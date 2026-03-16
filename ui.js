@@ -239,6 +239,99 @@ function drawListings() {
   });
 }
 
+// ── GREYED-OUT CONSPIRACY STRINGS (always visible, all modes) ──
+// Faint offer↔seek match strings that are always drawn beneath everything
+function drawConspiracyStrings() {
+  // Skip if full red strings are already on (they draw brighter versions)
+  if (G.showRedStrings) return;
+  // Skip in UFO mode — UFO draws its own strings via drawUfoStrings()
+  if (G.veh === 'ufo') return;
+
+  const offers = G.listings.filter(l => l.artSpace?.offer?.types?.length > 0);
+  const seeks = G.listings.filter(l => l.artSpace?.seek?.types?.length > 0);
+
+  seeks.forEach(sk => {
+    const seekTypes = sk.artSpace.seek.types;
+    offers.forEach(of => {
+      if (of.id === sk.id) return;
+      const ofTypes = of.artSpace.offer.types;
+      const match = seekTypes.some(st => ofTypes.some(ot => ot === st));
+      if (!match) return;
+
+      const a = worldToScreen(of.lat, of.lng);
+      const b = worldToScreen(sk.lat, sk.lng);
+      if (a.x < -50 && b.x < -50) return;
+      if (a.x > cv.width + 50 && b.x > cv.width + 50) return;
+
+      // Very faint greyed-out string
+      ctx.strokeStyle = 'rgba(255,34,68,0.08)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([8, 6]);
+      ctx.lineDashOffset = -G.frameN * 0.2;
+      ctx.beginPath(); ctx.moveTo(a.x, a.y - 12); ctx.lineTo(b.x, b.y - 12); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Tiny endpoint dots
+      [a, b].forEach(p => {
+        ctx.fillStyle = 'rgba(255,34,68,0.1)';
+        ctx.beginPath(); ctx.arc(p.x, p.y - 12, 3, 0, Math.PI * 2); ctx.fill();
+      });
+    });
+  });
+}
+
+// ── SEARCH RESULT SPRINKLES ──
+function drawSearchResults() {
+  if (!G.searchResults || G.searchResults.length === 0) return;
+  const z = getZoom().z;
+
+  G.searchResults.forEach((r, idx) => {
+    // Slowly fade out over time
+    r.fade = Math.max(0, r.fade - 0.0003);
+    if (r.fade <= 0) return;
+
+    const s = worldToScreen(r.lat, r.lng);
+    if (s.x < -60 || s.x > cv.width + 60 || s.y < -40 || s.y > cv.height + 40) return;
+
+    const alpha = r.fade;
+    const pulse = 0.5 + Math.sin(G.frameN * 0.04 + idx * 1.3) * 0.3;
+
+    // Glow ring
+    ctx.strokeStyle = 'rgba(200,100,255,' + (alpha * pulse * 0.4) + ')';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.lineDashOffset = -G.frameN * 0.3;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 12 + pulse * 4, 0, Math.PI * 2); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Pin dot
+    ctx.fillStyle = 'rgba(200,100,255,' + (alpha * 0.8) + ')';
+    ctx.shadowColor = '#cc44ff'; ctx.shadowBlur = 8 * alpha;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 5, 0, Math.PI * 2); ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Search icon
+    ctx.fillStyle = 'rgba(255,255,255,' + (alpha * 0.7) + ')';
+    ctx.font = '9px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('\u{1F50D}', s.x, s.y);
+
+    // Label
+    if (z >= 9) {
+      ctx.fillStyle = 'rgba(200,100,255,' + (alpha * 0.7) + ')';
+      ctx.font = "9px 'VT323',monospace"; ctx.textAlign = 'center';
+      ctx.fillText(r.label, s.x, s.y + 18);
+      if (z >= 12) {
+        ctx.fillStyle = 'rgba(200,100,255,' + (alpha * 0.35) + ')';
+        ctx.font = "7px 'VT323',monospace";
+        ctx.fillText('\u{1F50D} ' + r.query, s.x, s.y + 28);
+      }
+    }
+  });
+
+  // Clean up fully faded results
+  G.searchResults = G.searchResults.filter(r => r.fade > 0);
+}
+
 // ── RED STRINGS ──
 function drawRedStrings() {
   if (!G.showRedStrings) return;
