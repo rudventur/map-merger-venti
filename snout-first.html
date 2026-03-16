@@ -239,8 +239,8 @@ function screenToWorld(sx, sy) {
 
 // ── Tile loading ──
 function tileUrl(x, y, z) {
-  // Warm watercolor-style tiles
-  return `https://tiles.stadiamaps.com/tiles/stamen_watercolor/${z}/${x}/${y}.jpg`;
+  // Warm watercolor-style tiles (Cooper Hewitt mirror — free, no API key)
+  return `https://watercolormaps.collection.cooperhewitt.org/tile/watercolor/${z}/${x}/${y}.jpg`;
 }
 function tileUrlLabels(x, y, z) {
   return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
