@@ -10,6 +10,78 @@ let trainLoading = false;
 let trainLastCenter = null;
 const TRAIN_RELOAD_DIST = 5;
 
+// ── TRAIN VARIANTS ──
+const TRAIN_VARIANTS = [
+  { id: 'regional',  name: 'Regional',       spd: 0.0011,  kmh: '160 km/h',  color: '#ff6600', desc: 'Standard passenger train' },
+  { id: 'intercity', name: 'Intercity',       spd: 0.0015,  kmh: '200 km/h',  color: '#ffcc44', desc: 'Fast intercity service' },
+  { id: 'tgv',       name: 'TGV / Shinkansen', spd: 0.0022, kmh: '320 km/h', color: '#0088ff', desc: 'High-speed rail (France, Japan, Spain)' },
+  { id: 'maglev',    name: 'Maglev',          spd: 0.0038,  kmh: '600 km/h',  color: '#cc44ff', desc: 'Magnetic levitation — Shanghai, Chuo' },
+  { id: 'freight',   name: 'Freight',         spd: 0.0006,  kmh: '80 km/h',   color: '#cc8844', desc: 'Heavy goods hauler' },
+  { id: 'metro',     name: 'Metro',           spd: 0.0008,  kmh: '110 km/h',  color: '#ff2266', desc: 'Underground rapid transit' },
+];
+let curTrain = TRAIN_VARIANTS[0];
+
+function openTrainSelector() {
+  let html = '<button class="mcl" onclick="closeModal()">\u2715</button>';
+  html += '<div class="mh">\u{1F682} SELECT TRAIN</div>';
+  TRAIN_VARIANTS.forEach(t => {
+    const isCur = curTrain.id === t.id;
+    html += '<div style="padding:8px;margin:4px 0;border:2px solid ' + (isCur ? t.color : 'rgba(0,255,65,0.15)') +
+      ';border-radius:4px;cursor:pointer;background:' + (isCur ? 'rgba(255,255,255,0.05)' : 'transparent') +
+      '" onclick="selectTrain(\'' + t.id + '\')">';
+    html += '<div style="font-family:\'Press Start 2P\',monospace;font-size:.3rem;color:' + t.color + '">' + t.name + '</div>';
+    html += '<div style="font-family:VT323,monospace;font-size:.9rem;color:rgba(0,255,65,0.6)">' + t.desc + ' \u00B7 ' + t.kmh + '</div>';
+    html += '</div>';
+  });
+  document.getElementById('MB').innerHTML = html;
+  document.getElementById('MO').classList.add('open');
+}
+
+function selectTrain(id) {
+  curTrain = TRAIN_VARIANTS.find(t => t.id === id) || TRAIN_VARIANTS[0];
+  closeModal();
+  document.getElementById('SPD').innerHTML = '\u{1F682}<br>' + curTrain.kmh;
+  showToast('\u{1F682} ' + curTrain.name + ' \u2014 ' + curTrain.desc, curTrain.color);
+}
+
+// ── FORWARD TRACK LOADING ──
+// Loads tracks ahead of the train's current direction first
+let trainForwardLoading = false;
+
+async function trainLoadForward() {
+  if (trainForwardLoading || trainLoading) return;
+  trainForwardLoading = true;
+  const dir = G.dir;
+  const lookAhead = 0.15;
+  let fLat = G.pos.lat, fLng = G.pos.lng;
+  if (dir === 'up')    fLat += lookAhead;
+  if (dir === 'down')  fLat -= lookAhead;
+  if (dir === 'left')  fLng -= lookAhead * 1.6;
+  if (dir === 'right') fLng += lookAhead * 1.6;
+  const pad = 0.08;
+  const bbox = (fLat - pad) + ',' + (fLng - pad * 1.6) + ',' + (fLat + pad) + ',' + (fLng + pad * 1.6);
+  try {
+    const q = '[out:json][timeout:10];(way["railway"="rail"](' + bbox + ');node["railway"="station"](' + bbox + '););out body;>;out skel qt;';
+    const data = await overpassQuery(q);
+    const nodes = {};
+    data.elements.filter(e => e.type === 'node').forEach(n => { nodes[n.id] = [n.lat, n.lon]; });
+    const newTracks = [];
+    data.elements.filter(e => e.type === 'way' && e.tags?.railway === 'rail').forEach(w => {
+      const coords = w.nodes.map(id => nodes[id]).filter(Boolean);
+      if (coords.length >= 2) newTracks.push({ coords, type: 'rail' });
+    });
+    const newStations = data.elements.filter(e => e.type === 'node' && e.tags?.railway === 'station')
+      .map(e => ({ lat: e.lat, lon: e.lon, name: e.tags.name || 'Station', isMain: true, type: 'rail' }));
+    // Merge
+    const etk = new Set(trainTracks.map(t => t.coords[0][0].toFixed(3) + ',' + t.coords[0][1].toFixed(3)));
+    newTracks.forEach(t => { const k = t.coords[0][0].toFixed(3) + ',' + t.coords[0][1].toFixed(3); if (!etk.has(k)) { trainTracks.push(t); etk.add(k); } });
+    const esk = new Set(trainStations.map(s => s.lat.toFixed(3) + ',' + s.lon.toFixed(3)));
+    newStations.forEach(s => { const k = s.lat.toFixed(3) + ',' + s.lon.toFixed(3); if (!esk.has(k)) { trainStations.push(s); esk.add(k); } });
+    if (newTracks.length > 0) showToast('\u{1F682} +' + newTracks.length + ' forward tracks', '#ff6600');
+  } catch (e) { /* silent */ }
+  trainForwardLoading = false;
+}
+
 // Snap distance threshold — wider = can jump bigger gaps between track segments
 const SNAP_THRESHOLD = 0.0008; // ~90m at equator — allows jumping small gaps
 const SNAP_LOOSE = 0.003;      // ~330m — "searching for track" mode, very slow
@@ -23,18 +95,17 @@ async function trainLoadAround() {
   const bbox = (G.pos.lat - pad) + ',' + (G.pos.lng - pad * 1.6) + ',' + (G.pos.lat + pad) + ',' + (G.pos.lng + pad * 1.6);
   showToast('\u{1F682} Loading tracks...', '#ff6600');
   try {
-    // Fetch ALL rail types: mainline, subway, light rail, tram
-    const q = '[out:json][timeout:20];(' +
-      'way["railway"="rail"](' + bbox + ');' +
-      'way["railway"="subway"](' + bbox + ');' +
-      'way["railway"="light_rail"](' + bbox + ');' +
-      'way["railway"="tram"](' + bbox + ');' +
-      'way["railway"="narrow_gauge"](' + bbox + ');' +
-      'node["railway"="station"](' + bbox + ');' +
-      'node["railway"="halt"](' + bbox + ');' +
-      'node["station"="subway"](' + bbox + ');' +
-      'node["railway"="tram_stop"](' + bbox + ');' +
-      ');out body;>;out skel qt;';
+    // Zoom-aware: only load rail types appropriate for current zoom
+    let railTypes = 'way["railway"="rail"](' + bbox + ');';
+    if (z >= 9)  railTypes += 'way["railway"="subway"](' + bbox + ');' +
+                              'way["railway"="light_rail"](' + bbox + ');';
+    if (z >= 11) railTypes += 'way["railway"="tram"](' + bbox + ');' +
+                              'way["railway"="narrow_gauge"](' + bbox + ');';
+    let stationTypes = 'node["railway"="station"](' + bbox + ');';
+    if (z >= 7) stationTypes += 'node["railway"="halt"](' + bbox + ');';
+    if (z >= 9) stationTypes += 'node["station"="subway"](' + bbox + ');';
+    if (z >= 11) stationTypes += 'node["railway"="tram_stop"](' + bbox + ');';
+    const q = '[out:json][timeout:20];(' + railTypes + stationTypes + ');out body;>;out skel qt;';
     const data = await overpassQuery(q);
     const nodes = {};
     data.elements.filter(e => e.type === 'node').forEach(n => { nodes[n.id] = [n.lat, n.lon]; });
@@ -95,9 +166,20 @@ const TRACK_COLORS = {
   narrow_gauge: { main: '#cc8844', glow: 'rgba(204,136,68,0.12)' },
 };
 
+// Minimum zoom to show each rail type
+const RAIL_MIN_ZOOM = {
+  rail: 2, subway: 9, light_rail: 9, tram: 11, narrow_gauge: 11
+};
+
 function drawTrainTracks() {
   if (G.veh !== 'train' || !G.overlays.transit || trainTracks.length === 0) return;
+  const z = getZoom().z;
+
   trainTracks.forEach(track => {
+    // Only show mainline rail at zoomed out, others at closer zoom
+    const minZ = RAIL_MIN_ZOOM[track.type] || 9;
+    if (z < minZ) return;
+
     const tk = track.coords;
     if (tk.length < 2) return;
 

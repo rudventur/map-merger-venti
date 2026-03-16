@@ -72,6 +72,10 @@ let targetAltitude = 0;
 let planeSpeed = 0;
 let curAircraft = PLANE_FLEET[1]; // default A320
 
+// Altitude control
+let planeAltitudePresets = [1000, 5000, 10000, 20000, 35000]; // updated per aircraft
+let planeLandingMode = false; // approach mode — slow descent, reduced speed
+
 // Atmosphere state
 let planeLightning = 0;
 let planeLightningPos = null;
@@ -415,16 +419,28 @@ function checkAirportProximity() {
   const ind = document.getElementById('airInd');
   const bb = document.getElementById('boardBtn');
   const lb = document.getElementById('landBtn');
+  const ab = document.getElementById('altBtn');
+  const apb = document.getElementById('approachBtn');
   if (nearAirport && !planeAirborne) {
     ind.style.display = 'block';
     ind.innerHTML = '\u2708 AT ' + (nearAirport.iata || nearAirport.name) + ' \u2014 Press BOARD';
     bb.style.display = 'inline-block'; lb.style.display = 'none';
+    if (ab) ab.style.display = 'none';
+    if (apb) apb.style.display = 'none';
   } else if (nearAirport && planeAirborne) {
     ind.style.display = 'block';
     ind.innerHTML = '\u2708 NEAR ' + (nearAirport.iata || nearAirport.name) + ' \u2014 Press LAND';
     bb.style.display = 'none'; lb.style.display = 'inline-block';
+    if (ab) ab.style.display = 'inline-block';
+    if (apb) apb.style.display = 'inline-block';
+  } else if (planeAirborne) {
+    ind.style.display = 'none'; bb.style.display = 'none'; lb.style.display = 'none';
+    if (ab) ab.style.display = 'inline-block';
+    if (apb) apb.style.display = 'inline-block';
   } else {
     ind.style.display = 'none'; bb.style.display = 'none'; lb.style.display = 'none';
+    if (ab) ab.style.display = 'none';
+    if (apb) apb.style.display = 'none';
   }
 }
 
@@ -454,10 +470,92 @@ function landPlane() {
     if (!nearAirport) { showToast('Fly to an airport to land!', '#ff4444'); return; }
   }
   planeAirborne = false; targetAltitude = 0; planeSpeed = 0;
+  planeLandingMode = false;
   const where = nearAirport ? (nearAirport.iata || nearAirport.name) : 'field landing';
   showToast('\u2708 Landed at ' + where + '!', '#ffe600');
   setZoomLevel(15);
 }
+
+// ── LANDING MODE ──
+function toggleLandingMode() {
+  if (!planeAirborne) return;
+  planeLandingMode = !planeLandingMode;
+  if (planeLandingMode) {
+    targetAltitude = 1000; // descend to 1000ft approach altitude
+    showToast('\u{1F6EC} APPROACH MODE \u2014 descending to 1000ft', '#ffe600');
+  } else {
+    targetAltitude = curAircraft.alt;
+    showToast('\u2708 Climbing back to cruise', '#00bfff');
+  }
+}
+
+// ── ALTITUDE CHOOSER ──
+function setPlaneAltitude(alt) {
+  if (!planeAirborne) { showToast('Take off first!', '#ff4444'); return; }
+  targetAltitude = alt;
+  planeLandingMode = false;
+  const altStr = alt > 100000 ? Math.round(alt / 1000) + 'k' : alt.toLocaleString();
+  showToast('\u2708 Target: ' + altStr + ' ft', '#00bfff');
+}
+
+function openAltitudeChooser() {
+  if (!planeAirborne) { showToast('Take off first!', '#ff4444'); return; }
+  const ac = curAircraft;
+  // Build altitude presets based on aircraft ceiling
+  planeAltitudePresets = [];
+  if (ac.alt >= 1000)  planeAltitudePresets.push(1000);
+  if (ac.alt >= 5000)  planeAltitudePresets.push(5000);
+  if (ac.alt >= 10000) planeAltitudePresets.push(10000);
+  if (ac.alt >= 20000) planeAltitudePresets.push(20000);
+  if (ac.alt >= 35000) planeAltitudePresets.push(35000);
+  planeAltitudePresets.push(ac.alt); // max ceiling
+
+  let html = '<button class="mcl" onclick="closeModal()">\u2715</button>';
+  html += '<div class="mh">\u2708 SET ALTITUDE</div>';
+  html += '<div style="font-family:VT323,monospace;font-size:.9rem;color:rgba(0,191,255,0.5);margin-bottom:8px">Current: ' + Math.round(planeAltitude).toLocaleString() + ' ft \u00B7 ' + ac.name + '</div>';
+  html += '<div style="font-family:VT323,monospace;font-size:.8rem;color:rgba(255,230,0,0.4);margin-bottom:8px">\u26A0 Lower altitude = slower speed</div>';
+
+  planeAltitudePresets.forEach(alt => {
+    const isCur = Math.abs(targetAltitude - alt) < 500;
+    const speedPct = Math.round(Math.max(30, Math.min(100, (alt / ac.alt) * 100)));
+    const altStr = alt > 100000 ? Math.round(alt / 1000) + 'k ft' : alt.toLocaleString() + ' ft';
+    const spdStr = Math.round(ac.kmh * speedPct / 100) + ' km/h';
+    html += '<div style="padding:6px 8px;margin:3px 0;border:2px solid ' + (isCur ? '#ffe600' : 'rgba(0,191,255,0.15)') +
+      ';border-radius:4px;cursor:pointer;display:flex;justify-content:space-between;align-items:center" onclick="setPlaneAltitude(' + alt + ');closeModal()">';
+    html += '<span style="font-family:\'Press Start 2P\',monospace;font-size:.24rem;color:' + (isCur ? '#ffe600' : '#00bfff') + '">' + altStr + '</span>';
+    html += '<span style="font-family:VT323,monospace;font-size:.85rem;color:rgba(0,191,255,0.4)">' + speedPct + '% \u00B7 ~' + spdStr + '</span>';
+    html += '</div>';
+  });
+
+  html += '<div style="margin-top:8px;border-top:1px solid rgba(0,191,255,0.15);padding-top:8px">';
+  html += '<div style="padding:6px 8px;margin:3px 0;border:2px solid ' + (planeLandingMode ? '#ffe600' : 'rgba(255,230,0,0.2)') + ';border-radius:4px;cursor:pointer;background:' + (planeLandingMode ? 'rgba(255,230,0,0.08)' : 'transparent') + '" onclick="toggleLandingMode();closeModal()">';
+  html += '<span style="font-family:\'Press Start 2P\',monospace;font-size:.24rem;color:#ffe600">\u{1F6EC} LANDING APPROACH</span>';
+  html += '<div style="font-family:VT323,monospace;font-size:.8rem;color:rgba(255,230,0,0.4)">Descend to 1000ft, reduced speed, auto-land near airport</div>';
+  html += '</div></div>';
+
+  document.getElementById('MB').innerHTML = html;
+  document.getElementById('MO').classList.add('open');
+}
+
+// Altitude keybindings (Q = descend step, E = climb step, L = landing mode)
+document.addEventListener('keydown', function(e) {
+  if (G.veh !== 'plane' || !planeAirborne) return;
+  if (e.key === 'q' || e.key === 'Q') {
+    // Step down altitude
+    const steps = [1000, 5000, 10000, 20000, 35000, curAircraft.alt];
+    let cur = steps.findIndex(s => s >= targetAltitude);
+    if (cur > 0) { setPlaneAltitude(steps[cur - 1]); }
+  }
+  if (e.key === 'e' || e.key === 'E') {
+    // Step up altitude
+    const steps = [1000, 5000, 10000, 20000, 35000, curAircraft.alt];
+    let cur = steps.findIndex(s => s >= targetAltitude);
+    if (cur < steps.length - 1) { setPlaneAltitude(steps[cur + 1]); }
+  }
+  if (e.key === 'l' || e.key === 'L') {
+    toggleLandingMode();
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 //  SECTION 7: FLIGHT PHYSICS + CONTROLS
@@ -487,29 +585,38 @@ function planeUpdateControls() {
   const ac = curAircraft;
   const maxSpd = ac.spd;
 
+  // Speed scales with altitude — lower = slower (realistic approach)
+  // At cruising altitude = 100% speed, at 1000ft = 30% speed
+  const altRatio = Math.max(0.3, Math.min(1.0, planeAltitude / ac.alt));
+  const altAdjustedMax = maxSpd * (planeLandingMode ? altRatio * 0.6 : altRatio);
+
   // Fast speed ramp — reaches cruise quickly
-  planeSpeed += (maxSpd - planeSpeed) * 0.02;
-  if (planeSpeed < maxSpd * 0.5) planeSpeed = maxSpd * 0.5; // minimum 50% speed always
+  planeSpeed += (altAdjustedMax - planeSpeed) * 0.02;
+  if (planeSpeed < altAdjustedMax * 0.4) planeSpeed = altAdjustedMax * 0.4;
 
   // ── ANGULAR TURNING: Left/Right ONLY ──
-  // Left/Right rotate the heading. Up/Down are NOT used for direction.
-  // This gives proper angular flight — the plane always flies forward
-  // and you steer it like a real aircraft.
-  const turnSpd = ac.turnRate;
+  const turnSpd = ac.turnRate * (planeLandingMode ? 1.5 : 1.0); // tighter turns when landing
 
   if (lt && !rt) {
-    planeHeading -= turnSpd; // bank left
+    planeHeading -= turnSpd;
   }
   if (rt && !lt) {
-    planeHeading += turnSpd; // bank right
+    planeHeading += turnSpd;
   }
 
-  // Up = speed boost, Down = slow down (but never stop)
+  // Up = climb / speed boost, Down = descend / slow down
   if (up) {
-    planeSpeed = Math.min(planeSpeed * 1.01, maxSpd * 1.3); // slight boost
+    if (planeLandingMode) {
+      // In landing mode, Up aborts landing
+      planeLandingMode = false;
+      targetAltitude = ac.alt;
+      showToast('\u2708 Go-around! Climbing back to cruise', '#ffe600');
+    } else {
+      planeSpeed = Math.min(planeSpeed * 1.01, maxSpd * 1.3);
+    }
   }
   if (dn) {
-    planeSpeed = Math.max(planeSpeed * 0.99, maxSpd * 0.3); // slow but never stop
+    planeSpeed = Math.max(planeSpeed * 0.99, altAdjustedMax * 0.25);
   }
 
   // Normalize heading 0-360
@@ -521,8 +628,15 @@ function planeUpdateControls() {
   G.pos.lng += Math.sin(headRad) * planeSpeed;
 
   // ── ALTITUDE ──
-  planeAltitude += (targetAltitude - planeAltitude) * 0.015;
+  const altLerp = planeLandingMode ? 0.008 : 0.015; // slower descent in landing mode
+  planeAltitude += (targetAltitude - planeAltitude) * altLerp;
   if (!planeAirborne && planeAltitude < 10) planeAltitude = 0;
+
+  // Auto-land when very low in landing mode
+  if (planeLandingMode && planeAltitude < 200 && nearAirport) {
+    landPlane();
+    planeLandingMode = false;
+  }
 }
 
 function flyUpdatePhysics() {
@@ -810,9 +924,12 @@ function drawPlaneSprite() {
     const altStr = planeAltitude > 100000 ? (planeAltitude / 1000).toFixed(0) + 'k ft' : Math.floor(planeAltitude) + ' ft';
     const machStr = ac.mach >= 1 ? 'M' + ac.mach : ac.kmh + 'km/h';
     ctx.fillText(altStr + ' \u00B7 ' + machStr + ' \u00B7 HDG ' + Math.round(planeHeading) + '\u00B0', px, py + altOff - 24);
-    if (ac.cat === 'commercial') {
+    if (planeLandingMode) {
+      ctx.fillStyle = '#ffe600'; ctx.font = "5px 'Press Start 2P'";
+      ctx.fillText('\u{1F6EC} APPROACH MODE \u2014 Q/E altitude \u2014 L toggle', px, py + altOff - 16);
+    } else if (ac.cat === 'commercial') {
       ctx.fillStyle = 'rgba(255,230,0,0.4)'; ctx.font = "5px 'Press Start 2P'";
-      ctx.fillText('COMMERCIAL FLIGHT', px, py + altOff - 16);
+      ctx.fillText('COMMERCIAL FLIGHT \u2014 Q/E altitude \u2014 L approach', px, py + altOff - 16);
     }
   } else if (nearAirport) {
     ctx.font = "7px 'Press Start 2P'"; ctx.fillStyle = '#ffe600'; ctx.textAlign = 'center';
@@ -831,10 +948,13 @@ function flyClear() {
   airports = []; flights = [];
   planeAirborne = false; nearAirport = null;
   planeAltitude = 0; targetAltitude = 0; planeSpeed = 0;
+  planeLandingMode = false;
   planeRainDrops = []; planeWindParticles = [];
   planeLightning = 0; planeTurbulence = 0;
   planeWeather = null; planeWeatherPos = null;
   document.getElementById('airInd').style.display = 'none';
   document.getElementById('boardBtn').style.display = 'none';
   document.getElementById('landBtn').style.display = 'none';
+  const ab = document.getElementById('altBtn'); if (ab) ab.style.display = 'none';
+  const apb = document.getElementById('approachBtn'); if (apb) apb.style.display = 'none';
 }

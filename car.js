@@ -70,19 +70,20 @@ async function carLoadRoads() {
   showToast('\u{1F697} Loading roads...', '#3366ff');
   try {
     const z = getZoom().z;
-    const pad = z <= 9 ? 0.15 : z <= 13 ? 0.05 : 0.02;
+    // Zoom-aware: bigger area for major roads, smaller for minor
+    const pad = z <= 7 ? 1.0 : z <= 9 ? 0.15 : z <= 13 ? 0.05 : 0.02;
     const bbox = (G.pos.lat - pad) + ',' + (G.pos.lng - pad * 1.6) + ',' +
                  (G.pos.lat + pad) + ',' + (G.pos.lng + pad * 1.6);
-    const q = '[out:json][timeout:15];(' +
-      'way["highway"="motorway"](' + bbox + ');' +
-      'way["highway"="trunk"](' + bbox + ');' +
-      'way["highway"="primary"](' + bbox + ');' +
-      'way["highway"="secondary"](' + bbox + ');' +
-      'way["highway"="tertiary"](' + bbox + ');' +
-      'way["highway"="residential"](' + bbox + ');' +
-      'way["highway"="unclassified"](' + bbox + ');' +
-      'way["highway"="service"](' + bbox + ');' +
-      ');out geom;';
+    // Only load road types appropriate for current zoom level
+    let roadTypes = 'way["highway"="motorway"](' + bbox + ');' +
+                    'way["highway"="trunk"](' + bbox + ');';
+    if (z >= 7)  roadTypes += 'way["highway"="primary"](' + bbox + ');';
+    if (z >= 9)  roadTypes += 'way["highway"="secondary"](' + bbox + ');';
+    if (z >= 11) roadTypes += 'way["highway"="tertiary"](' + bbox + ');';
+    if (z >= 13) roadTypes += 'way["highway"="residential"](' + bbox + ');' +
+                              'way["highway"="unclassified"](' + bbox + ');';
+    if (z >= 15) roadTypes += 'way["highway"="service"](' + bbox + ');';
+    const q = '[out:json][timeout:15];(' + roadTypes + ');out geom;';
     const data = await overpassQuery(q);
 
     const newRoads = [];
@@ -260,10 +261,21 @@ const ROAD_COLORS = {
   unclassified:{ main: 'rgba(255,255,255,0.3)', glow: 'rgba(255,255,255,0.03)', width: 2 },
 };
 
+// Minimum zoom level to show each road type
+const ROAD_MIN_ZOOM = {
+  motorway: 2, trunk: 5, primary: 7, secondary: 9,
+  tertiary: 11, residential: 13, service: 15, unclassified: 13
+};
+
 function drawCarRoads() {
   if (G.veh !== 'car' || !G.overlays.transit || carRoads.length === 0) return;
+  const z = getZoom().z;
 
   carRoads.forEach(road => {
+    // Skip minor roads at zoomed-out levels
+    const minZ = ROAD_MIN_ZOOM[road.type] || 13;
+    if (z < minZ) return;
+
     const tk = road.coords;
     if (tk.length < 2) return;
 

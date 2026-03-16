@@ -426,6 +426,169 @@ function drawBusStops() {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  DASHBOARD — pinboard with polaroid pictures and yellow note tiles
+// ═══════════════════════════════════════════════════════════════
+
+let dashboardOpen = false;
+
+function toggleDashboard() {
+  dashboardOpen = !dashboardOpen;
+  const panel = document.getElementById('dashboard');
+  if (!panel) return;
+  panel.style.display = dashboardOpen ? 'block' : 'none';
+  const btn = document.getElementById('dashboardBtn');
+  if (btn) {
+    if (dashboardOpen) { btn.style.background = '#011289'; btn.style.color = '#fff'; }
+    else btn.style.cssText = 'border-color:#011289;color:#6688ff';
+  }
+  if (dashboardOpen) updateDashboard();
+}
+
+function updateDashboard() {
+  const el = document.getElementById('dashboardContent');
+  if (!el) return;
+
+  // Collect all items: comments (notes) + listings (polaroids) + notebook entries
+  const items = [];
+
+  // Yellow note tiles from comments
+  G.comments.forEach((c, i) => {
+    items.push({ type: 'note', data: c, index: i });
+  });
+
+  // Polaroid cards from listings
+  G.listings.forEach((l, i) => {
+    items.push({ type: 'polaroid', data: l, index: i });
+  });
+
+  // Notebook entries (if in UFO mode)
+  if (typeof ufoNotebookEntries !== 'undefined') {
+    ufoNotebookEntries.forEach((n, i) => {
+      items.push({ type: 'notebook', data: n, index: i });
+    });
+  }
+
+  if (items.length === 0) {
+    el.innerHTML = '<div style="color:rgba(1,18,137,0.4);padding:12px;font-size:.85rem;text-align:center">Nothing pinned yet.<br>Drop notes or explore!</div>';
+    return;
+  }
+
+  // Scale: more items = smaller cards
+  const count = items.length;
+  const scale = count <= 6 ? 'large' : count <= 15 ? 'medium' : 'small';
+  const noteH = scale === 'large' ? 70 : scale === 'medium' ? 50 : 36;
+  const polaroidH = scale === 'large' ? 90 : scale === 'medium' ? 65 : 45;
+  const fontSize = scale === 'large' ? '.85rem' : scale === 'medium' ? '.75rem' : '.65rem';
+  const titleSize = scale === 'large' ? '.28rem' : scale === 'medium' ? '.22rem' : '.18rem';
+
+  let html = '<div style="font-family:VT323,monospace;font-size:.7rem;color:rgba(1,18,137,0.4);margin-bottom:6px">' + items.length + ' items \u00B7 ' + scale + ' view</div>';
+
+  // Use a grid for small view
+  if (scale === 'small') html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">';
+
+  items.forEach(item => {
+    if (item.type === 'note') {
+      const c = item.data;
+      // Yellow sticky note tile
+      html += '<div style="background:rgba(255,230,0,0.12);border:1.5px solid rgba(255,230,0,0.35);border-radius:3px;padding:5px 7px;margin:' + (scale === 'small' ? '0' : '4px 0') + ';min-height:' + noteH + 'px;cursor:pointer;position:relative" onclick="dashboardFlyTo(' + c.lat + ',' + c.lng + ')">';
+      html += '<div style="font-family:\'Press Start 2P\',monospace;font-size:' + titleSize + ';color:#ffe600;margin-bottom:2px">\u{1F4CC} ' + esc(c.from) + '</div>';
+      html += '<div style="font-family:VT323,monospace;font-size:' + fontSize + ';color:rgba(255,230,0,0.7);line-height:1.3">' + esc(c.text.substring(0, scale === 'small' ? 30 : 60)) + '</div>';
+      html += '<div style="font-family:VT323,monospace;font-size:.6rem;color:rgba(255,230,0,0.3);margin-top:2px">' + c.timestamp + '</div>';
+      html += '</div>';
+    } else if (item.type === 'polaroid') {
+      const l = item.data;
+      const col = getPCol(l);
+      const hasOffer = l.artSpace?.offer?.types?.length > 0;
+      const hasSeek = l.artSpace?.seek?.types?.length > 0;
+      // Polaroid card — white border, tilted slightly
+      const tilt = ((item.index * 7 + 3) % 7) - 3; // -3 to +3 degrees
+      html += '<div style="background:#111;border:3px solid rgba(255,255,255,0.8);border-bottom-width:' + (scale === 'small' ? '12px' : '20px') + ';border-radius:2px;padding:4px;margin:' + (scale === 'small' ? '0' : '4px 0') + ';min-height:' + polaroidH + 'px;cursor:pointer;transform:rotate(' + tilt + 'deg);position:relative" onclick="dashboardFlyTo(' + l.lat + ',' + l.lng + ')">';
+      // "Photo" area — coloured gradient representing the space
+      html += '<div style="background:linear-gradient(135deg,' + col.bg + '22,' + col.bg + '08);border:1px solid ' + col.bg + '33;height:' + (polaroidH - 30) + 'px;display:flex;align-items:center;justify-content:center">';
+      html += '<span style="font-size:' + (scale === 'small' ? '14px' : '20px') + '">' + (hasOffer ? '\u{1F3E0}' : '\u{1F9E9}') + '</span>';
+      html += '</div>';
+      // Caption
+      html += '<div style="font-family:VT323,monospace;font-size:' + fontSize + ';color:rgba(255,255,255,0.7);margin-top:3px;text-align:center">' + esc(l.username || 'Anon') + '</div>';
+      if (scale !== 'small' && l.signature) {
+        html += '<div style="font-family:VT323,monospace;font-size:.65rem;color:rgba(255,255,255,0.35);text-align:center;font-style:italic">"' + esc(l.signature.substring(0, 25)) + '"</div>';
+      }
+      html += '</div>';
+    } else if (item.type === 'notebook') {
+      const n = item.data;
+      const NTAGS = typeof NOTEBOOK_TAGS !== 'undefined' ? NOTEBOOK_TAGS : [];
+      const tag = NTAGS.find(t => t.id === n.tag) || { label: '\u{1F4DD} Note', color: '#ff6600' };
+      html += '<div style="background:rgba(68,255,136,0.06);border:1.5px solid rgba(68,255,136,0.25);border-radius:3px;padding:5px 7px;margin:' + (scale === 'small' ? '0' : '4px 0') + ';min-height:' + noteH + 'px;cursor:pointer" onclick="dashboardFlyTo(' + n.lat + ',' + n.lng + ')">';
+      html += '<div style="font-family:\'Press Start 2P\',monospace;font-size:' + titleSize + ';color:' + tag.color + '">' + tag.label + '</div>';
+      html += '<div style="font-family:VT323,monospace;font-size:' + fontSize + ';color:rgba(68,255,136,0.7)">' + esc(n.text.substring(0, scale === 'small' ? 30 : 50)) + '</div>';
+      html += '</div>';
+    }
+  });
+
+  if (scale === 'small') html += '</div>';
+
+  el.innerHTML = html;
+}
+
+function dashboardFlyTo(lat, lng) {
+  G.pos.lat = lat; G.pos.lng = lng;
+  showToast('\u{1F4CD} Jumped to location!', '#011289');
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  MOVABLE NOTES — drag yellow comment dots on the map
+// ═══════════════════════════════════════════════════════════════
+
+let draggingComment = null;
+let dragOffsetX = 0, dragOffsetY = 0;
+
+function findCommentAt(sx, sy) {
+  for (let i = G.comments.length - 1; i >= 0; i--) {
+    const c = G.comments[i];
+    const s = worldToScreen(c.lat, c.lng);
+    if (Math.abs(sx - s.x) < 15 && Math.abs(sy - s.y) < 15) return i;
+  }
+  return -1;
+}
+
+// Hook into canvas for dragging notes
+(function() {
+  const canvas = document.getElementById('world');
+  let dragActive = false;
+
+  canvas.addEventListener('pointerdown', function(e) {
+    // Only drag notes when NOT in pin mode, comment mode, or string drawing
+    if (G.pinMode || G.commentMode) return;
+    if (typeof ufoDrawingString !== 'undefined' && ufoDrawingString) return;
+
+    const idx = findCommentAt(e.clientX, e.clientY);
+    if (idx >= 0) {
+      draggingComment = idx;
+      dragActive = true;
+      canvas.style.cursor = 'grabbing';
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+
+  canvas.addEventListener('pointermove', function(e) {
+    if (!dragActive || draggingComment === null) return;
+    const w = screenToWorld(e.clientX, e.clientY);
+    G.comments[draggingComment].lat = w.lat;
+    G.comments[draggingComment].lng = w.lng;
+  });
+
+  canvas.addEventListener('pointerup', function() {
+    if (dragActive && draggingComment !== null) {
+      showToast('\u{1F4CC} Note moved!', '#ffe600');
+      if (dashboardOpen) updateDashboard();
+      draggingComment = null;
+      dragActive = false;
+      document.getElementById('world').style.cursor = '';
+    }
+  });
+})();
+
 // ── MODALS ──
 function openNewPin(lat, lng) {
   document.getElementById('MB').innerHTML = '<button class="mcl" onclick="closeModal()">\u2715</button><div class="mh">\u{1F4CC} NEW ARTSPACE</div><div class="mf"><label>YOUR NAME</label><input type="text" id="pU" placeholder="username..." maxlength="30"></div><div class="mf"><label>SIGNATURE</label><input type="text" id="pS" placeholder="your vibe..." maxlength="60"></div><div class="mf"><label>SPACE TYPES</label><div class="chips">' + TYPES.map(t => '<span class="chip" onclick="this.classList.toggle(\'on\')">' + t + '</span>').join('') + '</div></div><div class="mf"><label>DESCRIPTION</label><textarea id="pD" placeholder="What do you have or seek?"></textarea></div><div class="mf"><label>I AM</label><select id="pR"><option value="offer">\u{1F3E0} Offering</option><option value="seek">\u{1F9E9} Seeking</option><option value="both">\u{1F3E0}\u{1F9E9} Both</option></select></div><div class="mf"><label>EXCHANGE</label><div class="chips"><span class="chip on" onclick="this.classList.toggle(\'on\')">\u{1F49A} FREE</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F504} SWAP</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u2615 DONATION</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F4B8} PAID</span></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><div class="mf"><label>FROM</label><input type="date" id="pF"></div><div class="mf"><label>TO</label><input type="date" id="pT"></div></div><button class="msave" onclick="savePin(' + lat + ',' + lng + ')">\u{1F4BE} PUBLISH</button>';
