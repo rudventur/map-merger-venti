@@ -9,6 +9,7 @@ const G = {
   overlays: { grid: true, pins: true, transit: true, compass: true, weather: false },
   listings: [...DEMO], selectedCountry: null,
   showOffersOnly: false, showRedStrings: false, commentMode: false,
+  searchResults: [],  // sprinkled search discoveries
   comments: [
     { lat:51.51, lng:-0.13, text:"This kiln is amazing", from:"NeonWanderer42", timestamp:"2026-03-12" },
     { lat:52.52, lng:13.40, text:"Collab on large-scale prints?", from:"CosmicNomad7", timestamp:"2026-03-14" },
@@ -47,7 +48,7 @@ async function goCity() {
   const name = document.getElementById('CI').value.trim(); if (!name) return;
   showToast('Finding ' + name + '...', '#00bfff');
   try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=1', { headers: { 'User-Agent': 'ArtSpaceCity/1.0' } });
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=8', { headers: { 'User-Agent': 'ArtSpaceCity/1.0' } });
     const d = await r.json();
     if (d[0]) {
       G.pos.lat = parseFloat(d[0].lat); G.pos.lng = parseFloat(d[0].lon);
@@ -59,8 +60,46 @@ async function goCity() {
       if (G.veh === 'boat') fetchWaterBodies();
       if (showFlights) fetchFlights();
       if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng);
+      // Sprinkle extra search results across the map
+      sprinkleSearchResults(name, d);
     } else showToast('Not found!', '#ff4444');
   } catch (e) { showToast('Network error', '#ff4444'); }
+}
+
+// ── SEARCH SPRINKLE ──
+// Scatters a few random "discovery" pins from search results across the visible map
+function sprinkleSearchResults(query, nominatimResults) {
+  G.searchResults = [];
+  const DISCOVERY_NAMES = [
+    'Hidden Studio', 'Art Collective', 'Maker Space', 'Print Workshop',
+    'Ceramics Lab', 'Dark Room', 'Sound Studio', 'Textile Hub',
+    'Community Garden', 'Gallery Space', 'Open Workshop', 'Creative Den',
+    'Craft Corner', 'Forge & Fire', 'The Art Vault', 'Colour House'
+  ];
+  // Use actual Nominatim results (skip first — that's the main destination)
+  const extras = nominatimResults.slice(1);
+  extras.forEach(r => {
+    G.searchResults.push({
+      lat: parseFloat(r.lat),
+      lng: parseFloat(r.lon),
+      label: r.display_name.split(',')[0],
+      query: query,
+      fade: 1.0
+    });
+  });
+  // Also sprinkle a few random fictional discoveries near the target
+  const count = 3 + Math.floor(Math.random() * 4); // 3-6 random spots
+  for (let i = 0; i < count; i++) {
+    const spread = 0.02 + Math.random() * 0.06;
+    G.searchResults.push({
+      lat: G.pos.lat + (Math.random() - 0.5) * spread * 2,
+      lng: G.pos.lng + (Math.random() - 0.5) * spread * 3,
+      label: DISCOVERY_NAMES[Math.floor(Math.random() * DISCOVERY_NAMES.length)],
+      query: query,
+      fade: 1.0
+    });
+  }
+  showToast('\u{1F50D} ' + G.searchResults.length + ' discoveries sprinkled!', '#cc44ff');
 }
 
 // ── PIN / CONSPIRACY ──
@@ -123,6 +162,11 @@ function setV(btn) {
   // Clear all transit
   trainClear(); busStops = []; flyClear(); waterBodies = []; carClear();
   document.getElementById('transitInfo').style.display = 'none';
+
+  // Show/hide notebook button (UFO mode only)
+  const nbBtn = document.getElementById('notebookBtn');
+  if (nbBtn) nbBtn.style.display = nv === 'ufo' ? 'inline-block' : 'none';
+  if (nv !== 'ufo' && typeof ufoNotebookOpen !== 'undefined' && ufoNotebookOpen) toggleUfoNotebook();
 
   // Load mode-specific data + open variant selector
   if (nv === 'train') trainLoadAround();
@@ -291,7 +335,9 @@ function loop() {
   drawAirports();          // 8. Airports
   drawFlights();           // 9. Real-time flights
   drawRedStrings();        // 10. Red string connections
+  drawConspiracyStrings(); // 10b. Greyed-out conspiracy strings (all modes)
   drawListings();          // 11. ArtSpace pins
+  drawSearchResults();     // 11b. Search sprinkle discoveries
   drawComments();          // 12. Conspiracy comments
   // Mode-specific atmospheres
   drawTrainAtmosphere();   // 13a. Train: clouds, sunshine

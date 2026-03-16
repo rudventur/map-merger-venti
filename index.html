@@ -158,6 +158,7 @@ canvas#world{position:fixed;inset:0;z-index:1}
   <div class="hsep"></div>
   <button class="hbtn y" id="offerFilterBtn" onclick="toggleOfferFilter()">OFFERS</button>
   <button class="hbtn r" id="redStringBtn" onclick="toggleRedStrings()">STRINGS</button>
+  <button class="hbtn" id="notebookBtn" style="display:none;border-color:#44ff88;color:#44ff88" onclick="toggleUfoNotebook()">&#128221; LOG</button>
   <button class="hbtn y" id="commentBtn" onclick="toggleCommentMode()">&#128172; NOTE</button>
 </div>
 
@@ -217,6 +218,13 @@ canvas#world{position:fixed;inset:0;z-index:1}
   <div class="fptitle" style="color:#cc44ff">&#129525; CONNECTIONS <button class="fpcl" onclick="toggleUfoPanel()">&#10005;</button></div>
   <div id="ufoPanelContent"></div>
   <button class="hbtn" style="width:100%;margin-top:6px;border-color:#cc44ff;color:#cc44ff" onclick="ufoStartDrawString()">&#129525; DRAW STRING</button>
+</div>
+
+<!-- UFO NOTEBOOK -->
+<div class="fpanel" id="ufoNotebook" style="border-color:#44ff88;left:10px;right:auto;transform:none;max-width:280px;top:auto;bottom:120px">
+  <div class="fptitle" style="color:#44ff88">&#128221; NOTEBOOK <button class="fpcl" onclick="toggleUfoNotebook()">&#10005;</button></div>
+  <div id="notebookContent"></div>
+  <button class="hbtn" style="width:100%;margin-top:6px;border-color:#44ff88;color:#44ff88" onclick="addNotebookEntry()">&#128221; LOG FINDING</button>
 </div>
 
 <!-- AIRPORT INDICATOR -->

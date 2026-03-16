@@ -376,6 +376,139 @@ function drawUfoArtOffers() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  SECTION 7b: UFO NOTEBOOK — collect findings while exploring
+// ═══════════════════════════════════════════════════════════════
+
+let ufoNotebookEntries = [
+  // Demo entries
+  { id: 'n1', text: 'Strange energy readings near Shoreditch', lat: 51.527, lng: -0.078, timestamp: '2026-03-14', tag: 'anomaly' },
+  { id: 'n2', text: 'Art collective spotted — prints everywhere', lat: 52.520, lng: 13.405, timestamp: '2026-03-15', tag: 'art' },
+];
+let ufoNotebookOpen = false;
+
+const NOTEBOOK_TAGS = [
+  { id: 'anomaly', label: '\u{1F47E} Anomaly', color: '#cc44ff' },
+  { id: 'art',     label: '\u{1F3A8} Art',     color: '#ffe600' },
+  { id: 'signal',  label: '\u{1F4E1} Signal',  color: '#00bfff' },
+  { id: 'contact', label: '\u{1F91D} Contact', color: '#44ff88' },
+  { id: 'note',    label: '\u{1F4DD} Note',    color: '#ff6600' },
+];
+
+function toggleUfoNotebook() {
+  ufoNotebookOpen = !ufoNotebookOpen;
+  const panel = document.getElementById('ufoNotebook');
+  if (!panel) return;
+  if (ufoNotebookOpen) {
+    panel.classList.add('show');
+    updateNotebookPanel();
+  } else {
+    panel.classList.remove('show');
+  }
+}
+
+function updateNotebookPanel() {
+  const el = document.getElementById('notebookContent');
+  if (!el) return;
+
+  if (ufoNotebookEntries.length === 0) {
+    el.innerHTML = '<div style="color:rgba(68,255,136,0.4);padding:8px;font-size:.8rem">No findings yet. Explore and log!</div>';
+    return;
+  }
+
+  let html = '';
+  ufoNotebookEntries.slice().reverse().forEach(entry => {
+    const tag = NOTEBOOK_TAGS.find(t => t.id === entry.tag) || NOTEBOOK_TAGS[4];
+    html += '<div style="padding:5px 6px;margin:3px 0;border-left:3px solid ' + tag.color + ';background:rgba(68,255,136,0.03);position:relative">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center">';
+    html += '<span style="font-family:VT323,monospace;font-size:.75rem;color:' + tag.color + '">' + tag.label + '</span>';
+    html += '<button onclick="deleteNotebookEntry(\'' + entry.id + '\')" style="background:none;border:1px solid #ff2244;color:#ff2244;padding:1px 4px;cursor:pointer;font-size:.6rem;border-radius:2px">\u2715</button>';
+    html += '</div>';
+    html += '<div style="font-family:VT323,monospace;font-size:.85rem;color:#44ff88;margin:2px 0">' + esc(entry.text) + '</div>';
+    html += '<div style="font-family:VT323,monospace;font-size:.65rem;color:rgba(68,255,136,0.35)">' + entry.lat.toFixed(4) + '\u00B0, ' + entry.lng.toFixed(4) + '\u00B0 \u00B7 ' + entry.timestamp + '</div>';
+    html += '<div style="cursor:pointer;font-family:VT323,monospace;font-size:.7rem;color:rgba(200,100,255,0.5);margin-top:1px" onclick="ufoFlyToConnection(' + entry.lat + ',' + entry.lng + ')">\u{1F6F8} Go here</div>';
+    html += '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function addNotebookEntry() {
+  if (G.veh !== 'ufo') { showToast('Switch to UFO mode first!', '#cc44ff'); return; }
+
+  let html = '<button class="mcl" onclick="closeModal()">\u2715</button>';
+  html += '<div class="mh" style="color:#44ff88">\u{1F4D3} LOG FINDING</div>';
+  html += '<div class="mf"><label>WHAT DID YOU FIND?</label><textarea id="nbText" placeholder="Describe your discovery..." style="border-color:#44ff88;color:#44ff88"></textarea></div>';
+  html += '<div class="mf"><label>TAG</label><div style="display:flex;gap:4px;flex-wrap:wrap">';
+  NOTEBOOK_TAGS.forEach((t, i) => {
+    html += '<span class="chip' + (i === 0 ? ' on' : '') + '" style="border-color:' + t.color + ';color:' + t.color + '" data-tag="' + t.id + '" onclick="document.querySelectorAll(\'#MB .chip\').forEach(c=>c.classList.remove(\'on\'));this.classList.add(\'on\')">' + t.label + '</span>';
+  });
+  html += '</div></div>';
+  html += '<div style="font-family:VT323,monospace;font-size:.8rem;color:rgba(68,255,136,0.4);margin:4px 0">\u{1F4CD} Location: ' + G.pos.lat.toFixed(4) + '\u00B0, ' + G.pos.lng.toFixed(4) + '\u00B0</div>';
+  html += '<button class="msave" style="background:#44ff88" onclick="saveNotebookEntry()">\u{1F4BE} SAVE FINDING</button>';
+
+  document.getElementById('MB').innerHTML = html;
+  document.getElementById('MO').classList.add('open');
+}
+
+function saveNotebookEntry() {
+  const text = document.getElementById('nbText')?.value?.trim();
+  if (!text) { showToast('Write something!', '#ff4444'); return; }
+  const activeTag = document.querySelector('#MB .chip.on');
+  const tag = activeTag ? activeTag.dataset.tag : 'note';
+
+  ufoNotebookEntries.push({
+    id: 'nb' + Date.now(),
+    text: text,
+    lat: G.pos.lat,
+    lng: G.pos.lng,
+    timestamp: new Date().toISOString().split('T')[0],
+    tag: tag
+  });
+
+  closeModal();
+  updateNotebookPanel();
+  showToast('\u{1F4D3} Finding logged!', '#44ff88');
+}
+
+function deleteNotebookEntry(id) {
+  ufoNotebookEntries = ufoNotebookEntries.filter(e => e.id !== id);
+  updateNotebookPanel();
+  showToast('\u{1F5D1} Entry removed', '#ff2244');
+}
+
+// Draw notebook markers on map (only in UFO mode)
+function drawNotebookMarkers() {
+  if (G.veh !== 'ufo') return;
+  const z = getZoom().z;
+
+  ufoNotebookEntries.forEach(entry => {
+    const s = worldToScreen(entry.lat, entry.lng);
+    if (s.x < -30 || s.x > cv.width + 30 || s.y < -30 || s.y > cv.height + 30) return;
+
+    const tag = NOTEBOOK_TAGS.find(t => t.id === entry.tag) || NOTEBOOK_TAGS[4];
+    const pulse = 0.5 + Math.sin(G.frameN * 0.05 + entry.lat * 100) * 0.3;
+
+    // Marker
+    ctx.fillStyle = tag.color + '44';
+    ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = tag.color + (pulse > 0.6 ? 'aa' : '55');
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(s.x, s.y, 7, 0, Math.PI * 2); ctx.stroke();
+
+    // Icon
+    ctx.fillStyle = tag.color;
+    ctx.font = '8px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('\u{1F4D3}', s.x, s.y);
+
+    // Label at closer zoom
+    if (z >= 10) {
+      ctx.fillStyle = tag.color + '88';
+      ctx.font = "8px 'VT323',monospace"; ctx.textAlign = 'left';
+      ctx.fillText(entry.text.substring(0, 25), s.x + 10, s.y + 3);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  SECTION 8: ATMOSPHERE (kept from original, enhanced)
 // ═══════════════════════════════════════════════════════════════
 
@@ -499,7 +632,8 @@ function drawUfoAtmosphere() {
     ctx.fillRect(0, y, cv.width, 1);
   }
 
-  // ── Draw connections and art offers AFTER atmosphere ──
+  // ── Draw connections, art offers, and notebook markers AFTER atmosphere ──
   drawUfoStrings();
   drawUfoArtOffers();
+  drawNotebookMarkers();
 }
