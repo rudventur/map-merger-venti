@@ -32,7 +32,10 @@ const ZOOM_NAMES = {
 
 const TILE_URLS = {
   dark:       'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+  darkclean:  'https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png',
   osm:        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+  voyager:    'https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png',
+  positron:   'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
   topo:       'https://a.tile.opentopomap.org/{z}/{x}/{y}.png',
   watercolor: 'https://watercolormaps.collection.cooperhewitt.org/tile/watercolor/{z}/{x}/{y}.jpg',
   satellite:  'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',

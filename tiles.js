@@ -70,7 +70,7 @@ function drawTiles() {
       if (tile._loaded) {
         ctx.drawImage(tile, Math.floor(px), Math.floor(py), Math.ceil(scaledTile) + 1, Math.ceil(scaledTile) + 1);
       } else if (!tile._failed) {
-        ctx.fillStyle = G.curTileLayer === 'dark' ? '#1a1a2e' : '#ddd';
+        ctx.fillStyle = (G.curTileLayer === 'dark' || G.curTileLayer === 'darkclean') ? '#1a1a2e' : '#eee';
         ctx.fillRect(Math.floor(px), Math.floor(py), Math.ceil(scaledTile), Math.ceil(scaledTile));
       }
     }
