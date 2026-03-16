@@ -154,6 +154,7 @@ function setV(btn) {
   else if (nv === 'boat') document.getElementById('SPD').innerHTML = '\u26F5<br>' + curBoat.kmh;
   else if (nv === 'bike') document.getElementById('SPD').innerHTML = '\u{1F6B2}<br>' + curBike.kmh;
   else if (nv === 'car') document.getElementById('SPD').innerHTML = '\u{1F697}<br>' + curCar.kmh;
+  else if (nv === 'train') document.getElementById('SPD').innerHTML = '\u{1F682}<br>' + curTrain.kmh;
   else document.getElementById('SPD').innerHTML = v.em + '<br>' + v.kmh;
 
   document.getElementById('VS').innerHTML = v.em + ' ' + v.lbl;
@@ -169,7 +170,7 @@ function setV(btn) {
   if (nv !== 'ufo' && typeof ufoNotebookOpen !== 'undefined' && ufoNotebookOpen) toggleUfoNotebook();
 
   // Load mode-specific data + open variant selector
-  if (nv === 'train') trainLoadAround();
+  if (nv === 'train') { trainLoadAround(); setTimeout(openTrainSelector, 300); }
   if (nv === 'bus') loadBusData();
   if (nv === 'plane') { flyLoadAirports(); if (!showFlights) toggleFlights(); setTimeout(openAircraftSelector, 300); }
   if (nv === 'boat') { fetchWaterBodies(); setTimeout(openBoatSelector, 300); }
@@ -191,7 +192,7 @@ function updateMovement() {
 
   } else if (G.veh === 'train' && trainTracks.length > 0 && mv) {
     // ── TRAIN: snap to tracks with gap jumping ──
-    const s = VEH.train.spd;
+    const s = curTrain.spd;
     let nl = G.pos.lat, ng = G.pos.lng;
     if (up) { nl += s; G.dir = 'up'; }
     if (dn) { nl -= s; G.dir = 'down'; }
@@ -314,6 +315,7 @@ function loop() {
   if (G.frameN % 20 === 0 && G.veh === 'plane') checkAirportProximity();
   if (G.frameN % 300 === 0 && G.veh === 'plane') { airportCheckReload(); planeWeatherCheck(); }
   if (G.frameN % 90 === 0 && G.veh === 'train') trainCheckProgressiveLoad();
+  if (G.frameN % 45 === 0 && G.veh === 'train' && Object.values(G.keys).some(Boolean)) trainLoadForward();
   if (G.frameN % 180 === 0 && G.veh === 'boat') boatCheckWater();
   if (G.frameN % 10 === 0 && G.veh === 'boat') boatUpdateWaterStatus(); // frequent water check
   if (G.frameN % 120 === 0 && G.veh === 'car') carCheckProgressiveLoad();
