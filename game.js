@@ -1,0 +1,321 @@
+// ═══════════════════════════════════════════════════════════════
+//  game.js — State, loop, controls, movement, boot
+// ═══════════════════════════════════════════════════════════════
+
+const G = {
+  pos: { lat: 51.5155, lng: -0.0922 },
+  dir: 'up', keys: {}, frameN: 0, veh: 'walk', zoom: 15,
+  pinMode: false, curTileLayer: 'dark',
+  overlays: { grid: true, pins: true, transit: true, compass: true, weather: false },
+  listings: [...DEMO], selectedCountry: null,
+  showOffersOnly: false, showRedStrings: false, commentMode: false,
+  comments: [
+    { lat:51.51, lng:-0.13, text:"This kiln is amazing", from:"NeonWanderer42", timestamp:"2026-03-12" },
+    { lat:52.52, lng:13.40, text:"Collab on large-scale prints?", from:"CosmicNomad7", timestamp:"2026-03-14" },
+    { lat:48.86, lng:2.35, text:"Darkroom available this weekend", from:"ElectricSeeker12", timestamp:"2026-03-10" },
+  ],
+};
+
+const cv = document.getElementById('world');
+const ctx = cv.getContext('2d');
+function resize() { cv.width = window.innerWidth; cv.height = window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+// ── CONTROLS ──
+document.addEventListener('keydown', e => {
+  G.keys[e.key] = true;
+  if (e.key === 'Escape') { closeModal(); document.getElementById('layersMenu')?.classList.remove('show'); document.getElementById('countryPanel')?.classList.remove('show'); }
+  if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  if (e.key === '=' || e.key === '+') zoomIn();
+  if (e.key === '-') zoomOut();
+});
+document.addEventListener('keyup', e => { G.keys[e.key] = false; });
+
+const DM = { up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight' };
+document.querySelectorAll('.db[data-dir]').forEach(btn => {
+  const k = DM[btn.dataset.dir];
+  btn.addEventListener('pointerdown', () => { G.keys[k] = true; btn.classList.add('pressed'); });
+  btn.addEventListener('pointerup', () => { G.keys[k] = false; btn.classList.remove('pressed'); });
+  btn.addEventListener('pointerleave', () => { G.keys[k] = false; btn.classList.remove('pressed'); });
+});
+function centerPlayer() {}
+
+// ── SEARCH ──
+document.getElementById('goBtn').addEventListener('click', goCity);
+document.getElementById('CI').addEventListener('keydown', e => { if (e.key === 'Enter') goCity(); });
+async function goCity() {
+  const name = document.getElementById('CI').value.trim(); if (!name) return;
+  showToast('Finding ' + name + '...', '#00bfff');
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=1', { headers: { 'User-Agent': 'ArtSpaceCity/1.0' } });
+    const d = await r.json();
+    if (d[0]) {
+      G.pos.lat = parseFloat(d[0].lat); G.pos.lng = parseFloat(d[0].lon);
+      showToast('Welcome to ' + name + '!', '#00ff41');
+      detectCountryFromCoords(G.pos.lat, G.pos.lng);
+      if (G.veh === 'train') trainLoadAround();
+      if (G.veh === 'bus') loadBusData();
+      if (G.veh === 'plane') flyLoadAirports();
+      if (G.veh === 'boat') fetchWaterBodies();
+      if (showFlights) fetchFlights();
+      if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng);
+    } else showToast('Not found!', '#ff4444');
+  } catch (e) { showToast('Network error', '#ff4444'); }
+}
+
+// ── PIN / CONSPIRACY ──
+function togglePin() {
+  G.pinMode = !G.pinMode; const pb = document.getElementById('pinBtn');
+  if (G.pinMode) { pb.innerHTML = '\u{1F4CC} PINNING...'; pb.style.background = '#ff6600'; pb.style.color = '#000'; cv.style.cursor = 'crosshair'; showToast('Click to pin!', '#ff6600'); }
+  else { pb.innerHTML = '\u{1F4CC} PIN'; pb.style.cssText = ''; cv.style.cursor = ''; }
+}
+function toggleOfferFilter() {
+  G.showOffersOnly = !G.showOffersOnly; const b = document.getElementById('offerFilterBtn');
+  if (G.showOffersOnly) { b.style.background = '#ffe600'; b.style.color = '#000'; setZoomLevel(3); }
+  else b.style.cssText = '';
+  showToast(G.showOffersOnly ? 'OFFERS only' : 'All spaces', '#ffe600');
+}
+function toggleRedStrings() {
+  if (G.veh === 'ufo') {
+    // In UFO mode, STRINGS opens the connections panel
+    toggleUfoPanel();
+    return;
+  }
+  G.showRedStrings = !G.showRedStrings; const b = document.getElementById('redStringBtn');
+  if (G.showRedStrings) { b.style.background = '#ff2244'; b.style.color = '#fff'; showToast('Red strings \u{1F441}', '#ff2244'); }
+  else { b.style.cssText = ''; showToast('Strings off', '#00ff41'); }
+}
+function toggleCommentMode() {
+  G.commentMode = !G.commentMode; const b = document.getElementById('commentBtn');
+  if (G.commentMode) { b.style.background = '#ffe600'; b.style.color = '#000'; cv.style.cursor = 'text'; }
+  else { b.style.cssText = ''; cv.style.cursor = ''; }
+}
+
+// ── CANVAS CLICK ──
+cv.addEventListener('click', e => {
+  const w = screenToWorld(e.clientX, e.clientY);
+  // UFO string drawing takes priority
+  if (ufoDrawingString && ufoHandleMapClick(w.lat, w.lng)) return;
+  if (G.commentMode) { G.commentMode = false; cv.style.cursor = ''; document.getElementById('commentBtn').style.cssText = ''; const t = prompt('Drop your note:'); if (t) { G.comments.push({ lat:w.lat, lng:w.lng, text:t, from:'Anonymous', timestamp:new Date().toISOString().split('T')[0] }); showToast('Note dropped!', '#ffe600'); } return; }
+  if (G.pinMode) { G.pinMode = false; document.getElementById('pinBtn').innerHTML = '\u{1F4CC} PIN'; document.getElementById('pinBtn').style.cssText = ''; cv.style.cursor = ''; openNewPin(w.lat, w.lng); return; }
+  let clicked = false;
+  G.listings.forEach(l => { const s = worldToScreen(l.lat, l.lng); if (Math.abs(e.clientX - s.x) < 15 && Math.abs(e.clientY - s.y + 10) < 20) { openView(l); clicked = true; } });
+  if (!clicked && !(G.veh === 'plane' && planeAirborne)) { G.pos.lat = w.lat; G.pos.lng = w.lng; }
+});
+
+// ── VEHICLE CHANGE ──
+function setV(btn) {
+  const nv = btn.dataset.v; if (nv === G.veh) return;
+  G.veh = nv; planeAirborne = false; boatNearWater = false;
+  document.querySelectorAll('.vbtn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
+  const v = VEH[G.veh];
+
+  // Update speed display based on vehicle type
+  if (nv === 'plane') document.getElementById('SPD').innerHTML = '\u2708<br>' + curAircraft.kmh + ' km/h';
+  else if (nv === 'boat') document.getElementById('SPD').innerHTML = '\u26F5<br>' + curBoat.kmh;
+  else if (nv === 'bike') document.getElementById('SPD').innerHTML = '\u{1F6B2}<br>' + curBike.kmh;
+  else if (nv === 'car') document.getElementById('SPD').innerHTML = '\u{1F697}<br>' + curCar.kmh;
+  else document.getElementById('SPD').innerHTML = v.em + '<br>' + v.kmh;
+
+  document.getElementById('VS').innerHTML = v.em + ' ' + v.lbl;
+  showToast('Vehicle: ' + v.em + ' ' + v.lbl, '#ffe600');
+
+  // Clear all transit
+  trainClear(); busStops = []; flyClear(); waterBodies = []; carClear();
+  document.getElementById('transitInfo').style.display = 'none';
+
+  // Load mode-specific data + open variant selector
+  if (nv === 'train') trainLoadAround();
+  if (nv === 'bus') loadBusData();
+  if (nv === 'plane') { flyLoadAirports(); if (!showFlights) toggleFlights(); setTimeout(openAircraftSelector, 300); }
+  if (nv === 'boat') { fetchWaterBodies(); setTimeout(openBoatSelector, 300); }
+  if (nv === 'bike') setTimeout(openBikeSelector, 300);
+  if (nv === 'car') { carLoadRoads(); carLoadStations(); carFetchFuelPrices(); setTimeout(openCarSelector, 300); }
+}
+
+// ── MOVEMENT ──
+function updateMovement() {
+  const k = G.keys;
+  const up = k.ArrowUp || k.w || k.W;
+  const dn = k.ArrowDown || k.s || k.S;
+  const lt = k.ArrowLeft || k.a || k.A;
+  const rt = k.ArrowRight || k.d || k.D;
+  const mv = up || dn || lt || rt;
+
+  if (G.veh === 'plane') {
+    planeUpdateControls(); // mode-plane.js handles all plane movement
+
+  } else if (G.veh === 'train' && trainTracks.length > 0 && mv) {
+    // ── TRAIN: snap to tracks with gap jumping ──
+    const s = VEH.train.spd;
+    let nl = G.pos.lat, ng = G.pos.lng;
+    if (up) { nl += s; G.dir = 'up'; }
+    if (dn) { nl -= s; G.dir = 'down'; }
+    if (lt) { ng -= s; G.dir = 'left'; }
+    if (rt) { ng += s; G.dir = 'right'; }
+    const sn = snapToTrack(nl, ng);
+    if (sn.snapped && sn.tight) {
+      // On track — full speed
+      G.pos.lat = sn.lat; G.pos.lng = sn.lng;
+    } else if (sn.snapped && !sn.tight) {
+      // Gap jumping — slower, pulled toward track
+      G.pos.lat = sn.lat; G.pos.lng = sn.lng;
+    } else {
+      // Off track — crawl speed
+      const slow = VEH.walk.spd * 0.4;
+      if (up) G.pos.lat += slow; if (dn) G.pos.lat -= slow;
+      if (lt) G.pos.lng -= slow; if (rt) G.pos.lng += slow;
+    }
+
+  } else if (G.veh === 'boat') {
+    // ── BOAT: water boundary enforcement ──
+    if (!mv) return;
+    if (boatNearWater) {
+      // On water — full boat speed
+      const spd = curBoat.spd;
+      let nl = G.pos.lat, ng = G.pos.lng;
+      if (up) { nl += spd; G.dir = 'up'; }
+      if (dn) { nl -= spd; G.dir = 'down'; }
+      if (lt) { ng -= spd; G.dir = 'left'; }
+      if (rt) { ng += spd; G.dir = 'right'; }
+      // Check if new position is still on water
+      if (isOnWater(nl, ng)) {
+        G.pos.lat = nl; G.pos.lng = ng;
+      } else {
+        // Would leave water — allow very slow crawl (dragging boat ashore)
+        const crawl = VEH.walk.spd * 0.15;
+        if (up) G.pos.lat += crawl; if (dn) G.pos.lat -= crawl;
+        if (lt) G.pos.lng -= crawl; if (rt) G.pos.lng += crawl;
+      }
+    } else {
+      // On land — barely move (dragging boat to water)
+      const crawl = VEH.walk.spd * 0.15;
+      if (up) { G.pos.lat += crawl; G.dir = 'up'; }
+      if (dn) { G.pos.lat -= crawl; G.dir = 'down'; }
+      if (lt) { G.pos.lng -= crawl; G.dir = 'left'; }
+      if (rt) { G.pos.lng += crawl; G.dir = 'right'; }
+    }
+
+  } else if (G.veh === 'bike') {
+    const spd = curBike.spd;
+    if (up) { G.pos.lat += spd; G.dir = 'up'; }
+    if (dn) { G.pos.lat -= spd; G.dir = 'down'; }
+    if (lt) { G.pos.lng -= spd; G.dir = 'left'; }
+    if (rt) { G.pos.lng += spd; G.dir = 'right'; }
+
+  } else if (G.veh === 'car') {
+    // ── CAR: road snapping + fuel + speed by road type ──
+    if (!mv) return;
+    if (carFuel <= 0 && !curCar.isElectric) {
+      // Out of fuel — can't move
+      if (G.frameN % 60 === 0) showToast('\u26FD OUT OF FUEL! Find a station!', '#ff2244');
+      return;
+    }
+    let baseSpd = curCar.spd;
+    let nl = G.pos.lat, ng = G.pos.lng;
+    if (up) { nl += baseSpd; G.dir = 'up'; }
+    if (dn) { nl -= baseSpd; G.dir = 'down'; }
+    if (lt) { ng -= baseSpd; G.dir = 'left'; }
+    if (rt) { ng += baseSpd; G.dir = 'right'; }
+    // Snap to road
+    const snap = carSnapToRoad(nl, ng);
+    if (snap.snapped && snap.tight) {
+      // On road — apply road speed multiplier
+      const mult = ROAD_SPEEDS[snap.roadType] || 1.0;
+      // SUV bonus on bad roads
+      const offRoadBonus = (curCar.id === 'suv' && mult < 0.5) ? 1.5 : 1.0;
+      const finalSpd = baseSpd * mult * offRoadBonus;
+      nl = G.pos.lat; ng = G.pos.lng;
+      if (up) nl = G.pos.lat + finalSpd;
+      if (dn) nl = G.pos.lat - finalSpd;
+      if (lt) ng = G.pos.lng - finalSpd;
+      if (rt) ng = G.pos.lng + finalSpd;
+      const snap2 = carSnapToRoad(nl, ng);
+      G.pos.lat = snap2.lat; G.pos.lng = snap2.lng;
+      carOnRoad = true;
+    } else if (snap.snapped && !snap.tight) {
+      // Near road — pulled toward it
+      G.pos.lat = snap.lat; G.pos.lng = snap.lng;
+      carOnRoad = false;
+    } else {
+      // Off road — slow (SUV less slow)
+      const offMult = curCar.id === 'suv' ? 0.5 : 0.25;
+      const slow = baseSpd * offMult;
+      if (up) G.pos.lat += slow; if (dn) G.pos.lat -= slow;
+      if (lt) G.pos.lng -= slow; if (rt) G.pos.lng += slow;
+      carOnRoad = false;
+    }
+    // Track distance for odometer
+    carOdometer += haversine(G.pos.lat, G.pos.lng, G.pos.lat - (up ? baseSpd : dn ? -baseSpd : 0), G.pos.lng);
+    // Burn fuel
+    carBurnFuel();
+
+  } else {
+    const s = VEH[G.veh]?.spd || VEH.walk.spd;
+    if (up) { G.pos.lat += s; G.dir = 'up'; }
+    if (dn) { G.pos.lat -= s; G.dir = 'down'; }
+    if (lt) { G.pos.lng -= s; G.dir = 'left'; }
+    if (rt) { G.pos.lng += s; G.dir = 'right'; }
+  }
+}
+
+// ── MAIN LOOP ──
+function loop() {
+  G.frameN++;
+  updateZoomSmooth();
+  updateMovement();
+  if (G.veh === 'plane') flyUpdatePhysics();
+
+  // Periodic checks
+  if (G.frameN % 20 === 0 && G.veh === 'plane') checkAirportProximity();
+  if (G.frameN % 300 === 0 && G.veh === 'plane') { airportCheckReload(); planeWeatherCheck(); }
+  if (G.frameN % 90 === 0 && G.veh === 'train') trainCheckProgressiveLoad();
+  if (G.frameN % 180 === 0 && G.veh === 'boat') boatCheckWater();
+  if (G.frameN % 10 === 0 && G.veh === 'boat') boatUpdateWaterStatus(); // frequent water check
+  if (G.frameN % 120 === 0 && G.veh === 'car') carCheckProgressiveLoad();
+  if (G.frameN % 15 === 0 && G.veh === 'car') carCheckStationProximity();
+  if (G.frameN % 600 === 0) weatherCheck();
+
+  // ── RENDER PIPELINE ──
+  ctx.fillStyle = '#0a0a12'; ctx.fillRect(0, 0, cv.width, cv.height);
+
+  drawTiles();             // 1. Base map tiles
+  drawRailTileOverlay();   // 2. OpenRailwayMap overlay (train mode)
+  drawGrid();              // 3. Coordinate grid
+  drawWaterHighlight();    // 4. Water body highlighting (boat mode)
+  drawTrainTracks();       // 5. Train tracks (Overpass data)
+  drawTrainStations();     // 6. Train stations
+  drawBusStops();          // 7. Bus stops
+  drawCarRoads();          // 7b. Car roads (car mode)
+  drawPetrolStations();    // 7c. Petrol stations (car mode)
+  drawAirports();          // 8. Airports
+  drawFlights();           // 9. Real-time flights
+  drawRedStrings();        // 10. Red string connections
+  drawListings();          // 11. ArtSpace pins
+  drawComments();          // 12. Conspiracy comments
+  // Mode-specific atmospheres
+  drawTrainAtmosphere();   // 13a. Train: clouds, sunshine
+  drawPlaneAtmosphere();   // 13b. Plane: lightning, rain, wind
+  drawUfoAtmosphere();     // 13c. UFO: aurora, static, lightning
+  drawWeather();           // 14. General weather overlay
+  drawPlayer();            // 15. Player sprite
+  drawPlaneAtmosphereEnd();// 15b. End turbulence shake
+  drawHUD();               // 16. Compass + coords
+
+  requestAnimationFrame(loop);
+}
+
+// ── BOOT ──
+document.getElementById('SS').textContent = G.listings.length;
+updateZoomUI(); // Initialize zoom display (G now exists)
+const countryList = document.getElementById('countryList');
+if (countryList) {
+  COUNTRIES.forEach(c => {
+    const row = document.createElement('div');
+    row.className = 'country-row';
+    row.innerHTML = '<span class="country-code">' + c.code + '</span> ' + c.name;
+    row.onclick = () => selectCountry(c.code);
+    countryList.appendChild(row);
+  });
+}
+loop();
