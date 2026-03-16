@@ -152,8 +152,10 @@ function connectBlitzortung() {
   if (blitzRetries >= BLITZ_MAX_RETRIES) return;
 
   try {
-    // Blitzortung public WebSocket for real-time strike data
-    blitzWs = new WebSocket('wss://ws1.blitzortung.org/');
+    // Blitzortung public WebSocket for real-time strike data (port 3000)
+    const servers = ['ws1', 'ws5', 'ws6', 'ws7'];
+    const srv = servers[Math.floor(Math.random() * servers.length)];
+    blitzWs = new WebSocket('wss://' + srv + '.blitzortung.org:3000');
 
     blitzWs.onopen = function() {
       blitzConnected = true;

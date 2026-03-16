@@ -321,11 +321,13 @@ function loop() {
   if (G.frameN % 120 === 0 && G.veh === 'car') carCheckProgressiveLoad();
   if (G.frameN % 15 === 0 && G.veh === 'car') carCheckStationProximity();
   if (G.frameN % 600 === 0) weatherCheck();
+  if (G.frameN % 600 === 0) rainRadarCheck();
 
   // ── RENDER PIPELINE ──
   ctx.fillStyle = '#0a0a12'; ctx.fillRect(0, 0, cv.width, cv.height);
 
   drawTiles();             // 1. Base map tiles
+  drawRainRadar();         // 1b. RainViewer precipitation radar overlay
   drawRailTileOverlay();   // 2. OpenRailwayMap overlay (train mode)
   drawGrid();              // 3. Coordinate grid
   drawWaterHighlight();    // 4. Water body highlighting (boat mode)

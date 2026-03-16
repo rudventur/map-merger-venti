@@ -171,3 +171,132 @@ function weatherCheck() {
     fetchWeather(G.pos.lat, G.pos.lng);
   }
 }
+
+// ═══════════════════════════════════════════════════════════════
+//  RAINVIEWER — Real-time precipitation radar overlay tiles
+//  Free API, no key needed. Global coverage, 10-min updates.
+// ═══════════════════════════════════════════════════════════════
+
+let rainRadarPath = null;    // e.g. "/v2/radar/1609401600"
+let rainRadarHost = null;    // e.g. "https://tilecache.rainviewer.com"
+let rainRadarLastFetch = 0;
+let rainRadarTiles = {};     // cache: "z/x/y" → { img, loaded }
+let rainRadarEnabled = false;
+
+async function fetchRainRadarMeta() {
+  try {
+    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json');
+    const data = await res.json();
+    rainRadarHost = data.host || 'https://tilecache.rainviewer.com';
+    const past = data.radar?.past;
+    if (past && past.length > 0) {
+      const latest = past[past.length - 1];
+      if (latest.path !== rainRadarPath) {
+        rainRadarPath = latest.path;
+        rainRadarTiles = {}; // clear cache on new timestamp
+      }
+    }
+    rainRadarLastFetch = Date.now();
+  } catch (e) { /* silent */ }
+}
+
+function getRainRadarTile(z, x, y) {
+  // RainViewer supports zoom 1-7
+  const rz = Math.min(7, Math.max(1, z));
+  const key = rz + '/' + x + '/' + y;
+  if (rainRadarTiles[key]) return rainRadarTiles[key];
+
+  // Load tile
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  const tile = { img, loaded: false, error: false };
+  img.onload = function() { tile.loaded = true; };
+  img.onerror = function() { tile.error = true; };
+  // Color scheme 2 (universal blue-green-yellow-red), smooth=1, snow=1
+  img.src = rainRadarHost + rainRadarPath + '/256/' + rz + '/' + x + '/' + y + '/2/1_1.png';
+  rainRadarTiles[key] = tile;
+
+  // Limit cache size
+  const keys = Object.keys(rainRadarTiles);
+  if (keys.length > 100) {
+    keys.slice(0, 30).forEach(k => delete rainRadarTiles[k]);
+  }
+  return tile;
+}
+
+// Convert lat/lng to slippy tile coords at given zoom
+function latLngToTile(lat, lng, zoom) {
+  const n = Math.pow(2, zoom);
+  const x = Math.floor((lng + 180) / 360 * n);
+  const latRad = lat * Math.PI / 180;
+  const y = Math.floor((1 - Math.log(Math.tan(latRad) + 1 / Math.cos(latRad)) / Math.PI) / 2 * n);
+  return { x: Math.max(0, Math.min(n - 1, x)), y: Math.max(0, Math.min(n - 1, y)) };
+}
+
+// Convert tile coords back to lat/lng (top-left corner)
+function tileToBounds(x, y, zoom) {
+  const n = Math.pow(2, zoom);
+  const lng1 = x / n * 360 - 180;
+  const lng2 = (x + 1) / n * 360 - 180;
+  const lat1Rad = Math.atan(Math.sinh(Math.PI * (1 - 2 * y / n)));
+  const lat2Rad = Math.atan(Math.sinh(Math.PI * (1 - 2 * (y + 1) / n)));
+  return { lat1: lat1Rad * 180 / Math.PI, lng1, lat2: lat2Rad * 180 / Math.PI, lng2 };
+}
+
+function drawRainRadar() {
+  if (!rainRadarEnabled || !rainRadarPath || !G.overlays.weather) return;
+
+  // Determine which tiles cover the screen
+  const rz = Math.min(7, Math.max(1, Math.floor(getZoom().z * 0.6))); // radar zoom lower than map zoom
+  const corners = [
+    screenToWorld(0, 0),
+    screenToWorld(cv.width, 0),
+    screenToWorld(0, cv.height),
+    screenToWorld(cv.width, cv.height)
+  ];
+  const latMin = Math.min(corners[0].lat, corners[1].lat, corners[2].lat, corners[3].lat);
+  const latMax = Math.max(corners[0].lat, corners[1].lat, corners[2].lat, corners[3].lat);
+  const lngMin = Math.min(corners[0].lng, corners[1].lng, corners[2].lng, corners[3].lng);
+  const lngMax = Math.max(corners[0].lng, corners[1].lng, corners[2].lng, corners[3].lng);
+
+  const tl = latLngToTile(latMax, lngMin, rz);
+  const br = latLngToTile(latMin, lngMax, rz);
+
+  ctx.globalAlpha = 0.45; // semi-transparent radar overlay
+
+  for (let tx = tl.x; tx <= br.x; tx++) {
+    for (let ty = tl.y; ty <= br.y; ty++) {
+      const tile = getRainRadarTile(rz, tx, ty);
+      if (!tile.loaded || tile.error) continue;
+
+      const bounds = tileToBounds(tx, ty, rz);
+      const s1 = worldToScreen(bounds.lat1, bounds.lng1);
+      const s2 = worldToScreen(bounds.lat2, bounds.lng2);
+      const w = s2.x - s1.x;
+      const h = s2.y - s1.y;
+      if (w > 1 && h > 1) {
+        try { ctx.drawImage(tile.img, s1.x, s1.y, w, h); } catch (e) {}
+      }
+    }
+  }
+
+  ctx.globalAlpha = 1;
+}
+
+// Refresh radar metadata periodically (every 5 min)
+function rainRadarCheck() {
+  if (!rainRadarEnabled || !G.overlays.weather) return;
+  if (Date.now() - rainRadarLastFetch > 300000) {
+    fetchRainRadarMeta();
+  }
+}
+
+function toggleRainRadar() {
+  rainRadarEnabled = !rainRadarEnabled;
+  if (rainRadarEnabled) {
+    fetchRainRadarMeta();
+    showToast('\u{1F327} Radar ON \u2014 real-time precipitation', '#00bfff');
+  } else {
+    showToast('\u{1F327} Radar OFF', '#666');
+  }
+}
