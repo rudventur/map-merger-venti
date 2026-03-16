@@ -86,11 +86,16 @@ function setZoomLevel(z) {
   t.addEventListener('click', e => sfy(e.clientY));
 })();
 
-// Scroll wheel — smooth, no cooldown
+// Scroll wheel — smooth, trackpad-friendly
 document.addEventListener('wheel', e => {
-  // Smaller delta = smoother. Normalize across browsers.
-  const delta = e.deltaY > 0 ? -0.4 : 0.4;
-  _zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, _zoomTarget + delta));
+  // Normalize: trackpads send many small deltas, mice send large discrete ones.
+  // deltaMode 1 = lines (~40px each), 0 = pixels
+  const px = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
+  // Scale so ~120px (one mouse notch) ≈ 0.35 zoom levels; trackpad micro-scrolls stay gentle
+  const delta = -px / 340;
+  // Clamp individual step so even a fast flick can't jump more than 0.6 levels at once
+  const clamped = Math.max(-0.6, Math.min(0.6, delta));
+  _zoomTarget = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, _zoomTarget + clamped));
   e.preventDefault();
 }, { passive: false });
 
