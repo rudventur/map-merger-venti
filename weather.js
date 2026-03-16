@@ -27,7 +27,7 @@ async function fetchWeather(lat, lng) {
   try {
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + lat.toFixed(4) +
       '&longitude=' + lng.toFixed(4) +
-      '&current=weather_code,temperature_2m,precipitation,wind_speed_10m,cloud_cover' +
+      '&current=weather_code,temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,cloud_cover,visibility' +
       '&forecast_days=1';
     const res = await fetch(url);
     weatherData = await res.json();
@@ -123,6 +123,16 @@ function drawWeather() {
     });
   }
 
+  // ── Visibility reduction ──
+  const vis = cur.visibility;
+  if (vis && vis < 5000) {
+    const fogAlpha = Math.min(0.2, (1 - vis / 5000) * 0.2);
+    ctx.globalAlpha = fogAlpha;
+    ctx.fillStyle = '#99a';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.globalAlpha = 1;
+  }
+
   // ── Lightning flash (thunderstorm) ──
   if (isStorm && G.frameN % 300 < 3 && Math.random() < 0.3) {
     ctx.globalAlpha = 0.15 + Math.random() * 0.1;
@@ -139,15 +149,19 @@ function drawWeather() {
   // ── Weather HUD (bottom-left info) ──
   const name = WEATHER_NAMES[wc] || ('Code ' + wc);
   const tempStr = temp !== undefined ? Math.round(temp) + '\u00B0C' : '?';
+  const visStr = vis ? (vis >= 10000 ? '' : ' \u{1F441} ' + (vis >= 1000 ? (vis/1000).toFixed(1) + 'km' : vis + 'm')) : '';
+  const windDir = cur.wind_direction_10m;
+  const dirStr = windDir !== undefined ? ' ' + Math.round(windDir) + '\u00B0' : '';
+  const hudW = 185;
   ctx.fillStyle = 'rgba(0,0,0,0.6)';
-  ctx.fillRect(6, cv.height - 48, 140, 20);
+  ctx.fillRect(6, cv.height - 48, hudW, 20);
   ctx.strokeStyle = 'rgba(0,191,255,0.25)';
   ctx.lineWidth = 1;
-  ctx.strokeRect(6, cv.height - 48, 140, 20);
+  ctx.strokeRect(6, cv.height - 48, hudW, 20);
   ctx.fillStyle = 'rgba(0,191,255,0.6)';
   ctx.font = "10px 'VT323',monospace";
   ctx.textAlign = 'left';
-  ctx.fillText('\u{1F326} ' + name + ' ' + tempStr + ' \u{1F32C} ' + Math.round(wind) + 'km/h', 10, cv.height - 34);
+  ctx.fillText('\u{1F326} ' + name + ' ' + tempStr + ' \u{1F32C} ' + Math.round(wind) + 'km/h' + dirStr + visStr, 10, cv.height - 34);
 }
 
 // Check if weather needs refreshing (every 10 min or 50km movement)

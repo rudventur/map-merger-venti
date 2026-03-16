@@ -313,7 +313,7 @@ function loop() {
 
   // Periodic checks
   if (G.frameN % 20 === 0 && G.veh === 'plane') checkAirportProximity();
-  if (G.frameN % 300 === 0 && G.veh === 'plane') { airportCheckReload(); planeWeatherCheck(); }
+  if (G.frameN % 300 === 0 && G.veh === 'plane') { airportCheckReload(); planeWeatherCheck(); updateBlitzortungBounds(); }
   if (G.frameN % 90 === 0 && G.veh === 'train') trainCheckProgressiveLoad();
   if (G.frameN % 45 === 0 && G.veh === 'train' && Object.values(G.keys).some(Boolean)) trainLoadForward();
   if (G.frameN % 180 === 0 && G.veh === 'boat') boatCheckWater();
