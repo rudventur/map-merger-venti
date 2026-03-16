@@ -145,7 +145,7 @@ canvas#world{position:fixed;inset:0;z-index:1}
 
 <!-- HUD -->
 <div class="hud">
-  <div class="htitle">&#127912; ArtSpace<br>City</div>
+  <div class="htitle" id="logoBtn" style="cursor:pointer" onclick="toggleFullscreen()" title="Toggle fullscreen">&#127912; ArtSpace<br>City</div>
   <div class="hsep"></div>
   <div class="csearch">
     <input class="cinput" id="CI" type="text" placeholder="City, country...">
@@ -244,13 +244,20 @@ canvas#world{position:fixed;inset:0;z-index:1}
 <!-- AIRPORT INDICATOR -->
 <div class="airport-ind" id="airInd">&#128747; NEAR AIRPORT</div>
 
-<!-- D-PAD -->
+<!-- D-PAD (classic mode) -->
 <div class="dpad">
   <div></div><div class="db" data-dir="up">&#9650;</div><div></div>
   <div class="db" data-dir="left">&#9668;</div>
-  <div class="db db-c" onclick="centerPlayer()">&#9679;</div>
+  <div class="db db-c" onclick="centerPlayer()" title="Toggle 360° mode">&#127918;</div>
   <div class="db" data-dir="right">&#9658;</div>
   <div></div><div class="db" data-dir="down">&#9660;</div><div></div>
+</div>
+
+<!-- VIRTUAL JOYSTICK (analog mode) -->
+<div id="joystickZone" style="display:none;position:fixed;bottom:64px;right:10px;z-index:800;width:120px;height:120px;touch-action:none">
+  <canvas id="joystickCanvas" width="120" height="120" style="width:120px;height:120px"></canvas>
+  <div style="position:absolute;top:-20px;left:0;width:100%;text-align:center;font-family:'Press Start 2P',monospace;font-size:.14rem;color:rgba(0,255,65,0.3)">360° ANALOG</div>
+  <button onclick="toggleAnalogMode()" style="position:absolute;top:-20px;right:0;background:none;border:1px solid rgba(0,255,65,0.3);color:rgba(0,255,65,0.4);padding:1px 4px;font-family:'Press Start 2P',monospace;font-size:.12rem;cursor:pointer;border-radius:2px">D-PAD</button>
 </div>
 
 <!-- VEHICLE BAR -->

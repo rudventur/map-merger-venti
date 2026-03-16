@@ -8,6 +8,27 @@ var busStops = [];
 var waterBodies = [];
 var boatNearWater = false;
 
+// ── FULLSCREEN ──
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+}
+// Auto-enter fullscreen on first user interaction (browsers block auto-fullscreen without gesture)
+(function() {
+  function autoFS() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    }
+    document.removeEventListener('click', autoFS);
+    document.removeEventListener('keydown', autoFS);
+  }
+  document.addEventListener('click', autoFS, { once: true });
+  document.addEventListener('keydown', autoFS, { once: true });
+})();
+
 // ── LAYERS MENU ──
 function toggleLayersMenu() {
   document.getElementById('layersMenu').classList.toggle('show');
@@ -143,7 +164,14 @@ function selectCountry(code) {
   G.pos.lng = country.lng;
   setZoomLevel(5); // Country zoom
 
+  // Load mode-specific data for the new location
   trainOnCountrySelect(country);
+  if (G.veh === 'bus') loadBusData();
+  if (G.veh === 'plane') flyLoadAirports();
+  if (G.veh === 'boat') fetchWaterBodies();
+  if (G.veh === 'car') { carLoadRoads(); carLoadStations(); }
+  if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng);
+  if (typeof showFlights !== 'undefined' && showFlights) fetchFlights();
 }
 
 function detectCountryFromCoords(lat, lng) {
@@ -210,6 +238,14 @@ function drawHUD() {
   ctx.fillText('N', cx, cy - 9);
   ctx.fillStyle = 'rgba(0,255,65,0.12)';
   ctx.fillText('S', cx, cy + 13); ctx.fillText('W', cx - 13, cy + 3); ctx.fillText('E', cx + 13, cy + 3);
+  // Heading needle in analog mode
+  if (G.analogMode) {
+    const hRad = G.heading * Math.PI / 180;
+    const nx = cx + Math.sin(hRad) * 14, ny = cy - Math.cos(hRad) * 14;
+    ctx.strokeStyle = 'rgba(0,191,255,0.6)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(nx, ny); ctx.stroke();
+    ctx.fillStyle = '#00bfff'; ctx.beginPath(); ctx.arc(nx, ny, 2.5, 0, Math.PI * 2); ctx.fill();
+  }
   ctx.restore();
   ctx.fillStyle = 'rgba(0,255,65,0.2)'; ctx.font = "10px 'VT323',monospace"; ctx.textAlign = 'left';
   ctx.fillText(G.pos.lat.toFixed(5) + '\u00B0N  ' + G.pos.lng.toFixed(5) + '\u00B0' + (G.pos.lng >= 0 ? 'E' : 'W'), 8, cv.height - 62);
@@ -454,6 +490,16 @@ function updateDashboard() {
   const el = document.getElementById('dashboardContent');
   if (!el) return;
 
+  // ── Search bar at top of dashboard ──
+  let searchHtml = '<div style="margin-bottom:8px">';
+  searchHtml += '<div style="font-family:\'Press Start 2P\',monospace;font-size:.18rem;color:rgba(1,18,137,0.5);margin-bottom:4px">\u{1F50D} DISCOVER</div>';
+  searchHtml += '<div style="display:flex;gap:4px">';
+  searchHtml += '<input id="dashSearch" type="text" placeholder="Search places..." style="flex:1;background:#000;color:#6688ff;border:1.5px solid rgba(1,18,137,0.4);padding:4px 6px;border-radius:3px;font-family:VT323,monospace;font-size:.9rem;outline:none">';
+  searchHtml += '<button onclick="dashboardSearch()" style="background:#000;border:1.5px solid #011289;color:#6688ff;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:VT323,monospace;font-size:.85rem;white-space:nowrap">GO</button>';
+  searchHtml += '</div>';
+  searchHtml += '<div id="dashSearchResults" style="margin-top:4px"></div>';
+  searchHtml += '</div>';
+
   // Collect all items: comments (notes) + listings (polaroids) + notebook entries
   const items = [];
 
@@ -475,7 +521,8 @@ function updateDashboard() {
   }
 
   if (items.length === 0) {
-    el.innerHTML = '<div style="color:rgba(1,18,137,0.4);padding:12px;font-size:.85rem;text-align:center">Nothing pinned yet.<br>Drop notes or explore!</div>';
+    el.innerHTML = searchHtml + '<div style="color:rgba(1,18,137,0.4);padding:12px;font-size:.85rem;text-align:center">Nothing pinned yet.<br>Drop notes or explore!</div>';
+    _dashSearchBind();
     return;
   }
 
@@ -532,7 +579,45 @@ function updateDashboard() {
 
   if (scale === 'small') html += '</div>';
 
-  el.innerHTML = html;
+  el.innerHTML = searchHtml + html;
+  _dashSearchBind();
+}
+
+// Bind Enter key in dashboard search input
+function _dashSearchBind() {
+  const inp = document.getElementById('dashSearch');
+  if (inp) inp.addEventListener('keydown', e => { if (e.key === 'Enter') dashboardSearch(); });
+}
+
+// Dashboard search — queries Nominatim and sprinkles results on map
+async function dashboardSearch() {
+  const inp = document.getElementById('dashSearch');
+  const resEl = document.getElementById('dashSearchResults');
+  if (!inp || !resEl) return;
+  const q = inp.value.trim();
+  if (!q) return;
+  resEl.innerHTML = '<div style="color:rgba(1,18,137,0.5);font-size:.75rem;font-style:italic">Searching...</div>';
+  try {
+    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&limit=8', { headers: { 'User-Agent': 'ArtSpaceCity/1.0' } });
+    const data = await r.json();
+    if (!data.length) { resEl.innerHTML = '<div style="color:#ff4444;font-size:.75rem">Nothing found</div>'; return; }
+    // Fly to first result
+    G.pos.lat = parseFloat(data[0].lat); G.pos.lng = parseFloat(data[0].lon);
+    detectCountryFromCoords(G.pos.lat, G.pos.lng);
+    // Sprinkle all results onto the map as search discoveries
+    sprinkleSearchResults(q, data);
+    // Show results in dashboard
+    let rhtml = '';
+    data.forEach((d, i) => {
+      const lat = parseFloat(d.lat), lon = parseFloat(d.lon);
+      const label = d.display_name.split(',').slice(0, 2).join(',');
+      rhtml += '<div style="padding:3px 5px;cursor:pointer;font-family:VT323,monospace;font-size:.8rem;color:#6688ff;border-bottom:1px solid rgba(1,18,137,0.12);transition:background .1s" onmouseover="this.style.background=\'rgba(1,18,137,0.1)\'" onmouseout="this.style.background=\'none\'" onclick="dashboardFlyTo(' + lat + ',' + lon + ')">';
+      rhtml += '<span style="color:rgba(200,100,255,0.7)">\u{1F50D}</span> ' + esc(label);
+      rhtml += '</div>';
+    });
+    resEl.innerHTML = rhtml;
+    showToast('\u{1F50D} ' + data.length + ' places found & mapped!', '#011289');
+  } catch (e) { resEl.innerHTML = '<div style="color:#ff4444;font-size:.75rem">Network error</div>'; }
 }
 
 function dashboardFlyTo(lat, lng) {
