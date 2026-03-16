@@ -238,12 +238,13 @@ function screenToWorld(sx, sy) {
 }
 
 // ── Tile loading ──
+// Use OpenStreetMap as reliable base (always works, no API key)
 function tileUrl(x, y, z) {
-  // Warm watercolor-style tiles
-  return `https://tiles.stadiamaps.com/tiles/stamen_watercolor/${z}/${x}/${y}.jpg`;
+  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 }
 function tileUrlLabels(x, y, z) {
-  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
+  // Labels are already in OSM tiles, but we can use Carto labels at high zoom
+  return `https://a.basemaps.cartocdn.com/light_only_labels/${z}/${x}/${y}.png`;
 }
 
 function loadTile(url) {
@@ -279,13 +280,14 @@ function drawTiles() {
   const y0 = Math.floor(cyT - halfH) - 1, y1 = Math.ceil(cyT + halfH) + 1;
   const maxT = Math.pow(2, iz);
 
+  // Apply warm sepia tint to make OSM tiles feel cozy/pet-friendly
+  cx.filter = 'sepia(0.35) saturate(1.2) brightness(1.05) hue-rotate(-10deg)';
   for (let y = y0; y <= y1; y++) {
     for (let x = x0; x <= x1; x++) {
       if (y < 0 || y >= maxT) continue;
       const wx = ((x % maxT) + maxT) % maxT;
       const sx = cv.width / 2 + (x - cxT) * scale;
       const sy = cv.height / 2 + (y - cyT) * scale;
-      // Draw watercolor base
       const img = loadTile(tileUrl(wx, y, iz));
       if (img.complete && img.naturalWidth) {
         cx.drawImage(img, sx, sy, scale + 1, scale + 1);
@@ -293,17 +295,9 @@ function drawTiles() {
         cx.fillStyle = '#d4c5a9';
         cx.fillRect(sx, sy, scale + 1, scale + 1);
       }
-      // Draw label overlay at higher zoom
-      if (iz >= 10) {
-        const lbl = loadTile(tileUrlLabels(wx, y, iz));
-        if (lbl.complete && lbl.naturalWidth) {
-          cx.globalAlpha = 0.45;
-          cx.drawImage(lbl, sx, sy, scale + 1, scale + 1);
-          cx.globalAlpha = 1;
-        }
-      }
     }
   }
+  cx.filter = 'none';
 }
 
 // ── Draw pet pins ──
