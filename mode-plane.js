@@ -88,6 +88,157 @@ let realLightningStrikes = [];
 let lightningLastFetch = 0;
 
 // ═══════════════════════════════════════════════════════════════
+//  BLITZORTUNG REAL-TIME LIGHTNING (WebSocket)
+//  Connects to Blitzortung network for live strike data
+//  Sound delay based on distance / speed of sound (343 m/s)
+// ═══════════════════════════════════════════════════════════════
+
+let blitzWs = null;
+let blitzConnected = false;
+let blitzRetries = 0;
+const BLITZ_MAX_RETRIES = 3;
+let thunderSoundsQueued = [];
+
+// Audio context for thunder
+let thunderAudioCtx = null;
+
+function getThunderAudioCtx() {
+  if (!thunderAudioCtx) {
+    try { thunderAudioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { /* no audio */ }
+  }
+  return thunderAudioCtx;
+}
+
+function playThunderSound(distKm) {
+  const audioCtx = getThunderAudioCtx();
+  if (!audioCtx) return;
+  // Volume drops with distance, character changes (close = sharp crack, far = low rumble)
+  const vol = Math.max(0.02, Math.min(0.5, 1.0 / (1 + distKm * 0.05)));
+  const baseFreq = distKm < 5 ? 120 : distKm < 20 ? 80 : 50; // closer = higher crack
+  const duration = distKm < 5 ? 0.8 : distKm < 20 ? 1.5 : 2.5; // far = longer rumble
+
+  try {
+    // Create thunder-like sound: filtered noise burst + low rumble
+    const now = audioCtx.currentTime;
+
+    // Noise burst (crack)
+    const bufSize = Math.floor(audioCtx.sampleRate * duration);
+    const buf = audioCtx.createBuffer(1, bufSize, audioCtx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) {
+      const t = i / audioCtx.sampleRate;
+      const env = Math.exp(-t * (distKm < 5 ? 3 : 1.5)) * (0.5 + 0.5 * Math.random());
+      data[i] = (Math.random() * 2 - 1) * env;
+    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+
+    // Low-pass filter (far thunder = more muffled)
+    const filt = audioCtx.createBiquadFilter();
+    filt.type = 'lowpass';
+    filt.frequency.value = baseFreq + (distKm < 10 ? 200 : 50);
+
+    const gain = audioCtx.createGain();
+    gain.gain.value = vol;
+
+    src.connect(filt); filt.connect(gain); gain.connect(audioCtx.destination);
+    src.start(now);
+    src.stop(now + duration + 0.5);
+  } catch (e) { /* audio error, silent */ }
+}
+
+function connectBlitzortung() {
+  if (blitzWs && blitzWs.readyState <= 1) return; // already open/connecting
+  if (blitzRetries >= BLITZ_MAX_RETRIES) return;
+
+  try {
+    // Blitzortung public WebSocket for real-time strike data (port 3000)
+    const servers = ['ws1', 'ws5', 'ws6', 'ws7'];
+    const srv = servers[Math.floor(Math.random() * servers.length)];
+    blitzWs = new WebSocket('wss://' + srv + '.blitzortung.org:3000');
+
+    blitzWs.onopen = function() {
+      blitzConnected = true;
+      blitzRetries = 0;
+      // Request strikes in a wide area around current position
+      const bounds = {
+        west: Math.floor(G.pos.lng - 15),
+        east: Math.ceil(G.pos.lng + 15),
+        south: Math.floor(G.pos.lat - 10),
+        north: Math.ceil(G.pos.lat + 10)
+      };
+      blitzWs.send(JSON.stringify(bounds));
+      showToast('\u26A1 Lightning data connected', '#ffe600');
+    };
+
+    blitzWs.onmessage = function(ev) {
+      try {
+        const d = JSON.parse(ev.data);
+        if (d.lat !== undefined && d.lon !== undefined) {
+          const strikeTime = d.time ? d.time / 1000000 : Date.now(); // Blitzortung sends nanoseconds
+          const strike = { lat: d.lat, lon: d.lon, time: Date.now(), realTime: strikeTime, sig: d.sig || 0 };
+          realLightningStrikes.push(strike);
+
+          // Calculate sound delay: distance in km / 0.343 km/s = delay in seconds
+          const distKm = haversine(G.pos.lat, G.pos.lng, d.lat, d.lon);
+          if (distKm < 100) {
+            const delaySec = distKm / 0.343; // speed of sound ≈ 343 m/s
+            const delayMs = Math.min(delaySec * 1000, 30000); // cap at 30s
+            thunderSoundsQueued.push({ time: Date.now() + delayMs, distKm });
+          }
+
+          // Limit stored strikes
+          if (realLightningStrikes.length > 200) {
+            realLightningStrikes = realLightningStrikes.slice(-100);
+          }
+        }
+      } catch (e) { /* parse error */ }
+    };
+
+    blitzWs.onclose = function() {
+      blitzConnected = false;
+      blitzRetries++;
+      // Retry after delay
+      if (blitzRetries < BLITZ_MAX_RETRIES) {
+        setTimeout(connectBlitzortung, 5000 * blitzRetries);
+      }
+    };
+
+    blitzWs.onerror = function() {
+      blitzConnected = false;
+    };
+  } catch (e) {
+    blitzConnected = false;
+    blitzRetries++;
+  }
+}
+
+function disconnectBlitzortung() {
+  if (blitzWs) { try { blitzWs.close(); } catch (e) {} blitzWs = null; }
+  blitzConnected = false;
+}
+
+function updateBlitzortungBounds() {
+  if (!blitzWs || blitzWs.readyState !== 1) return;
+  const bounds = {
+    west: Math.floor(G.pos.lng - 15),
+    east: Math.ceil(G.pos.lng + 15),
+    south: Math.floor(G.pos.lat - 10),
+    north: Math.ceil(G.pos.lat + 10)
+  };
+  try { blitzWs.send(JSON.stringify(bounds)); } catch (e) {}
+}
+
+// Process queued thunder sounds (delayed by distance / speed of sound)
+function processThunderSounds() {
+  const now = Date.now();
+  thunderSoundsQueued = thunderSoundsQueued.filter(t => {
+    if (now >= t.time) { playThunderSound(t.distKm); return false; }
+    return t.time - now < 60000; // discard if > 60s away
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  SECTION 3: HARDCODED MAJOR AIRPORTS
 //  ~5 per country. Instant load, no Overpass needed.
 // ═══════════════════════════════════════════════════════════════
@@ -456,6 +607,7 @@ function boardPlane() {
     planeSpeed = curAircraft.spd * 0.3; // start with some speed immediately
     showToast('\u2708 ' + curAircraft.name + ' SCRAMBLE!', curAircraft.color);
     if (G.zoom > 9) { setZoomLevel(9); }
+    connectBlitzortung();
     return;
   }
   if (!nearAirport) { showToast('Get to an airport!', '#ff4444'); return; }
@@ -463,6 +615,7 @@ function boardPlane() {
   planeSpeed = curAircraft.spd * 0.3; // start with some speed immediately
   showToast('\u2708 ' + curAircraft.name + ' TAKEOFF from ' + (nearAirport.iata || nearAirport.name) + '!', curAircraft.color);
   if (G.zoom > 9) { setZoomLevel(9); }
+  connectBlitzortung(); // Start receiving real lightning data
 }
 
 function landPlane() {
@@ -471,6 +624,7 @@ function landPlane() {
   }
   planeAirborne = false; targetAltitude = 0; planeSpeed = 0;
   planeLandingMode = false;
+  disconnectBlitzortung();
   const where = nearAirport ? (nearAirport.iata || nearAirport.name) : 'field landing';
   showToast('\u2708 Landed at ' + where + '!', '#ffe600');
   setZoomLevel(15);
@@ -661,11 +815,22 @@ function flyUpdatePhysics() {
 
 async function fetchPlaneWeather() {
   try {
+    // Enhanced: get hourly cloud layers, precipitation, wind direction, visibility
     const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + G.pos.lat.toFixed(2) +
       '&longitude=' + G.pos.lng.toFixed(2) +
-      '&current=weather_code,temperature_2m,precipitation,wind_speed_10m,cloud_cover';
+      '&current=weather_code,temperature_2m,precipitation,wind_speed_10m,wind_direction_10m,cloud_cover,visibility' +
+      '&hourly=cloud_cover_low,cloud_cover_mid,cloud_cover_high,precipitation,wind_speed_10m,wind_direction_10m' +
+      '&forecast_hours=1';
     const res = await fetch(url);
-    planeWeather = (await res.json()).current;
+    const data = await res.json();
+    planeWeather = data.current;
+    // Attach cloud layer data for altitude-specific rendering
+    if (data.hourly) {
+      planeWeather._cloudLow = data.hourly.cloud_cover_low?.[0] || 0;
+      planeWeather._cloudMid = data.hourly.cloud_cover_mid?.[0] || 0;
+      planeWeather._cloudHigh = data.hourly.cloud_cover_high?.[0] || 0;
+      planeWeather._windDir = data.hourly.wind_direction_10m?.[0] || 0;
+    }
     planeWeatherPos = { lat: G.pos.lat, lng: G.pos.lng };
   } catch (e) { /* silent */ }
 }
@@ -682,6 +847,15 @@ function drawPlaneAtmosphere() {
   const realWind = planeWeather?.wind_speed_10m || 0;
   const realCode = planeWeather?.weather_code || 0;
   const isStorm = realCode >= 95;
+  // Real cloud layers from Open-Meteo hourly data
+  const cloudLow = planeWeather?._cloudLow || 0;   // ~2000-6500ft (stratus, cumulus)
+  const cloudMid = planeWeather?._cloudMid || 0;    // ~6500-20000ft (altostratus)
+  const cloudHigh = planeWeather?._cloudHigh || 0;  // ~20000-40000ft (cirrus)
+  const windDir = planeWeather?._windDir || 0;      // degrees
+  const windDirRad = windDir * Math.PI / 180;
+
+  // Process delayed thunder sounds
+  processThunderSounds();
 
   // ── Space view for very high altitude ──
   if (alt > 80000) {
@@ -695,8 +869,62 @@ function drawPlaneAtmosphere() {
     }
   }
 
-  // ── Clouds ──
-  if (alt > 10000 && alt < 50000 && realCloud > 15) {
+  // ── REAL CLOUD LAYERS ──
+  // Low clouds (2000-6500ft) — thick, grey, bottom of view
+  if (cloudLow > 10 && alt > 1500 && alt < 10000) {
+    const inCloud = (alt > 2000 && alt < 6500);
+    const alpha = (cloudLow / 100) * (inCloud ? 0.15 : 0.06);
+    ctx.fillStyle = 'rgba(180,190,200,' + alpha + ')';
+    const nClouds = Math.ceil(cloudLow / 12);
+    for (let i = 0; i < nClouds; i++) {
+      const driftX = Math.cos(windDirRad) * G.frameN * 0.4;
+      const cx = ((driftX + i * 160) % (cv.width + 400)) - 200;
+      const cy = inCloud ? cv.height * (0.3 + Math.sin(i * 1.7) * 0.2)
+                         : cv.height * 0.7 + Math.sin(i * 2.1) * 30;
+      ctx.beginPath(); ctx.ellipse(cx, cy, 60 + i * 8, 22 + i * 3, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // Fog effect when inside low cloud layer
+    if (inCloud && cloudLow > 50) {
+      ctx.globalAlpha = (cloudLow / 100) * 0.08;
+      ctx.fillStyle = '#bcc2cc';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  // Mid clouds (6500-20000ft) — wispy, lighter
+  if (cloudMid > 10 && alt > 5000 && alt < 25000) {
+    const inCloud = (alt > 6500 && alt < 20000);
+    const alpha = (cloudMid / 100) * (inCloud ? 0.1 : 0.04);
+    ctx.fillStyle = 'rgba(200,210,225,' + alpha + ')';
+    const nClouds = Math.ceil(cloudMid / 18);
+    for (let i = 0; i < nClouds; i++) {
+      const driftX = Math.cos(windDirRad) * G.frameN * 0.25;
+      const cx = ((driftX + i * 220) % (cv.width + 400)) - 200;
+      const cy = inCloud ? cv.height * (0.2 + Math.sin(i * 3.1) * 0.25)
+                         : cv.height * 0.15 + Math.sin(i * 2.8) * 40;
+      ctx.beginPath(); ctx.ellipse(cx, cy, 80 + i * 15, 12 + i * 3, 0.2, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // High clouds (20000-40000ft) — thin cirrus, ice crystals
+  if (cloudHigh > 10 && alt > 15000 && alt < 45000) {
+    const inCloud = (alt > 20000 && alt < 40000);
+    const alpha = (cloudHigh / 100) * (inCloud ? 0.06 : 0.03);
+    ctx.fillStyle = 'rgba(220,230,245,' + alpha + ')';
+    const nClouds = Math.ceil(cloudHigh / 25);
+    for (let i = 0; i < nClouds; i++) {
+      const driftX = Math.cos(windDirRad) * G.frameN * 0.15;
+      const cx = ((driftX + i * 300) % (cv.width + 500)) - 250;
+      const cy = inCloud ? cv.height * (0.15 + Math.sin(i * 4.2) * 0.15)
+                         : cv.height * 0.05 + i * 12;
+      // Cirrus = long thin streaks
+      ctx.beginPath(); ctx.ellipse(cx, cy, 120 + i * 20, 5 + i * 2, 0.3 + i * 0.1, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  // Fallback: use total cloud_cover if no layer data
+  if (cloudLow === 0 && cloudMid === 0 && cloudHigh === 0 && realCloud > 15 && alt > 10000 && alt < 50000) {
     const alpha = (realCloud / 100) * 0.08;
     ctx.fillStyle = 'rgba(200,210,230,' + alpha + ')';
     for (let i = 0; i < Math.ceil(realCloud / 15); i++) {
@@ -706,77 +934,143 @@ function drawPlaneAtmosphere() {
     }
   }
 
-  // ── Rain ──
+  // ── RAIN — uses real wind direction for drift ──
   if (realPrec > 0 && alt < 25000) {
     const intensity = Math.min(1, realPrec / 10) * Math.max(0, 1 - alt / 25000);
-    while (planeRainDrops.length < intensity * 100) {
-      planeRainDrops.push({ x: Math.random() * cv.width, y: Math.random() * cv.height, len: 12 + Math.random() * 20, spd: 7 + Math.random() * 5 });
+    const targetDrops = Math.floor(intensity * 150);
+    while (planeRainDrops.length < targetDrops) {
+      planeRainDrops.push({
+        x: Math.random() * cv.width, y: Math.random() * cv.height,
+        len: 12 + Math.random() * 20, spd: 7 + Math.random() * 5
+      });
     }
-    ctx.strokeStyle = 'rgba(150,200,255,' + (intensity * 0.3) + ')'; ctx.lineWidth = 1;
+    // Rain color: heavier = more opaque, bluer
+    const rainAlpha = intensity * 0.35;
+    ctx.strokeStyle = 'rgba(140,190,255,' + rainAlpha + ')'; ctx.lineWidth = 1;
+    // Wind-driven drift using real direction
+    const driftX = Math.sin(windDirRad) * realWind * 0.04;
+    const driftY = Math.cos(windDirRad) * realWind * 0.02;
     planeRainDrops.forEach(p => {
-      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + realWind * 0.05, p.y + p.len); ctx.stroke();
-      p.y += p.spd; p.x += realWind * 0.03;
+      ctx.beginPath(); ctx.moveTo(p.x, p.y);
+      ctx.lineTo(p.x + driftX * 2, p.y + p.len); ctx.stroke();
+      p.y += p.spd + driftY; p.x += driftX;
       if (p.y > cv.height) { p.y = -p.len; p.x = Math.random() * cv.width; }
+      if (p.x > cv.width + 20) p.x = -10;
+      if (p.x < -20) p.x = cv.width + 10;
     });
-    if (planeRainDrops.length > intensity * 100) planeRainDrops.length = Math.floor(intensity * 100);
+    if (planeRainDrops.length > targetDrops) planeRainDrops.length = targetDrops;
+    // Visibility reduction during heavy rain
+    if (realPrec > 5 && alt < 8000) {
+      ctx.globalAlpha = Math.min(0.15, realPrec * 0.01);
+      ctx.fillStyle = '#889';
+      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.globalAlpha = 1;
+    }
   } else { planeRainDrops = []; }
 
-  // ── Lightning ──
+  // ── REAL LIGHTNING — from Blitzortung WebSocket ──
   const now = Date.now();
+
   realLightningStrikes.forEach(strike => {
     const age = now - strike.time;
-    if (age > 3000) return;
+    if (age > 8000) return; // keep visible longer for real strikes
     const s = worldToScreen(strike.lat, strike.lon);
-    if (s.x < -50 || s.x > cv.width + 50 || s.y < -50 || s.y > cv.height + 50) return;
+    if (s.x < -100 || s.x > cv.width + 100 || s.y < -100 || s.y > cv.height + 100) return;
 
-    const fade = 1 - (age / 3000);
-    ctx.fillStyle = 'rgba(255,255,200,' + (fade * 0.3) + ')';
-    ctx.shadowColor = '#ffe666'; ctx.shadowBlur = 20 * fade;
-    ctx.beginPath(); ctx.arc(s.x, s.y, 8 + (1 - fade) * 30, 0, Math.PI * 2); ctx.fill();
+    const distKm = haversine(G.pos.lat, G.pos.lng, strike.lat, strike.lon);
+    const fade = 1 - (age / 8000);
+
+    // Ground strike glow — expanding ring
+    const ringRadius = 6 + (1 - fade) * 50;
+    ctx.fillStyle = 'rgba(255,255,200,' + (fade * 0.2) + ')';
+    ctx.shadowColor = '#ffe666'; ctx.shadowBlur = 15 * fade;
+    ctx.beginPath(); ctx.arc(s.x, s.y, ringRadius, 0, Math.PI * 2); ctx.fill();
+
+    // Sound propagation ring — visible circle expanding at speed of sound
+    // 343 m/s ≈ 0.343 km/s — ring shows where sound has reached
+    const soundDistKm = (age / 1000) * 0.343;
+    if (soundDistKm > 0.5 && soundDistKm < 100) {
+      // Convert km to screen pixels (rough: depends on zoom)
+      const z = getZoom().z;
+      const kmPerPixel = 40075 * Math.cos(G.pos.lat * Math.PI / 180) / (256 * Math.pow(2, z));
+      const soundRadiusPx = soundDistKm / kmPerPixel;
+      if (soundRadiusPx > 2 && soundRadiusPx < cv.width) {
+        const ringFade = Math.max(0, 1 - soundRadiusPx / cv.width);
+        ctx.strokeStyle = 'rgba(200,200,255,' + (ringFade * 0.15 * fade) + ')';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath(); ctx.arc(s.x, s.y, soundRadiusPx, 0, Math.PI * 2); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
     ctx.shadowBlur = 0;
 
-    if (age < 500) {
-      const boltFade = 1 - (age / 500);
-      ctx.strokeStyle = 'rgba(200,220,255,' + (boltFade * 0.7) + ')';
-      ctx.lineWidth = 2; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 12 * boltFade;
+    // Lightning bolt (visible for first 600ms)
+    if (age < 600) {
+      const boltFade = 1 - (age / 600);
+      ctx.strokeStyle = 'rgba(200,220,255,' + (boltFade * 0.8) + ')';
+      ctx.lineWidth = 2.5; ctx.shadowColor = '#aaccff'; ctx.shadowBlur = 15 * boltFade;
+
+      // Main bolt
       ctx.beginPath();
       let ly = Math.max(0, s.y - 300);
       let lx = s.x + (Math.random() - 0.5) * 30;
       ctx.moveTo(lx, ly);
-      const segments = 6 + Math.floor(Math.abs(s.y - ly) / 50);
+      const segments = 8 + Math.floor(Math.abs(s.y - ly) / 40);
       const stepY = (s.y - ly) / segments;
       for (let seg = 0; seg < segments; seg++) {
         ly += stepY;
-        lx = s.x + (Math.random() - 0.5) * 40 * (1 - seg / segments);
+        lx = s.x + (Math.random() - 0.5) * 45 * (1 - seg / segments);
         ctx.lineTo(lx, ly);
+        // Branch bolt (20% chance per segment)
+        if (Math.random() < 0.2 && seg > 1) {
+          ctx.moveTo(lx, ly);
+          const bx = lx + (Math.random() - 0.5) * 60;
+          const by = ly + stepY * (1 + Math.random());
+          ctx.lineTo(bx, by);
+          ctx.moveTo(lx, ly);
+        }
       }
       ctx.lineTo(s.x, s.y);
       ctx.stroke();
       ctx.shadowBlur = 0;
     }
+
+    // Small label showing distance
+    if (age < 4000 && distKm < 200) {
+      ctx.fillStyle = 'rgba(255,255,200,' + (fade * 0.5) + ')';
+      ctx.font = "7px 'VT323',monospace"; ctx.textAlign = 'center';
+      ctx.fillText('\u26A1 ' + Math.round(distKm) + 'km', s.x, s.y + ringRadius + 10);
+    }
   });
 
-  // Screen flash for nearby strikes
+  // Screen flash for nearby strikes (< 10km)
   const recentNearby = realLightningStrikes.find(s =>
-    (now - s.time) < 200 && haversine(G.pos.lat, G.pos.lng, s.lat, s.lon) < 30
+    (now - s.time) < 300 && haversine(G.pos.lat, G.pos.lng, s.lat, s.lon) < 10
   );
   if (recentNearby) {
-    const flashAge = (now - recentNearby.time) / 200;
-    ctx.globalAlpha = (1 - flashAge) * 0.12;
-    ctx.fillStyle = '#fff';
+    const flashAge = (now - recentNearby.time) / 300;
+    ctx.globalAlpha = (1 - flashAge) * 0.18;
+    ctx.fillStyle = '#ffe';
     ctx.fillRect(0, 0, cv.width, cv.height);
     ctx.globalAlpha = 1;
   }
 
-  // Simulated storm strikes when no real data
-  if (isStorm && realLightningStrikes.length === 0 && G.frameN % 120 < 2) {
+  // Simulated storm strikes when no real Blitzortung data available
+  if (isStorm && !blitzConnected && G.frameN % 90 < 2) {
     const strikeLat = G.pos.lat + (Math.random() - 0.5) * 0.5;
     const strikeLon = G.pos.lng + (Math.random() - 0.5) * 0.7;
-    realLightningStrikes.push({ lat: strikeLat, lon: strikeLon, time: now });
+    const strike = { lat: strikeLat, lon: strikeLon, time: now };
+    realLightningStrikes.push(strike);
+    // Simulated thunder too
+    const distKm = haversine(G.pos.lat, G.pos.lng, strikeLat, strikeLon);
+    if (distKm < 80) {
+      thunderSoundsQueued.push({ time: now + (distKm / 0.343) * 1000, distKm });
+    }
   }
 
   // Clean old strikes
-  realLightningStrikes = realLightningStrikes.filter(s => now - s.time < 5000);
+  realLightningStrikes = realLightningStrikes.filter(s => now - s.time < 10000);
 
   // ── Speed lines (supersonic) ──
   if (ac.mach > 1) {
@@ -817,12 +1111,23 @@ function drawPlaneAtmosphere() {
     ctx.save(); ctx.translate((Math.random() - 0.5) * shake, (Math.random() - 0.5) * shake);
   }
 
-  // ── Weather HUD ──
+  // ── Weather HUD — enhanced with real data ──
   if (planeWeather) {
     const temp = planeWeather.temperature_2m;
-    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(6, cv.height - 48, 160, 18);
+    const vis = planeWeather.visibility;
+    const visStr = vis ? (vis >= 10000 ? (vis / 1000).toFixed(0) + 'km' : vis + 'm') : '';
+    const blitzStr = blitzConnected ? ' \u26A1LIVE' : '';
+    const hudW = 230;
+    ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(6, cv.height - 48, hudW, 18);
     ctx.fillStyle = 'rgba(0,191,255,0.5)'; ctx.font = "9px 'VT323',monospace"; ctx.textAlign = 'left';
-    ctx.fillText('\u{1F326} ' + Math.round(temp) + '\u00B0C  \u{1F32C} ' + Math.round(realWind) + 'km/h  \u2601 ' + realCloud + '%', 10, cv.height - 35);
+    let hudText = '\u{1F326} ' + Math.round(temp) + '\u00B0C  \u{1F32C} ' + Math.round(realWind) + 'km/h ' + Math.round(windDir) + '\u00B0  \u2601 ' + realCloud + '%';
+    if (visStr) hudText += '  \u{1F441} ' + visStr;
+    ctx.fillText(hudText, 10, cv.height - 35);
+    // Blitzortung status
+    if (blitzConnected) {
+      ctx.fillStyle = '#ffe600'; ctx.font = "7px 'Press Start 2P',monospace";
+      ctx.fillText('\u26A1 LIVE LIGHTNING', 10, cv.height - 52);
+    }
   }
 }
 
@@ -838,8 +1143,8 @@ function planeWeatherCheck() {
   }
 }
 
-// No Blitzortung fetch — it always gets CORS blocked anyway
-function fetchLightningStrikes() { /* removed — simulated strikes used instead */ }
+// Blitzortung connection managed by connectBlitzortung() / disconnectBlitzortung()
+// Called when boarding plane and when flying over new regions
 
 // ═══════════════════════════════════════════════════════════════
 //  SECTION 9: PLANE SPRITE
@@ -952,6 +1257,7 @@ function flyClear() {
   planeRainDrops = []; planeWindParticles = [];
   planeLightning = 0; planeTurbulence = 0;
   planeWeather = null; planeWeatherPos = null;
+  disconnectBlitzortung(); thunderSoundsQueued = [];
   document.getElementById('airInd').style.display = 'none';
   document.getElementById('boardBtn').style.display = 'none';
   document.getElementById('landBtn').style.display = 'none';
