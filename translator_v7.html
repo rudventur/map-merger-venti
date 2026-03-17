@@ -138,9 +138,12 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
     <button class="hdr-btn" id="btn-move" onclick="toggleMoveMode()">📌 MOVE</button>
-    <button class="hdr-btn" onclick="resetAllState()">↺ RESET ALL</button>
+    <button class="hdr-btn" onclick="randomiseAll()" title="Randomise sizes, zoom, position">🎲 RANDOM</button>
+    <button class="hdr-btn" onclick="saveToTxt()" title="Save state to .txt">💾 SAVE</button>
+    <button class="hdr-btn" onclick="loadFromTxt()" title="Load state from .txt">📂 LOAD</button>
+    <button class="hdr-btn" onclick="resetAllState()">↺ RESET</button>
     <a href="index.html" style="font-size:10px;color:var(--green);text-decoration:none;border:1px solid rgba(0,255,65,.3);padding:3px 8px;border-radius:5px">&#128072; ARTSPACE</a>
-    <span style="font-size:10px;color:var(--dim)">RUDVENTUR © 2026</span>
+    <span style="font-size:10px;color:var(--dim)">RV©26</span>
   </div>
 </div>
 
@@ -202,13 +205,25 @@ const FLAGS = {
   'en':'🇬🇧','es':'🇪🇸','fr':'🇫🇷','de':'🇩🇪','ru':'🇷🇺','el':'🇬🇷','ar':'🇸🇦',
   'zh-CN':'🇨🇳','ja':'🇯🇵','ko':'🇰🇷','pl':'🇵🇱','tr':'🇹🇷','hi':'🇮🇳','it':'🇮🇹',
   'pt':'🇵🇹','sv':'🇸🇪','fi':'🇫🇮','hu':'🇭🇺','nl':'🇳🇱','uk':'🇺🇦','cs':'🇨🇿',
-  'ro':'🇷🇴','he':'🇮🇱',
+  'ro':'🇷🇴','he':'🇮🇱','da':'🇩🇰','no':'🇳🇴',
   'en-US':'🇺🇸','fr-CA':'🇨🇦','es-MX':'🇲🇽','pt-BR':'🇧🇷','gsw':'🇨🇭',
   'cy':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','ca':'🏳️','eu':'🏳️','ga':'🇮🇪','br':'🏳️','gl':'🏳️',
   'szl':'🇵🇱','csb':'🇵🇱','gd':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','co':'🇫🇷','fy':'🇳🇱','wen':'🇩🇪',
   'lb':'🇱🇺','mt':'🇲🇹','et':'🇪🇪','lv':'🇱🇻','lt':'🇱🇹','sk':'🇸🇰','sl':'🇸🇮',
   'sq':'🇦🇱','mk':'🇲🇰','bs':'🇧🇦','cnr':'🇲🇪','is':'🇮🇸','fo':'🇫🇴',
-  'be':'🇧🇾','bg':'🇧🇬','sr':'🇷🇸','hr':'🇭🇷','ro-MD':'🇲🇩'
+  'be':'🇧🇾','bg':'🇧🇬','sr':'🇷🇸','hr':'🇭🇷','ro-MD':'🇲🇩',
+  'oc':'🏳️','sc':'🇮🇹','an':'🇪🇸','ast':'🇪🇸','nap':'🇮🇹','scn':'🇮🇹',
+  'pms':'🇮🇹','lij':'🇮🇹','fur':'🇮🇹','lmo':'🇮🇹','vec':'🇮🇹',
+  'bar':'🇩🇪','nds':'🇩🇪','ksh':'🇩🇪','pfl':'🇩🇪','swg':'🇩🇪','sli':'🇩🇪',
+  'frr':'🇩🇪','stq':'🇩🇪',
+  'wa':'🇧🇪','li':'🇧🇪','vls':'🇧🇪',
+  'hsb':'🇩🇪','dsb':'🇩🇪',
+  'rm':'🇨🇭','gsw-FR':'🇫🇷',
+  'sco':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','gv':'🇮🇲','kw':'🇬🇧',
+  'se':'🇳🇴','smj':'🇸🇪','sma':'🇳🇴',
+  'krl':'🇫🇮','vro':'🇪🇪','liv':'🇱🇻',
+  'csb2':'🇵🇱','rue':'🇺🇦','rup':'🇷🇴',
+  'ka':'🇬🇪','hy':'🇦🇲','az':'🇦🇿'
 };
 
 // ========================================================================
@@ -275,6 +290,59 @@ const LANGUAGES = [
   {name:"Serbian",code:"sr",lat:44.0,lng:20.9,country:"Serbia",speakers:"12M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Zdravo"},alphabet:"Latin + Cyrillic"},
   {name:"Croatian",code:"hr",lat:45.1,lng:15.2,country:"Croatia",speakers:"5M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Bok"},alphabet:"Latin + Č Ć Dž Đ Š Ž"},
   {name:"Moldovan",code:"ro-MD",lat:47.4,lng:28.5,country:"Moldova",speakers:"3M+",tier:"regional",minZoom:5,dialectOf:"Romanian",family:"Romance",hello:{text:"Salut"},alphabet:"Latin + Ș Ț"},
+  // ========== NORDIC ==========
+  {name:"Danish",code:"da",lat:55.7,lng:9.5,country:"Denmark",speakers:"6M+",tier:"major",minZoom:3,family:"Germanic",hello:{text:"Hej",pr:"Hi"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Æ Ø Å",grammar:"2 genders (common/neuter). V2 word order."},
+  {name:"Norwegian",code:"no",lat:62.0,lng:10.0,country:"Norway",speakers:"5.3M+",tier:"major",minZoom:3,family:"Germanic",hello:{text:"Hei",pr:"Hay"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Æ Ø Å",grammar:"2 written forms: Bokmål & Nynorsk. 3 genders."},
+  {name:"Sami (Northern)",code:"se",lat:69.0,lng:25.5,country:"Norway/Finland",speakers:"25K+",tier:"minority",minZoom:6,family:"Uralic",hello:{text:"Bures"},alphabet:"A-Z + Á Č Đ Ŋ Š Ŧ Ž"},
+  {name:"Sami (Lule)",code:"smj",lat:67.2,lng:20.2,country:"Sweden/Norway",speakers:"2K+",tier:"minority",minZoom:7,family:"Uralic",hello:{text:"Buorre"},alphabet:"A-Z + Á Ŋ"},
+  {name:"Sami (Southern)",code:"sma",lat:63.5,lng:14.5,country:"Norway/Sweden",speakers:"500+",tier:"minority",minZoom:7,family:"Uralic",hello:{text:"Buerie"},alphabet:"A-Z + Ï"},
+  // ========== ITALIAN REGIONAL ==========
+  {name:"Sardinian",code:"sc",lat:40.0,lng:9.1,country:"Italy (Sardinia)",speakers:"1M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Salude"},alphabet:"A-Z"},
+  {name:"Neapolitan",code:"nap",lat:40.8,lng:14.2,country:"Italy (Naples)",speakers:"5.7M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Uè"},alphabet:"A-Z"},
+  {name:"Sicilian",code:"scn",lat:37.5,lng:14.0,country:"Italy (Sicily)",speakers:"5M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Ciao"},alphabet:"A-Z + Ḍ"},
+  {name:"Piedmontese",code:"pms",lat:45.0,lng:7.7,country:"Italy (Piedmont)",speakers:"1.6M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Cerea"},alphabet:"A-Z"},
+  {name:"Ligurian",code:"lij",lat:44.4,lng:8.9,country:"Italy (Liguria)",speakers:"500K+",tier:"regional",minZoom:7,family:"Romance",hello:{text:"Ciao"},alphabet:"A-Z + Ö Ü"},
+  {name:"Friulian",code:"fur",lat:46.1,lng:13.2,country:"Italy (Friuli)",speakers:"600K+",tier:"regional",minZoom:7,family:"Romance",hello:{text:"Mandi"},alphabet:"A-Z + Â Ç Ê Ô Û"},
+  {name:"Lombard",code:"lmo",lat:45.5,lng:9.2,country:"Italy (Lombardy)",speakers:"3.5M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Ciao"},alphabet:"A-Z + Ö Ü"},
+  {name:"Venetian",code:"vec",lat:45.4,lng:12.3,country:"Italy (Veneto)",speakers:"3.8M+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Ciao"},alphabet:"A-Z + Ł"},
+  // ========== SPANISH REGIONAL ==========
+  {name:"Aragonese",code:"an",lat:42.4,lng:-0.4,country:"Spain (Aragon)",speakers:"10K+",tier:"minority",minZoom:7,family:"Romance",hello:{text:"Ola"},alphabet:"A-Z + Ñ"},
+  {name:"Asturian",code:"ast",lat:43.3,lng:-5.8,country:"Spain (Asturias)",speakers:"450K+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Hola"},alphabet:"A-Z + Ñ Ü Ḷḷ"},
+  // ========== FRENCH REGIONAL ==========
+  {name:"Occitan",code:"oc",lat:43.6,lng:2.3,country:"France (South)",speakers:"100K+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Adieu"},alphabet:"A-Z + Ç Ò Ó"},
+  {name:"Alsatian",code:"gsw-FR",lat:48.5,lng:7.5,country:"France (Alsace)",speakers:"900K+",tier:"regional",minZoom:6,dialectOf:"German",family:"Germanic",hello:{text:"Hallo"},alphabet:"A-Z + Ä Ö Ü"},
+  // ========== GERMAN REGIONAL ==========
+  {name:"Bavarian",code:"bar",lat:48.1,lng:11.6,country:"Germany (Bavaria)",speakers:"12M+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Griaß God"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Low German",code:"nds",lat:53.6,lng:10.0,country:"Germany (North)",speakers:"5M+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Moin"},alphabet:"A-Z"},
+  {name:"Kölsch",code:"ksh",lat:50.9,lng:6.9,country:"Germany (Cologne)",speakers:"250K+",tier:"regional",minZoom:7,family:"Germanic",hello:{text:"Tach"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Palatinate German",code:"pfl",lat:49.4,lng:8.1,country:"Germany (Pfalz)",speakers:"1M+",tier:"regional",minZoom:7,family:"Germanic",hello:{text:"Guude"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Swabian",code:"swg",lat:48.5,lng:9.5,country:"Germany (Swabia)",speakers:"800K+",tier:"regional",minZoom:7,family:"Germanic",hello:{text:"Grüß Gott"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Silesian German",code:"sli",lat:51.1,lng:17.0,country:"Germany/Poland",speakers:"100K+",tier:"minority",minZoom:7,family:"Germanic",hello:{text:"Gutn Tog"},alphabet:"A-Z"},
+  {name:"North Frisian",code:"frr",lat:54.7,lng:8.9,country:"Germany (Schleswig)",speakers:"10K+",tier:"minority",minZoom:7,family:"Germanic",hello:{text:"Moin"},alphabet:"A-Z + Ö Ü"},
+  {name:"Saterland Frisian",code:"stq",lat:53.1,lng:7.7,country:"Germany (Saterland)",speakers:"2K+",tier:"minority",minZoom:7,family:"Germanic",hello:{text:"Moin"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Upper Sorbian",code:"hsb",lat:51.2,lng:14.5,country:"Germany (Saxony)",speakers:"20K+",tier:"minority",minZoom:7,family:"Slavic",hello:{text:"Witaj"},alphabet:"A-Z + Č Ě Ř Š Ž"},
+  {name:"Lower Sorbian",code:"dsb",lat:51.7,lng:14.0,country:"Germany (Brandenburg)",speakers:"7K+",tier:"minority",minZoom:7,family:"Slavic",hello:{text:"Witaj"},alphabet:"A-Z + Č Ś Š Ź Ž"},
+  // ========== BELGIAN REGIONAL ==========
+  {name:"Walloon",code:"wa",lat:50.4,lng:5.0,country:"Belgium (Wallonia)",speakers:"600K+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Bondjoû"},alphabet:"A-Z + Â Ê Î Ô Û"},
+  {name:"Limburgish",code:"li",lat:50.9,lng:5.6,country:"Belgium/Netherlands",speakers:"1.3M+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Hallau"},alphabet:"A-Z + Ä Ö"},
+  {name:"West Flemish",code:"vls",lat:51.0,lng:3.0,country:"Belgium (Flanders)",speakers:"1.4M+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Allo"},alphabet:"A-Z"},
+  // ========== SWISS ==========
+  {name:"Romansh",code:"rm",lat:46.6,lng:9.8,country:"Switzerland (Grisons)",speakers:"60K+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Allegra"},alphabet:"A-Z + À È Ì Ò Ù"},
+  // ========== CELTIC ==========
+  {name:"Scots",code:"sco",lat:56.5,lng:-3.5,country:"Scotland",speakers:"1.5M+",tier:"regional",minZoom:5,family:"Germanic",hello:{text:"Hullo"},alphabet:"A-Z"},
+  {name:"Manx",code:"gv",lat:54.2,lng:-4.5,country:"Isle of Man",speakers:"1.8K+",tier:"minority",minZoom:7,family:"Celtic",hello:{text:"Moghrey mie"},alphabet:"A-Z"},
+  {name:"Cornish",code:"kw",lat:50.3,lng:-5.0,country:"UK (Cornwall)",speakers:"600+",tier:"minority",minZoom:7,family:"Celtic",hello:{text:"Dydh da"},alphabet:"A-Z"},
+  // ========== BALTIC/URALIC MINORITY ==========
+  {name:"Karelian",code:"krl",lat:64.0,lng:32.0,country:"Russia/Finland",speakers:"36K+",tier:"minority",minZoom:7,family:"Uralic",hello:{text:"Terveh"},alphabet:"A-Z + Ä Ö Ü"},
+  {name:"Võro",code:"vro",lat:57.8,lng:27.0,country:"Estonia (South)",speakers:"75K+",tier:"minority",minZoom:7,family:"Uralic",hello:{text:"Tere"},alphabet:"A-Z + Õ Ä Ö Ü"},
+  {name:"Livonian",code:"liv",lat:57.6,lng:22.2,country:"Latvia (Livonia)",speakers:"20+",tier:"minority",minZoom:7,family:"Uralic",hello:{text:"Tēriņtš"},alphabet:"A-Z + Ā Ē Ī Ō Ū Ȯ Ȱ"},
+  // ========== EASTERN ==========
+  {name:"Rusyn",code:"rue",lat:49.0,lng:22.5,country:"Ukraine/Slovakia",speakers:"600K+",tier:"regional",minZoom:6,family:"Slavic",hello:{text:"Здраво"},alphabet:"Cyrillic + Ы Ё Ї"},
+  {name:"Aromanian",code:"rup",lat:40.5,lng:21.0,country:"Greece/Romania",speakers:"250K+",tier:"minority",minZoom:7,family:"Romance",hello:{text:"Bunã dzua"},alphabet:"A-Z + Ã"},
+  // ========== CAUCASUS ==========
+  {name:"Georgian",code:"ka",lat:42.0,lng:43.5,country:"Georgia",speakers:"4M+",tier:"regional",minZoom:4,family:"Kartvelian",hello:{text:"გამარჯობა",pr:"ga-mar-JO-ba"},alphabet:"ა ბ გ დ ე ვ ზ თ ი კ ლ მ ნ ო პ ჟ რ ს ტ უ ფ ქ ღ ყ შ ჩ ც ძ წ ჭ ხ ჯ ჰ",grammar:"Unique script. Agglutinative. No grammatical gender."},
+  {name:"Armenian",code:"hy",lat:40.2,lng:44.5,country:"Armenia",speakers:"6M+",tier:"regional",minZoom:4,family:"Indo-European",hello:{text:"Բարև",pr:"ba-REV"},alphabet:"Ա Բ Գ Դ Ե Զ Է Ը Թ Ժ Ի Լ Խ Ծ Կ Հ Ձ Ղ Ճ Մ Յ Ն Շ Ո Չ Պ Ջ Ռ Ս Վ Տ Ր Ց Ւ Փ Ք Օ Ֆ",grammar:"Own unique alphabet since 405 AD. Highly inflected."},
+  {name:"Azerbaijani",code:"az",lat:40.4,lng:49.8,country:"Azerbaijan",speakers:"23M+",tier:"regional",minZoom:4,family:"Turkic",hello:{text:"Salam",pr:"sa-LAM"},alphabet:"A B C Ç D E Ə F G Ğ H X I İ J K Q L M N O Ö P R S Ş T U Ü V Y Z",grammar:"Agglutinative. Vowel harmony. Latin script since 1991."},
   // ========== ADD NEW LANGUAGES BELOW ==========
 ];
 
@@ -318,8 +386,21 @@ function resetAllState(){
 // ========================================================================
 //  BOOT
 // ========================================================================
-const bootLines=["> RUDVENTUR OS v17.0 — FLAGS","> Flag markers: Active","> Click-to-move: Enabled","> Per-language sizing: Ready","> Full state persistence: ON","> ","Ready to explore. 🗺️"];
+// Build boot lines — each line a random language hello
+function buildBootLines(){
+  const shuffled=[...LANGUAGES].sort(()=>Math.random()-.5);
+  const picks=shuffled.slice(0,6);
+  const lines=["> RUDVENTUR TRANSLATOR MAP v7"];
+  picks.forEach(l=>{
+    const flag=FLAGS[l.code]||'🏳️';
+    lines.push(`> ${flag} ${l.name}: ${l.hello.text}`);
+  });
+  lines.push("> "+LANGUAGES.length+" languages loaded");
+  lines.push("Ready to explore. 🗺️");
+  return lines;
+}
 (function(){
+  const bootLines=buildBootLines();
   const el=document.getElementById('boot-text');let li=0,ci=0,txt='';
   function tick(){
     if(li>=bootLines.length){el.classList.add('cursor-blink');setTimeout(()=>{document.getElementById('boot-screen').classList.add('fade-out');setTimeout(initApp,600)},400);return}
@@ -421,26 +502,47 @@ function toggleMoveMode(){
 }
 
 function resolveCollisions(){
-  const fontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--map-font-size'))||28;
-  const padding = Math.max(25, fontSize*2);
-  markers.forEach(m=>{const el=m.getElement();if(el)el.classList.remove('hidden')});
-  const vis = markers.filter(m=>{const el=m.getElement();return el&&el.style.display!=='none'&&!el.classList.contains('hidden')});
-  for(let i=0;i<vis.length;i++){
-    for(let j=i+1;j<vis.length;j++){
-      const p1=map.latLngToContainerPoint(vis[i].getLatLng()),p2=map.latLngToContainerPoint(vis[j].getLatLng());
-      const dist=Math.sqrt((p1.x-p2.x)**2+(p1.y-p2.y)**2);
-      if(dist<padding){
-        const t1=vis[i]._langData.tier==='major'?3:(vis[i]._langData.tier==='regional'?2:1);
-        const t2=vis[j]._langData.tier==='major'?3:(vis[j]._langData.tier==='regional'?2:1);
-        if(t1>t2)vis[i].getElement().classList.add('hidden');else vis[j].getElement().classList.add('hidden');
+  // Measure actual label widths for better collision detection
+  markers.forEach(m=>{const el=m.getElement();if(el){el.classList.remove('hidden');el.style.opacity='1'}});
+  const vis = markers.filter(m=>{
+    const el=m.getElement();
+    if(!el) return false;
+    if(!checkedLangs.has(m._langData.code)) return false;
+    return el.style.display!=='none';
+  });
+  // Sort by priority: major > regional > minority, then by speakers count
+  const tierVal=t=>t==='major'?3:t==='regional'?2:1;
+  vis.sort((a,b)=>tierVal(b._langData.tier)-tierVal(a._langData.tier));
+  const placed=[];
+  vis.forEach(m=>{
+    const el=m.getElement();if(!el)return;
+    const p=map.latLngToContainerPoint(m.getLatLng());
+    const sz=langSizes[m._langData.code]||parseInt(getComputedStyle(document.documentElement).getPropertyValue('--map-font-size'))||28;
+    // Estimate label width based on font size and name length
+    const lbl=document.getElementById('label-'+m._langData.code);
+    const txt=lbl?lbl.textContent:m._langData.name;
+    const estW=txt.length*sz*0.55+30; // flag + gap
+    const estH=sz*1.2;
+    const rect={x:p.x-11,y:p.y-estH/2,w:estW,h:estH};
+    // Check overlap with already placed labels
+    let overlaps=false;
+    for(const pr of placed){
+      if(rect.x<pr.x+pr.w && rect.x+rect.w>pr.x && rect.y<pr.y+pr.h && rect.y+rect.h>pr.y){
+        overlaps=true;break;
       }
     }
-  }
+    if(overlaps){el.classList.add('hidden');el.style.opacity='0'}
+    else{placed.push(rect)}
+  });
 }
 
 function updateVisibility(){
   const z=map.getZoom();
-  markers.forEach(m=>{const el=m.getElement();if(!el)return;el.style.display=z>=m._langData.minZoom?'':'none'});
+  markers.forEach(m=>{
+    const el=m.getElement();if(!el)return;
+    const visible=z>=m._langData.minZoom && checkedLangs.has(m._langData.code);
+    el.style.display=visible?'':'none';
+  });
 }
 
 function updateGlobalSize(val){
@@ -612,6 +714,143 @@ function closeGrammar(){document.getElementById('grammar-overlay').style.display
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeGrammar();document.getElementById('side-panel').classList.remove('open');if(moveMode)deselectMarker()}
 });
+
+// ========================================================================
+//  RANDOMISE EVERYTHING
+// ========================================================================
+function randomiseAll(){
+  // Random zoom 2-7
+  const rz=2+Math.floor(Math.random()*6);
+  map.setZoom(rz);
+  // Random center somewhere in Europe-ish
+  const lat=35+Math.random()*30;
+  const lng=-10+Math.random()*50;
+  map.panTo([lat,lng]);
+  // Random sizes for all languages
+  LANGUAGES.forEach(l=>{
+    const sz=14+Math.floor(Math.random()*34);
+    langSizes[l.code]=sz;
+    const lbl=document.getElementById('label-'+l.code);
+    if(lbl)lbl.style.fontSize=sz+'px';
+    const sldr=document.getElementById('sz-'+l.code);
+    if(sldr)sldr.value=sz;
+    const sv=document.getElementById('szv-'+l.code);
+    if(sv)sv.textContent=sz+'px';
+  });
+  // Random selection: enable 40-70% of languages
+  checkedLangs.clear();
+  const shuffled=[...LANGUAGES].sort(()=>Math.random()-.5);
+  const count=Math.floor(LANGUAGES.length*(0.4+Math.random()*0.3));
+  shuffled.slice(0,count).forEach(l=>{
+    checkedLangs.add(l.code);
+    const cb=document.getElementById('chk-'+l.code);
+    if(cb)cb.checked=true;
+  });
+  // Uncheck the rest
+  LANGUAGES.forEach(l=>{
+    if(!checkedLangs.has(l.code)){
+      const cb=document.getElementById('chk-'+l.code);
+      if(cb)cb.checked=false;
+    }
+  });
+  // Update global slider to random
+  const globalSz=18+Math.floor(Math.random()*22);
+  document.getElementById('sizeSlider').value=globalSz;
+  document.documentElement.style.setProperty('--map-font-size',globalSz+'px');
+  saveState();
+  updateVisibility();
+  setTimeout(resolveCollisions,300);
+}
+
+// ========================================================================
+//  SAVE / LOAD to TXT file
+// ========================================================================
+function saveToTxt(){
+  const positions={};
+  markers.forEach(m=>{
+    const ll=m.getLatLng(),o=m._langData;
+    positions[o.code]={lat:ll.lat,lng:ll.lng};
+  });
+  const state={
+    version:'rv-translator-v7',
+    timestamp:new Date().toISOString(),
+    mapCenter:{lat:map.getCenter().lat,lng:map.getCenter().lng},
+    mapZoom:map.getZoom(),
+    globalSize:document.getElementById('sizeSlider').value,
+    positions,
+    sizes:langSizes,
+    checked:[...checkedLangs],
+    translations:currentTranslations,
+    baseLang
+  };
+  const txt=JSON.stringify(state,null,2);
+  const blob=new Blob([txt],{type:'text/plain'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='rudventur-translator-'+new Date().toISOString().slice(0,10)+'.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function loadFromTxt(){
+  const input=document.createElement('input');
+  input.type='file';input.accept='.txt';
+  input.onchange=e=>{
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const state=JSON.parse(ev.target.result);
+        if(state.version!=='rv-translator-v7'){alert('Not a valid RudVentur translator save file.');return}
+        // Restore map view
+        if(state.mapCenter)map.setView([state.mapCenter.lat,state.mapCenter.lng],state.mapZoom||4);
+        // Restore sizes
+        if(state.sizes){
+          langSizes=state.sizes;
+          Object.entries(langSizes).forEach(([code,sz])=>{
+            const lbl=document.getElementById('label-'+code);if(lbl)lbl.style.fontSize=sz+'px';
+            const sldr=document.getElementById('sz-'+code);if(sldr)sldr.value=sz;
+            const sv=document.getElementById('szv-'+code);if(sv)sv.textContent=sz+'px';
+          });
+        }
+        // Restore global size
+        if(state.globalSize){
+          document.getElementById('sizeSlider').value=state.globalSize;
+          document.documentElement.style.setProperty('--map-font-size',state.globalSize+'px');
+        }
+        // Restore positions
+        if(state.positions){
+          markers.forEach(m=>{
+            const pos=state.positions[m._langData.code];
+            if(pos)m.setLatLng([pos.lat,pos.lng]);
+          });
+        }
+        // Restore checked languages
+        if(state.checked){
+          checkedLangs=new Set(state.checked);
+          document.querySelectorAll('#lang-checks-list input[type=checkbox]').forEach(cb=>{
+            cb.checked=checkedLangs.has(cb.value);
+          });
+        }
+        // Restore translations
+        if(state.translations){
+          currentTranslations=state.translations;
+          translatingActive=Object.keys(currentTranslations).length>0;
+          updateMapLabels();
+        }
+        if(state.baseLang){
+          baseLang=state.baseLang;
+          document.getElementById('base-lang-select').value=baseLang;
+        }
+        saveState();
+        updateVisibility();
+        setTimeout(resolveCollisions,300);
+      }catch(err){alert('Error loading file: '+err.message)}
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
 
 // Fullscreen toggle (logo click)
 function toggleFullscreen(){
