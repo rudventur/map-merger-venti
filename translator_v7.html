@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RudVentur Creator Map v7 (Flags)</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0a0a0a;--panel:#0d1117;--border:#1a2332;
+  --green:#00ff41;--cyan:#00f0ff;--amber:#ffb800;--red:#ff3333;--purple:#c084fc;
+  --text:#c9d1d9;--dim:#484f58;
+  --glow-green:0 0 15px rgba(0,255,65,.5);
+  --glow-cyan:0 0 15px rgba(0,240,255,.5);
+  --map-font-size:28px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Fira Code',monospace;overflow:hidden}
+
+#boot-screen{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;transition:opacity .6s}
+#boot-screen.fade-out{opacity:0;pointer-events:none}
+#boot-text{font-size:clamp(11px,1.8vw,15px);color:var(--green);max-width:600px;padding:2rem;line-height:1.8;white-space:pre}
+.cursor-blink::after{content:'█';animation:blink .6s step-end infinite}
+@keyframes blink{50%{opacity:0}}
+
+#header{position:fixed;top:0;left:0;right:0;z-index:800;background:linear-gradient(180deg,rgba(10,10,10,.97),rgba(10,10,10,.85));backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:.5rem 1rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#header h1{font-family:'Orbitron',monospace;font-size:clamp(12px,2vw,18px);color:var(--green);text-shadow:var(--glow-green);letter-spacing:2px;white-space:nowrap}
+.hdr-btn{background:rgba(0,0,0,.3);border:1px solid var(--border);color:var(--dim);padding:4px 10px;border-radius:5px;font-family:'Fira Code',monospace;font-size:10px;cursor:pointer;transition:all .2s;white-space:nowrap}
+.hdr-btn:hover{color:var(--text);border-color:var(--dim)}
+.hdr-btn.active{color:var(--amber);border-color:var(--amber)}
+
+.size-control{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.3);padding:4px 10px;border-radius:20px;border:1px solid var(--border)}
+.size-control label{font-size:10px;color:var(--cyan);text-transform:uppercase;letter-spacing:1px}
+input[type=range]{-webkit-appearance:none;height:4px;background:#333;border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--cyan);cursor:pointer}
+
+#translate-bar{position:fixed;top:55px;left:0;right:0;z-index:799;background:rgba(13,17,23,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+#base-lang-select{background:var(--bg);color:var(--amber);border:1px solid rgba(255,184,0,.3);padding:5px 8px;border-radius:4px;font-family:'Fira Code',monospace;font-size:12px;cursor:pointer;max-width:150px}
+#translate-input{flex:1;min-width:150px;background:rgba(255,255,255,.04);border:1px solid var(--border);color:#fff;padding:7px 12px;border-radius:5px;font-family:'Fira Code',monospace;font-size:14px;transition:border-color .2s}
+#translate-input:focus{outline:none;border-color:var(--green);box-shadow:0 0 8px rgba(0,255,65,.15)}
+.tb-btn{padding:7px 14px;border-radius:5px;font-family:'Fira Code',monospace;font-size:12px;cursor:pointer;transition:all .2s}
+#btn-translate{background:rgba(0,255,65,.1);border:1px solid rgba(0,255,65,.3);color:var(--green)}
+#btn-clear{background:rgba(255,51,51,.08);border:1px solid rgba(255,51,51,.25);color:var(--red)}
+#translate-status{width:100%;font-size:10px;color:var(--dim);margin-top:2px}
+
+/* MOVE INSTRUCTIONS */
+#move-instructions{position:fixed;top:105px;left:50%;transform:translateX(-50%);z-index:900;background:rgba(255,184,0,.12);border:1px solid var(--amber);color:var(--amber);padding:8px 20px;border-radius:8px;font-size:12px;text-align:center;display:none;pointer-events:none;animation:fade-pulse 1.5s ease-in-out infinite}
+@keyframes fade-pulse{0%,100%{opacity:.7}50%{opacity:1}}
+
+/* LANG TOGGLES */
+#toggle-btn{position:fixed;top:110px;left:10px;z-index:799;background:rgba(13,17,23,.9);border:1px solid var(--border);color:var(--cyan);padding:4px 10px;border-radius:5px;font-family:'Fira Code',monospace;font-size:11px;cursor:pointer}
+#lang-toggles{position:fixed;top:105px;left:10px;z-index:798;background:rgba(13,17,23,.92);backdrop-filter:blur(6px);border:1px solid var(--border);border-radius:8px;padding:8px;max-height:calc(100vh - 200px);overflow-y:auto;width:260px;display:none}
+#lang-toggles.open{display:block}
+.lang-check{display:flex;align-items:center;gap:6px;padding:4px 4px;cursor:pointer;font-size:11px;border-radius:3px}
+.lang-check:hover{background:rgba(255,255,255,.04)}
+.lang-check input[type=checkbox]{accent-color:var(--green);cursor:pointer;flex-shrink:0}
+.lang-check .flag-sm{font-size:14px;flex-shrink:0}
+.lang-check label{cursor:pointer;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lang-check input[type=range]{width:50px;flex-shrink:0}
+.ctrl-row{display:flex;gap:4px;margin-bottom:8px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.ctrl-row button{flex:1;background:rgba(255,255,255,.03);border:1px solid var(--border);color:var(--dim);padding:3px;border-radius:3px;font-family:'Fira Code';font-size:9px;cursor:pointer}
+.ctrl-row button:hover{color:var(--text)}
+
+/* MAP */
+#map{position:fixed;inset:0;top:100px;z-index:1}
+.leaflet-container{background:var(--bg)!important}
+/* Move zoom to right */
+.leaflet-top.leaflet-left .leaflet-control-zoom{display:none}
+.leaflet-control-zoom a{background:var(--panel)!important;color:var(--green)!important;border-color:var(--border)!important}
+
+/* MARKERS */
+.lang-marker{display:flex;align-items:center;gap:8px;cursor:pointer;white-space:nowrap;transition:all .2s}
+.lang-marker.hidden{opacity:0;pointer-events:none}
+.lang-marker.selected .lang-flag{animation:flag-blink .5s step-end infinite}
+@keyframes flag-blink{50%{opacity:.2}}
+.lang-flag{font-size:22px;line-height:1;filter:drop-shadow(0 0 4px rgba(0,0,0,.8));transition:transform .15s;flex-shrink:0}
+.lang-marker:hover .lang-flag{transform:scale(1.3)}
+.lang-label{font-family:'Orbitron',monospace;font-weight:900;color:var(--text);text-shadow:2px 2px 0px #000,0 0 10px rgba(0,0,0,.9);pointer-events:none;line-height:1;white-space:nowrap}
+.lang-marker:hover .lang-label{color:#fff;text-shadow:0 0 15px var(--green)}
+.lang-label.translated{color:var(--purple);font-weight:900;text-shadow:2px 2px 0 #000,0 0 15px rgba(192,132,252,.6)}
+
+/* SIDE PANEL */
+#side-panel{position:fixed;top:100px;right:0;bottom:0;width:480px;max-width:92vw;z-index:900;background:var(--panel);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .35s;overflow-y:auto;display:flex;flex-direction:column}
+#side-panel.open{transform:translateX(0)}
+#panel-close{position:absolute;top:10px;right:14px;background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer;z-index:10}
+#panel-content{padding:1.5rem;flex:1}
+.panel-lang-name{font-family:'Orbitron',monospace;font-size:clamp(28px,5vw,42px);margin-bottom:4px}
+.panel-country{font-size:14px;color:var(--dim);margin-bottom:1.5rem;text-transform:uppercase;letter-spacing:1px}
+.panel-section{margin-bottom:1.5rem}
+.panel-section-title{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:2px;margin-bottom:.6rem;border-bottom:1px solid var(--border);padding-bottom:4px}
+.phrase-card{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:12px 15px;margin-bottom:8px}
+.phrase-en{font-size:12px;color:var(--dim);text-transform:uppercase}
+.phrase-tl{font-size:20px;color:#fff;margin:4px 0;font-family:'Orbitron'}
+.hello-big{font-size:clamp(40px,6vw,56px);font-weight:900;margin:6px 0;line-height:1.1}
+.alphabet-display{background:rgba(0,0,0,.3);border:1px solid var(--border);padding:15px;border-radius:8px;font-size:16px;line-height:1.8;color:var(--cyan);word-break:break-all;margin-top:10px;max-height:200px;overflow-y:auto}
+.dialect-badge{display:inline-block;background:var(--cyan);color:#000;font-size:10px;padding:2px 6px;border-radius:4px;font-weight:bold;margin-left:8px;vertical-align:middle}
+.panel-size-control{display:flex;align-items:center;gap:10px;margin-top:8px;padding:8px;background:rgba(0,0,0,.2);border-radius:6px;border:1px solid var(--border)}
+.panel-size-control label{font-size:10px;color:var(--cyan)}
+.panel-size-control input[type=range]{flex:1}
+.panel-size-control .sz-val{font-size:11px;color:var(--amber);min-width:30px;text-align:right}
+
+/* GRAMMAR MODAL */
+#grammar-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
+#grammar-modal{background:var(--panel);border:1px solid var(--green);border-radius:12px;max-width:700px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 0 50px rgba(0,255,65,.15)}
+#grammar-body{padding:1.5rem}
+
+/* FOOTER */
+#footer{position:fixed;bottom:0;left:0;right:0;z-index:800;background:linear-gradient(0deg,rgba(10,10,10,.95),rgba(10,10,10,.6));border-top:1px solid var(--border);padding:5px 1rem;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
+
+/* RIGHT SIDE CONTROLS (zoom + clear) */
+#right-controls{position:fixed;top:110px;right:12px;z-index:799;display:flex;flex-direction:column;gap:4px}
+#right-controls button{width:34px;height:34px;background:var(--panel);border:1px solid var(--border);color:var(--green);font-size:18px;cursor:pointer;border-radius:4px;font-family:'Fira Code';display:flex;align-items:center;justify-content:center;transition:all .15s}
+#right-controls button:hover{background:rgba(0,255,65,.1);border-color:var(--green)}
+
+@media(max-width:600px){
+  #side-panel{top:auto;bottom:0;height:65vh;transform:translateY(100%);border-radius:16px 16px 0 0}
+  #side-panel.open{transform:translateY(0)}
+  .lang-label{font-size:18px!important}
+  #header h1{font-size:14px}
+  #lang-toggles{width:220px}
+}
+
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+
+<div id="boot-screen"><div id="boot-text"></div></div>
+
+<div id="header">
+  <h1>🗺️ CREATOR MAP v7</h1>
+  <div class="size-control">
+    <label>ALL SIZE</label>
+    <input type="range" id="sizeSlider" min="12" max="48" value="28" style="width:80px" oninput="updateGlobalSize(this.value)">
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
+    <button class="hdr-btn" id="btn-move" onclick="toggleMoveMode()">📌 MOVE</button>
+    <button class="hdr-btn" onclick="resetAllState()">↺ RESET ALL</button>
+    <span style="font-size:10px;color:var(--dim)">RUDVENTUR © 2026</span>
+  </div>
+</div>
+
+<div id="translate-bar">
+  <select id="base-lang-select"></select>
+  <input id="translate-input" type="text" placeholder="Type to translate..." autocomplete="off">
+  <button class="tb-btn" id="btn-translate">TRANSLATE ⚡</button>
+  <button class="tb-btn" id="btn-clear">CLEAR ✕</button>
+  <div id="translate-status"></div>
+</div>
+
+<div id="move-instructions">🏁 Click a flag to select it, then click anywhere on the map to move it</div>
+
+<button id="toggle-btn" onclick="toggleLangPanel()">☑ LANGUAGES</button>
+<div id="lang-toggles">
+  <div class="ctrl-row">
+    <button onclick="selectAllLangs(true)">All</button>
+    <button onclick="selectAllLangs(false)">None</button>
+    <button onclick="selectByTier('major')">Major</button>
+    <button onclick="selectByTier('regional')">Regional</button>
+  </div>
+  <div id="lang-checks-list"></div>
+</div>
+
+<div id="map"></div>
+
+<!-- RIGHT SIDE: Zoom + Clear -->
+<div id="right-controls">
+  <button onclick="map.zoomIn()" title="Zoom in">+</button>
+  <button onclick="map.zoomOut()" title="Zoom out">−</button>
+</div>
+
+<div id="side-panel">
+  <button id="panel-close" style="position:absolute;top:10px;right:14px;background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer;z-index:10">✕</button>
+  <div id="panel-content"></div>
+</div>
+
+<div id="grammar-overlay">
+  <div id="grammar-modal">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div id="grammar-modal-title" style="font-family:'Orbitron';color:var(--green)"></div>
+      <button onclick="closeGrammar()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+    </div>
+    <div id="grammar-body"></div>
+  </div>
+</div>
+
+<div id="footer">
+  <span>> RudVentur © 2026 | <a href="https://rudventur.com" target="_blank" style="color:var(--green);text-decoration:none">rudventur.com</a></span>
+  <span class="cursor-blink"></span>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ========================================================================
+//  FLAG EMOJI MAP — country code to emoji
+// ========================================================================
+const FLAGS = {
+  'en':'🇬🇧','es':'🇪🇸','fr':'🇫🇷','de':'🇩🇪','ru':'🇷🇺','el':'🇬🇷','ar':'🇸🇦',
+  'zh-CN':'🇨🇳','ja':'🇯🇵','ko':'🇰🇷','pl':'🇵🇱','tr':'🇹🇷','hi':'🇮🇳','it':'🇮🇹',
+  'pt':'🇵🇹','sv':'🇸🇪','fi':'🇫🇮','hu':'🇭🇺','nl':'🇳🇱','uk':'🇺🇦','cs':'🇨🇿',
+  'ro':'🇷🇴','he':'🇮🇱',
+  'en-US':'🇺🇸','fr-CA':'🇨🇦','es-MX':'🇲🇽','pt-BR':'🇧🇷','gsw':'🇨🇭',
+  'cy':'🏴󠁧󠁢󠁷󠁬󠁳󠁿','ca':'🏳️','eu':'🏳️','ga':'🇮🇪','br':'🏳️','gl':'🏳️',
+  'szl':'🇵🇱','csb':'🇵🇱','gd':'🏴󠁧󠁢󠁳󠁣󠁴󠁿','co':'🇫🇷','fy':'🇳🇱','wen':'🇩🇪',
+  'lb':'🇱🇺','mt':'🇲🇹','et':'🇪🇪','lv':'🇱🇻','lt':'🇱🇹','sk':'🇸🇰','sl':'🇸🇮',
+  'sq':'🇦🇱','mk':'🇲🇰','bs':'🇧🇦','cnr':'🇲🇪','is':'🇮🇸','fo':'🇫🇴',
+  'be':'🇧🇾','bg':'🇧🇬','sr':'🇷🇸','hr':'🇭🇷','ro-MD':'🇲🇩'
+};
+
+// ========================================================================
+//  LANGUAGE DATABASE
+// ========================================================================
+const LANGUAGES = [
+  {name:"English",code:"en",lat:53.0,lng:-1.5,country:"United Kingdom",speakers:"1.5B+",tier:"major",minZoom:1,family:"Indo-European",hello:{text:"Hello",pr:"heh-LOH"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z",grammar:"Subject-Verb-Object order. No grammatical gender."},
+  {name:"Spanish",code:"es",lat:40.4,lng:-2.0,country:"Spain",speakers:"560M+",tier:"major",minZoom:1,family:"Romance",hello:{text:"Hola",pr:"OH-la"},alphabet:"A B C D E F G H I J K L M N Ñ O P Q R S T U V W X Y Z",grammar:"Two genders (masculine/feminine). 5 verb moods."},
+  {name:"French",code:"fr",lat:46.6,lng:2.3,country:"France",speakers:"320M+",tier:"major",minZoom:1,family:"Romance",hello:{text:"Bonjour",pr:"bon-ZHOOR"},alphabet:"A À Â Ä B C Ç D E É È Ê Ë F G H I Î Ï J K L M N O Ô Ö P Q R S T U Ù Û Ü V W X Y Z",grammar:"23 consonants, 16 vowels. Accents vital for meaning."},
+  {name:"German",code:"de",lat:51.0,lng:10.5,country:"Germany",speakers:"130M+",tier:"major",minZoom:1,family:"Germanic",hello:{text:"Hallo",pr:"HAH-loh"},alphabet:"A Ä B C D E F G H I J K L M N O Ö P Q R S T U Ü V W X Y Z ß",grammar:"4 cases. Compound words can be infinitely long."},
+  {name:"Russian",code:"ru",lat:56.0,lng:38.0,country:"Russia",speakers:"255M+",tier:"major",minZoom:1,family:"Slavic",hello:{text:"Привет",pr:"pree-VYET"},alphabet:"А Б В Г Д Е Ё Ж З И Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ъ Ы Ь Э Ю Я",grammar:"Cyrillic script. 6 cases. Verbs of motion are complex."},
+  {name:"Greek",code:"el",lat:39.0,lng:22.9,country:"Greece",speakers:"13M+",tier:"major",minZoom:3,family:"Hellenic",hello:{text:"Γεια",pr:"YAH"},alphabet:"Α α Β β Γ γ Δ δ Ε ε Ζ ζ Η η Θ θ Ι ι Κ κ Λ λ Μ μ Ν ν Ξ ξ Ο ο Π π Ρ ρ Σ σ/ς Τ τ Υ υ Φ φ Χ χ Ψ ψ Ω ω",grammar:"One of the oldest recorded languages. 3 genders."},
+  {name:"Arabic",code:"ar",lat:25.0,lng:45.0,country:"Saudi Arabia",speakers:"420M+",tier:"major",minZoom:1,family:"Semitic",hello:{text:"مرحبا",pr:"MAR-ha-ba"},alphabet:"ا ب ت ث ج ح خ د ذ ر ز س ش ص ض ط ظ ع غ ف ق ك ل م ن ه و ي",grammar:"Written right-to-left. Root-based morphology."},
+  {name:"Mandarin",code:"zh-CN",lat:35.0,lng:105.0,country:"China",speakers:"1.1B+",tier:"major",minZoom:1,family:"Sino-Tibetan",hello:{text:"你好",pr:"nǐ hǎo"},alphabet:"一 二 三 四 五 六 七 八 九 十 - Logographic System",grammar:"Tonal (4 tones). No conjugation. Measure words required."},
+  {name:"Japanese",code:"ja",lat:36.5,lng:138.0,country:"Japan",speakers:"125M+",tier:"major",minZoom:1,family:"Japonic",hello:{text:"こんにちは",pr:"kon-nee-chee-WAH"},alphabet:"Hiragana + Katakana + Kanji (2000+)",grammar:"SOV order. 3 writing systems mixed together."},
+  {name:"Korean",code:"ko",lat:36.5,lng:127.8,country:"South Korea",speakers:"80M+",tier:"major",minZoom:1,family:"Koreanic",hello:{text:"안녕하세요",pr:"ahn-nyeong-ha-SAY-yo"},alphabet:"가 나 다 라 마 바 사 아 자 차 카 타 파 하 + Vowels",grammar:"Agglutinative language. Honorifics are essential."},
+  {name:"Polish",code:"pl",lat:52.0,lng:19.5,country:"Poland",speakers:"45M+",tier:"major",minZoom:3,family:"Slavic",hello:{text:"Cześć",pr:"cheshch"},alphabet:"A Ą B C Ć D E Ę F G H I J K L Ł M N Ń O Ó P R S Ś T U W Y Z Ź Ż",grammar:"7 cases. Extremely complex consonant clusters."},
+  {name:"Turkish",code:"tr",lat:39.9,lng:32.8,country:"Turkey",speakers:"80M+",tier:"major",minZoom:3,family:"Turkic",hello:{text:"Merhaba",pr:"mare-HAH-bah"},alphabet:"A B C Ç D E F G Ğ H I İ J K L M N O Ö P R S Ş T U Ü V Y Z",grammar:"Agglutinative. Vowel harmony. SOV order."},
+  {name:"Hindi",code:"hi",lat:23.0,lng:80.0,country:"India",speakers:"600M+",tier:"major",minZoom:3,family:"Indo-Aryan",hello:{text:"नमस्ते",pr:"nah-mah-STAY"},alphabet:"अ आ इ ई उ ऊ ऋ ए ऐ ओ औ + Consonants",grammar:"Devanagari script. SOV order."},
+  {name:"Italian",code:"it",lat:42.5,lng:12.5,country:"Italy",speakers:"68M+",tier:"major",minZoom:3,family:"Romance",hello:{text:"Ciao",pr:"CHOW"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V Z",grammar:"2 genders. Many dialects."},
+  {name:"Portuguese",code:"pt",lat:37.0,lng:-9.5,country:"Portugal",speakers:"260M+",tier:"major",minZoom:3,family:"Romance",hello:{text:"Olá",pr:"oh-LAH"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z + diacritics",grammar:"Nasal vowels unique. Plurals add -s."},
+  {name:"Swedish",code:"sv",lat:60.1,lng:18.6,country:"Sweden",speakers:"10M+",tier:"major",minZoom:3,family:"Germanic",hello:{text:"Hej",pr:"Hey"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Å Ä Ö",grammar:"2 genders. Tonal word accent."},
+  {name:"Finnish",code:"fi",lat:61.9,lng:25.7,country:"Finland",speakers:"5.5M+",tier:"major",minZoom:3,family:"Uralic",hello:{text:"Hei",pr:"Hay"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z Å Ä Ö",grammar:"15 cases. Agglutinative. No articles."},
+  {name:"Hungarian",code:"hu",lat:47.1,lng:19.5,country:"Hungary",speakers:"13M+",tier:"major",minZoom:3,family:"Uralic",hello:{text:"Szia",pr:"SEE-ah"},alphabet:"A Á B C Cs D Dz Dzs E É F G Gy H I Í J K L Ly M N Ny O Ó Ö Ő P Q R S Sz T Ty U Ú Ü Ű V W X Y Z Zs",grammar:"18 cases. Vowel harmony. Agglutinative."},
+  {name:"Dutch",code:"nl",lat:52.3,lng:5.3,country:"Netherlands",speakers:"24M+",tier:"major",minZoom:3,family:"Germanic",hello:{text:"Hallo",pr:"HAH-low"},alphabet:"A B C D E F G H I J K L M N O P Q R S T U V W X Y Z",grammar:"3 genders. Word order V2."},
+  {name:"Ukrainian",code:"uk",lat:48.3,lng:31.1,country:"Ukraine",speakers:"35M+",tier:"major",minZoom:3,family:"Slavic",hello:{text:"Привіт",pr:"pree-VIT"},alphabet:"А Б В Г Ґ Д Е Є Ж З И І Ї Й К Л М Н О П Р С Т У Ф Х Ц Ч Ш Щ Ь Ю Я",grammar:"7 cases. Vocative case still used."},
+  {name:"Czech",code:"cs",lat:49.8,lng:15.5,country:"Czechia",speakers:"10M+",tier:"major",minZoom:3,family:"Slavic",hello:{text:"Ahoj",pr:"ah-hoy"},alphabet:"A B C Č D Ď E F G H Ch I J K L M N Ň O P Q R Ř S Š T U V W X Y Z Ž",grammar:"7 cases. Unique 'ř' sound."},
+  {name:"Romanian",code:"ro",lat:45.9,lng:24.9,country:"Romania",speakers:"24M+",tier:"major",minZoom:3,family:"Romance",hello:{text:"Salut",pr:"sah-LOOT"},alphabet:"A Â B C D E F G H I Î J K L M N O P Q R S Ș T Ț U V W X Y Z",grammar:"5 cases. Balkan Sprachbund features."},
+  {name:"Hebrew",code:"he",lat:31.0,lng:34.8,country:"Israel",speakers:"9M+",tier:"major",minZoom:3,family:"Afro-Asiatic",hello:{text:"שלום",pr:"shah-LOM"},alphabet:"א ב ג ד ה ו ז ח ט י כ ל מ נ ס ע פ צ ק ר ש ת",grammar:"Right-to-left. Consonantal root system."},
+  // Dialects
+  {name:"American English",code:"en-US",lat:38.9,lng:-77.0,country:"United States",speakers:"300M+",tier:"regional",minZoom:3,dialectOf:"English",family:"Germanic",hello:{text:"Hi"},alphabet:"A-Z"},
+  {name:"Canadian French",code:"fr-CA",lat:46.8,lng:-71.2,country:"Canada",speakers:"8M+",tier:"regional",minZoom:4,dialectOf:"French",family:"Romance",hello:{text:"Bonjour"},alphabet:"A-Z + diacritics"},
+  {name:"Mexican Spanish",code:"es-MX",lat:23.6,lng:-102.5,country:"Mexico",speakers:"130M+",tier:"regional",minZoom:3,dialectOf:"Spanish",family:"Romance",hello:{text:"Qué onda"},alphabet:"A-Z + Ñ"},
+  {name:"Brazilian Portuguese",code:"pt-BR",lat:-14.2,lng:-51.9,country:"Brazil",speakers:"215M+",tier:"regional",minZoom:3,dialectOf:"Portuguese",family:"Romance",hello:{text:"Oi"},alphabet:"A-Z"},
+  {name:"Swiss German",code:"gsw",lat:46.8,lng:8.2,country:"Switzerland",speakers:"5M+",tier:"regional",minZoom:4,dialectOf:"German",family:"Germanic",hello:{text:"Grüezi"},alphabet:"A-Z + Ä Ö Ü"},
+  // Regional Europe
+  {name:"Welsh",code:"cy",lat:52.2,lng:-3.6,country:"UK",speakers:"880K+",tier:"regional",minZoom:5,family:"Celtic",hello:{text:"Helo"},alphabet:"A B C Ch D Dd E F Ff G Ng H I J L Ll M N O P Ph R Rh S T Th U W Y"},
+  {name:"Catalan",code:"ca",lat:41.7,lng:1.8,country:"Spain",speakers:"10M+",tier:"regional",minZoom:5,family:"Romance",hello:{text:"Hola"},alphabet:"A-Z + diacritics"},
+  {name:"Basque",code:"eu",lat:43.0,lng:-2.3,country:"Spain",speakers:"750K+",tier:"regional",minZoom:5,family:"Isolate",hello:{text:"Kaixo"},alphabet:"A-Z + Ñ"},
+  {name:"Irish",code:"ga",lat:53.3,lng:-7.7,country:"Ireland",speakers:"1.8M+",tier:"regional",minZoom:5,family:"Celtic",hello:{text:"Dia duit"},alphabet:"A Á B C D E É F G H I Í L M N O Ó P R S T U Ú"},
+  {name:"Breton",code:"br",lat:48.2,lng:-3.0,country:"France",speakers:"200K+",tier:"regional",minZoom:6,family:"Celtic",hello:{text:"Demat"},alphabet:"A-Z + C'h"},
+  {name:"Galician",code:"gl",lat:42.4,lng:-8.2,country:"Spain",speakers:"2.5M+",tier:"regional",minZoom:5,family:"Romance",hello:{text:"Ola"},alphabet:"A-Z + Ñ"},
+  {name:"Silesian",code:"szl",lat:50.3,lng:18.9,country:"Poland",speakers:"500K+",tier:"regional",minZoom:6,family:"Slavic",hello:{text:"Witej"},alphabet:"A Ą B C Ć D E F G H I J K L Ł M N O Ó P R S Ś T U W Y Z Ź Ż"},
+  {name:"Kashubian",code:"csb",lat:54.35,lng:18.0,country:"Poland",speakers:"100K+",tier:"regional",minZoom:6,family:"Slavic",hello:{text:"Witôj"},alphabet:"A Ą B C D E Ë F G H I J K L Ł M N Ń O Ò P R S T U W Y Z"},
+  {name:"Scots Gaelic",code:"gd",lat:57.5,lng:-5.5,country:"UK",speakers:"60K+",tier:"minority",minZoom:6,family:"Celtic",hello:{text:"Halò"},alphabet:"A B C D E F G H I L M N O P R S T U"},
+  {name:"Corsican",code:"co",lat:42.0,lng:9.0,country:"France",speakers:"150K+",tier:"regional",minZoom:6,family:"Romance",hello:{text:"Bonghjornu"},alphabet:"A-Z"},
+  {name:"Frisian",code:"fy",lat:53.2,lng:5.8,country:"Netherlands",speakers:"480K+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Hallo"},alphabet:"A-Z"},
+  {name:"Sorbian",code:"wen",lat:51.3,lng:14.3,country:"Germany",speakers:"30K+",tier:"minority",minZoom:7,family:"Slavic",hello:{text:"Witaj"},alphabet:"A-Z + Č Š Ž"},
+  {name:"Luxembourgish",code:"lb",lat:49.8,lng:6.1,country:"Luxembourg",speakers:"400K+",tier:"regional",minZoom:6,family:"Germanic",hello:{text:"Moien"},alphabet:"A-Z + Ä É"},
+  {name:"Maltese",code:"mt",lat:35.9,lng:14.4,country:"Malta",speakers:"520K+",tier:"regional",minZoom:6,family:"Semitic",hello:{text:"Bongu"},alphabet:"A B Ċ D E F Ġ G H I IE J K L M N O P Q R S T U V W X Ż Z"},
+  {name:"Estonian",code:"et",lat:58.6,lng:25.0,country:"Estonia",speakers:"1.1M+",tier:"regional",minZoom:5,family:"Uralic",hello:{text:"Tere"},alphabet:"A-Z + Š Ž Õ Ä Ö Ü"},
+  {name:"Latvian",code:"lv",lat:56.8,lng:24.6,country:"Latvia",speakers:"1.7M+",tier:"regional",minZoom:5,family:"Baltic",hello:{text:"Sveiki"},alphabet:"A-Z + macrons/cedillas"},
+  {name:"Lithuanian",code:"lt",lat:55.1,lng:23.9,country:"Lithuania",speakers:"2.8M+",tier:"regional",minZoom:5,family:"Baltic",hello:{text:"Labas"},alphabet:"A-Z + diacritics"},
+  {name:"Slovak",code:"sk",lat:48.6,lng:19.6,country:"Slovakia",speakers:"5M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Ahoj"},alphabet:"A-Z + háčky/dĺžne"},
+  {name:"Slovenian",code:"sl",lat:46.0,lng:14.8,country:"Slovenia",speakers:"2.5M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Zdravo"},alphabet:"A-Z + Č Š Ž"},
+  {name:"Albanian",code:"sq",lat:41.1,lng:20.1,country:"Albania",speakers:"7M+",tier:"regional",minZoom:5,family:"Indo-European",hello:{text:"Përshëndetje"},alphabet:"A-Z + Ç Ë + digraphs"},
+  {name:"Macedonian",code:"mk",lat:41.5,lng:21.7,country:"Macedonia",speakers:"2M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Здраво"},alphabet:"Cyrillic + Ѓ Ѕ Ј Љ Њ Ќ Џ"},
+  {name:"Bosnian",code:"bs",lat:43.9,lng:17.6,country:"Bosnia",speakers:"3M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Zdravo"},alphabet:"Latin + Cyrillic"},
+  {name:"Montenegrin",code:"cnr",lat:42.2,lng:19.0,country:"Montenegro",speakers:"500K+",tier:"regional",minZoom:6,family:"Slavic",hello:{text:"Zdravo"},alphabet:"Latin + Ś Ź"},
+  {name:"Icelandic",code:"is",lat:64.9,lng:-19.0,country:"Iceland",speakers:"350K+",tier:"regional",minZoom:5,family:"Germanic",hello:{text:"Góðan dag"},alphabet:"A-Z + Á Ð É Í Ó Ú Ý Þ Æ Ö"},
+  {name:"Faroese",code:"fo",lat:62.0,lng:-6.8,country:"Faroes",speakers:"70K+",tier:"minority",minZoom:7,family:"Germanic",hello:{text:"Hallo"},alphabet:"A-Z + Á Ð Í Ó Ú Ý Æ Ø"},
+  {name:"Belarusian",code:"be",lat:53.9,lng:27.5,country:"Belarus",speakers:"9M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Прывітанне"},alphabet:"Cyrillic + Ґ Ў"},
+  {name:"Bulgarian",code:"bg",lat:42.7,lng:25.4,country:"Bulgaria",speakers:"9M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Здравей"},alphabet:"Cyrillic 30 letters"},
+  {name:"Serbian",code:"sr",lat:44.0,lng:20.9,country:"Serbia",speakers:"12M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Zdravo"},alphabet:"Latin + Cyrillic"},
+  {name:"Croatian",code:"hr",lat:45.1,lng:15.2,country:"Croatia",speakers:"5M+",tier:"regional",minZoom:5,family:"Slavic",hello:{text:"Bok"},alphabet:"Latin + Č Ć Dž Đ Š Ž"},
+  {name:"Moldovan",code:"ro-MD",lat:47.4,lng:28.5,country:"Moldova",speakers:"3M+",tier:"regional",minZoom:5,dialectOf:"Romanian",family:"Romance",hello:{text:"Salut"},alphabet:"Latin + Ș Ț"},
+  // ========== ADD NEW LANGUAGES BELOW ==========
+];
+
+// ========================================================================
+//  STATE
+// ========================================================================
+let map, markers = [];
+let checkedLangs = new Set();
+let currentTranslations = {};
+let translatingActive = false;
+let baseLang = 'en';
+let moveMode = false;
+let selectedMarker = null;
+let langSizes = {}; // { code: px }
+
+// ========================================================================
+//  PERSISTENCE
+// ========================================================================
+const STORE_KEY = 'rudventur-map-v7';
+function loadState(){
+  try{
+    const s = JSON.parse(localStorage.getItem(STORE_KEY)||'{}');
+    return s;
+  }catch(e){return{}}
+}
+function saveState(){
+  const positions = {};
+  markers.forEach(m=>{
+    const ll=m.getLatLng(), o=m._langData;
+    if(Math.abs(ll.lat-o.lat)>0.01||Math.abs(ll.lng-o.lng)>0.01) positions[o.code]={lat:ll.lat,lng:ll.lng};
+  });
+  const checked = [...checkedLangs];
+  localStorage.setItem(STORE_KEY, JSON.stringify({positions, sizes:langSizes, checked}));
+}
+function resetAllState(){
+  if(!confirm('Reset ALL positions, sizes, and selections to default?')) return;
+  localStorage.removeItem(STORE_KEY);
+  location.reload();
+}
+
+// ========================================================================
+//  BOOT
+// ========================================================================
+const bootLines=["> RUDVENTUR OS v17.0 — FLAGS","> Flag markers: Active","> Click-to-move: Enabled","> Per-language sizing: Ready","> Full state persistence: ON","> ","Ready to explore. 🗺️"];
+(function(){
+  const el=document.getElementById('boot-text');let li=0,ci=0,txt='';
+  function tick(){
+    if(li>=bootLines.length){el.classList.add('cursor-blink');setTimeout(()=>{document.getElementById('boot-screen').classList.add('fade-out');setTimeout(initApp,600)},400);return}
+    const line=bootLines[li];
+    if(ci<line.length){txt+=line[ci];ci++;el.textContent=txt;setTimeout(tick,10)}
+    else{txt+='\n';li++;ci=0;el.textContent=txt;setTimeout(tick,50)}
+  }
+  tick();
+})();
+
+// ========================================================================
+//  INIT
+// ========================================================================
+function initApp(){
+  const saved = loadState();
+  if(saved.sizes) langSizes = saved.sizes;
+  if(saved.checked){
+    checkedLangs = new Set(saved.checked);
+  } else {
+    LANGUAGES.filter(l=>l.tier==='major').forEach(l=>checkedLangs.add(l.code));
+  }
+  initMap(saved.positions||{});
+  initBaseLangSelect();
+  initLangCheckboxes();
+  initTranslateBar();
+}
+
+// ========================================================================
+//  MAP
+// ========================================================================
+function initMap(savedPositions){
+  map = L.map('map',{center:[50,15],zoom:4,zoomControl:false,attributionControl:false,minZoom:2,maxZoom:10});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+  LANGUAGES.forEach(lang=>{
+    const flag = FLAGS[lang.code]||'🏳️';
+    const sz = langSizes[lang.code] || 28;
+    const icon = L.divIcon({
+      className:'',
+      html:`<div class="lang-marker" data-code="${lang.code}" id="marker-${lang.code}">
+        <span class="lang-flag">${flag}</span>
+        <span class="lang-label" id="label-${lang.code}" style="font-size:${sz}px">${lang.name}</span>
+      </div>`,
+      iconSize:[null,null],iconAnchor:[11,11],
+    });
+    const pos = savedPositions[lang.code]||{lat:lang.lat,lng:lang.lng};
+    const m = L.marker([pos.lat,pos.lng],{icon}).addTo(map);
+    m._langData = lang;
+    m.on('click', ()=> onMarkerClick(m));
+    markers.push(m);
+  });
+
+  // Click on map to move selected marker
+  map.on('click', e=>{
+    if(moveMode && selectedMarker){
+      selectedMarker.setLatLng(e.latlng);
+      deselectMarker();
+      saveState();
+      setTimeout(resolveCollisions,100);
+    }
+  });
+
+  updateVisibility();
+  setTimeout(resolveCollisions,500);
+  map.on('zoomend moveend',()=>{updateVisibility();resolveCollisions()});
+}
+
+function onMarkerClick(m){
+  if(moveMode){
+    if(selectedMarker === m){
+      deselectMarker();
+    } else {
+      deselectMarker();
+      selectedMarker = m;
+      const el = document.getElementById('marker-'+m._langData.code);
+      if(el) el.classList.add('selected');
+    }
+  } else {
+    openPanel(m._langData);
+  }
+}
+
+function deselectMarker(){
+  if(selectedMarker){
+    const el = document.getElementById('marker-'+selectedMarker._langData.code);
+    if(el) el.classList.remove('selected');
+    selectedMarker = null;
+  }
+}
+
+function toggleMoveMode(){
+  moveMode = !moveMode;
+  const btn = document.getElementById('btn-move');
+  const instr = document.getElementById('move-instructions');
+  btn.classList.toggle('active', moveMode);
+  btn.textContent = moveMode ? '📌 MOVING...' : '📌 MOVE';
+  instr.style.display = moveMode ? 'block' : 'none';
+  if(!moveMode) deselectMarker();
+}
+
+function resolveCollisions(){
+  const fontSize = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--map-font-size'))||28;
+  const padding = Math.max(25, fontSize*2);
+  markers.forEach(m=>{const el=m.getElement();if(el)el.classList.remove('hidden')});
+  const vis = markers.filter(m=>{const el=m.getElement();return el&&el.style.display!=='none'&&!el.classList.contains('hidden')});
+  for(let i=0;i<vis.length;i++){
+    for(let j=i+1;j<vis.length;j++){
+      const p1=map.latLngToContainerPoint(vis[i].getLatLng()),p2=map.latLngToContainerPoint(vis[j].getLatLng());
+      const dist=Math.sqrt((p1.x-p2.x)**2+(p1.y-p2.y)**2);
+      if(dist<padding){
+        const t1=vis[i]._langData.tier==='major'?3:(vis[i]._langData.tier==='regional'?2:1);
+        const t2=vis[j]._langData.tier==='major'?3:(vis[j]._langData.tier==='regional'?2:1);
+        if(t1>t2)vis[i].getElement().classList.add('hidden');else vis[j].getElement().classList.add('hidden');
+      }
+    }
+  }
+}
+
+function updateVisibility(){
+  const z=map.getZoom();
+  markers.forEach(m=>{const el=m.getElement();if(!el)return;el.style.display=z>=m._langData.minZoom?'':'none'});
+}
+
+function updateGlobalSize(val){
+  document.documentElement.style.setProperty('--map-font-size',val+'px');
+  // Update all labels that don't have custom size
+  LANGUAGES.forEach(l=>{
+    if(!langSizes[l.code]){
+      const lbl=document.getElementById('label-'+l.code);
+      if(lbl)lbl.style.fontSize=val+'px';
+    }
+  });
+  setTimeout(resolveCollisions,100);
+}
+
+function setLangSize(code, val){
+  langSizes[code]=parseInt(val);
+  const lbl=document.getElementById('label-'+code);
+  if(lbl) lbl.style.fontSize=val+'px';
+  // Update slider in side panel if open
+  const ps=document.getElementById('panel-slider');
+  if(ps&&ps.dataset.code===code) ps.value=val;
+  // Update slider in checkbox panel
+  const cs=document.getElementById('sz-'+code);
+  if(cs) cs.value=val;
+  // Update map slider display
+  const sv=document.getElementById('szv-'+code);
+  if(sv) sv.textContent=val+'px';
+  const psv=document.getElementById('panel-sz-val');
+  if(psv&&ps&&ps.dataset.code===code) psv.textContent=val+'px';
+  saveState();
+  setTimeout(resolveCollisions,100);
+}
+
+// ========================================================================
+//  CONTROLS
+// ========================================================================
+function initBaseLangSelect(){
+  const sel=document.getElementById('base-lang-select');
+  LANGUAGES.filter(l=>!l.dialectOf).sort((a,b)=>a.name.localeCompare(b.name)).forEach(l=>{
+    const opt=document.createElement('option');opt.value=l.code;opt.textContent=`${FLAGS[l.code]||''} ${l.name}`;
+    if(l.code==='en')opt.selected=true;sel.appendChild(opt);
+  });
+  sel.addEventListener('change',e=>{baseLang=e.target.value});
+}
+
+function initLangCheckboxes(){
+  const list=document.getElementById('lang-checks-list');
+  LANGUAGES.forEach(lang=>{
+    const flag=FLAGS[lang.code]||'🏳️';
+    const sz=langSizes[lang.code]||28;
+    const div=document.createElement('div');div.className='lang-check';
+    div.innerHTML=`
+      <input type="checkbox" id="chk-${lang.code}" value="${lang.code}" ${checkedLangs.has(lang.code)?'checked':''}>
+      <span class="flag-sm">${flag}</span>
+      <label for="chk-${lang.code}" style="flex:1">${lang.name}</label>
+      <input type="range" id="sz-${lang.code}" min="10" max="60" value="${sz}" style="width:50px" oninput="setLangSize('${lang.code}',this.value)">
+      <span id="szv-${lang.code}" style="font-size:9px;color:var(--amber);min-width:28px">${sz}px</span>`;
+    div.querySelector('input[type=checkbox]').addEventListener('change',e=>{
+      if(e.target.checked)checkedLangs.add(lang.code);else checkedLangs.delete(lang.code);
+      updateVisibility();resolveCollisions();saveState();
+    });
+    list.appendChild(div);
+  });
+}
+
+function selectAllLangs(checked){
+  checkedLangs.clear();
+  document.querySelectorAll('#lang-checks-list input[type=checkbox]').forEach(cb=>{cb.checked=checked;if(checked)checkedLangs.add(cb.value)});
+  updateVisibility();resolveCollisions();saveState();
+}
+function selectByTier(tier){
+  checkedLangs.clear();
+  document.querySelectorAll('#lang-checks-list input[type=checkbox]').forEach(cb=>{cb.checked=false});
+  LANGUAGES.forEach(l=>{if(l.tier===tier){checkedLangs.add(l.code);const cb=document.getElementById('chk-'+l.code);if(cb)cb.checked=true}});
+  updateVisibility();resolveCollisions();saveState();
+}
+function toggleLangPanel(){document.getElementById('lang-toggles').classList.toggle('open');document.getElementById('toggle-btn').classList.toggle('shifted')}
+
+// ========================================================================
+//  TRANSLATE
+// ========================================================================
+function initTranslateBar(){
+  document.getElementById('btn-translate').addEventListener('click',doTranslate);
+  document.getElementById('translate-input').addEventListener('keydown',e=>{if(e.key==='Enter')doTranslate()});
+  document.getElementById('btn-clear').addEventListener('click',()=>{
+    currentTranslations={};translatingActive=false;document.getElementById('translate-input').value='';
+    const s=document.getElementById('translate-status');if(s)s.textContent='';updateMapLabels();
+  });
+}
+
+async function doTranslate(){
+  const input=document.getElementById('translate-input'),status=document.getElementById('translate-status'),btn=document.getElementById('btn-translate');
+  if(!status)return;
+  const text=input.value.trim();if(!text)return;
+  const targets=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==baseLang);
+  btn.disabled=true;btn.textContent='TRANSLATING...';status.textContent=`> Translating "${text}"...`;
+  currentTranslations={};translatingActive=true;
+  let done=0;
+  for(let i=0;i<targets.length;i+=3){
+    const batch=targets.slice(i,i+3);
+    await Promise.all(batch.map(async lang=>{
+      try{
+        const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${baseLang}|${lang.code}`;
+        const res=await fetch(url);const data=await res.json();
+        if(data.responseStatus===200)currentTranslations[lang.code]=data.responseData.translatedText;
+      }catch(e){console.warn('Fail',lang.name)}
+      done++;status.textContent=`> ${done}/${targets.length} complete`;updateMapLabels();
+    }));
+  }
+  btn.disabled=false;btn.textContent='TRANSLATE ⚡';status.textContent='> Done.';updateMapLabels();
+}
+
+function updateMapLabels(){
+  LANGUAGES.forEach(lang=>{
+    const lbl=document.getElementById('label-'+lang.code);if(!lbl)return;
+    if(translatingActive&&currentTranslations[lang.code]){lbl.textContent=currentTranslations[lang.code];lbl.classList.add('translated')}
+    else{lbl.textContent=lang.name;lbl.classList.remove('translated')}
+  });
+  setTimeout(resolveCollisions,200);
+}
+
+// ========================================================================
+//  SIDE PANEL (with per-language size slider + flag on map slider)
+// ========================================================================
+function openPanel(lang){
+  const panel=document.getElementById('side-panel'),content=document.getElementById('panel-content');
+  const flag=FLAGS[lang.code]||'🏳️';
+  const dialectBadge=lang.dialectOf?`<span class="dialect-badge">Dialect of: ${lang.dialectOf}</span>`:`<span class="dialect-badge" style="background:var(--green)">ROOT</span>`;
+  const translatedBit=currentTranslations[lang.code]?`<div class="panel-section"><div class="panel-section-title">Translation</div><div style="font-size:24px;color:var(--purple);font-weight:bold">${currentTranslations[lang.code]}</div></div>`:'';
+  const sz=langSizes[lang.code]||28;
+
+  content.innerHTML=`
+    <div style="font-size:60px;margin-bottom:8px">${flag}</div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="panel-lang-name" style="color:${lang.tier==='major'?'var(--green)':(lang.tier==='regional'?'var(--cyan)':'var(--amber)')}">${lang.hello.text}</div>
+      ${dialectBadge}
+    </div>
+    <h2 class="panel-lang-name" style="color:#fff;font-size:22px">${lang.name}</h2>
+    <div class="panel-country">${lang.country} · ${lang.speakers}</div>
+    <div class="panel-size-control">
+      <label>SIZE</label>
+      <input type="range" id="panel-slider" data-code="${lang.code}" min="10" max="60" value="${sz}" oninput="setLangSize('${lang.code}',this.value)" style="flex:1">
+      <span class="sz-val" id="panel-sz-val">${sz}px</span>
+    </div>
+    ${translatedBit}
+    <div class="panel-section"><div class="panel-section-title">Alphabet</div><div class="alphabet-display">${lang.alphabet||''}</div></div>
+    <div class="panel-section"><div class="panel-section-title">Family</div><div style="font-size:14px">${lang.family}</div></div>
+    ${lang.grammar?`<div class="panel-section"><div class="panel-section-title">Quick Grammar</div><div style="font-size:13px;color:var(--dim)">${lang.grammar}</div></div>`:''}
+    <button onclick="openGrammar('${lang.name}')" style="width:100%;margin-top:20px;padding:12px;background:var(--green);color:#000;border:none;font-family:'Orbitron';cursor:pointer;border-radius:6px;font-weight:bold">FULL INFO</button>`;
+  panel.classList.add('open');
+}
+document.getElementById('panel-close').addEventListener('click',()=>document.getElementById('side-panel').classList.remove('open'));
+
+// ========================================================================
+//  GRAMMAR MODAL
+// ========================================================================
+function openGrammar(name){
+  const lang=LANGUAGES.find(l=>l.name===name);if(!lang)return;
+  document.getElementById('grammar-modal-title').textContent=`${FLAGS[lang.code]||''} ${lang.name} Details`;
+  document.getElementById('grammar-body').innerHTML=`
+    <div style="padding:1rem"><h3 style="color:var(--cyan)">Full Alphabet</h3><div class="alphabet-display">${lang.alphabet||''}</div></div>
+    <div style="padding:0 1rem 1rem"><h3 style="color:var(--cyan)">Family</h3><p style="margin-top:8px">${lang.family}</p></div>
+    ${lang.grammar?`<div style="padding:0 1rem 1rem"><h3 style="color:var(--cyan)">Grammar</h3><p style="margin-top:8px">${lang.grammar}</p></div>`:''}`;
+  document.getElementById('grammar-overlay').style.display='flex';
+}
+function closeGrammar(){document.getElementById('grammar-overlay').style.display='none'}
+
+// ESC key
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeGrammar();document.getElementById('side-panel').classList.remove('open');if(moveMode)deselectMarker()}
+});
+</script>
+</body>
+</html>
