@@ -131,7 +131,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="boot-screen"><div id="boot-text"></div></div>
 
 <div id="header">
-  <h1>🗺️ CREATOR MAP v7</h1>
+  <h1 onclick="toggleFullscreen()" style="cursor:pointer" title="Toggle fullscreen">🗺️ CREATOR MAP v7</h1>
   <div class="size-control">
     <label>ALL SIZE</label>
     <input type="range" id="sizeSlider" min="12" max="48" value="28" style="width:80px" oninput="updateGlobalSize(this.value)">
@@ -139,6 +139,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
     <button class="hdr-btn" id="btn-move" onclick="toggleMoveMode()">📌 MOVE</button>
     <button class="hdr-btn" onclick="resetAllState()">↺ RESET ALL</button>
+    <a href="index.html" style="font-size:10px;color:var(--green);text-decoration:none;border:1px solid rgba(0,255,65,.3);padding:3px 8px;border-radius:5px">&#128072; ARTSPACE</a>
     <span style="font-size:10px;color:var(--dim)">RUDVENTUR © 2026</span>
   </div>
 </div>
@@ -611,6 +612,12 @@ function closeGrammar(){document.getElementById('grammar-overlay').style.display
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape'){closeGrammar();document.getElementById('side-panel').classList.remove('open');if(moveMode)deselectMarker()}
 });
+
+// Fullscreen toggle (logo click)
+function toggleFullscreen(){
+  if(!document.fullscreenElement) document.documentElement.requestFullscreen().catch(()=>{});
+  else document.exitFullscreen().catch(()=>{});
+}
 </script>
 </body>
 </html>

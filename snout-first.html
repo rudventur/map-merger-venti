@@ -111,7 +111,7 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 
 <!-- HUD -->
 <div class="hud">
-  <div class="htitle" onclick="panToRandom()">&#128062; Snout First</div>
+  <div class="htitle" onclick="toggleFullscreen()" title="Toggle fullscreen" style="cursor:pointer">&#128062; Snout First</div>
   <div class="hsep"></div>
   <div class="csearch">
     <input class="cinput" id="searchInput" type="text" placeholder="Sniff sniff...">
@@ -885,6 +885,15 @@ document.addEventListener('touchstart', function once() {
   tryFullscreen();
   document.removeEventListener('touchstart', once);
 }, { once: true });
+
+// ── Fullscreen toggle (logo click) ──
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
 
 // ── Init ──
 loadPets();
