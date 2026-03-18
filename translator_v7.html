@@ -223,7 +223,17 @@ const FLAGS = {
   'se':'🇳🇴','smj':'🇸🇪','sma':'🇳🇴',
   'krl':'🇫🇮','vro':'🇪🇪','liv':'🇱🇻',
   'csb2':'🇵🇱','rue':'🇺🇦','rup':'🇷🇴',
-  'ka':'🇬🇪','hy':'🇦🇲','az':'🇦🇿'
+  'ka':'🇬🇪','hy':'🇦🇲','az':'🇦🇿',
+  'sw':'🇹🇿','am':'🇪🇹','yo':'🇳🇬','ig':'🇳🇬','ha':'🇳🇬','zu':'🇿🇦','xh':'🇿🇦',
+  'af':'🇿🇦','so':'🇸🇴','mg':'🇲🇬','wo':'🇸🇳','ber':'🇲🇦',
+  'fa':'🇮🇷','ku':'🇮🇶','uz':'🇺🇿','kk':'🇰🇿','ps':'🇦🇫','ur':'🇵🇰',
+  'bn':'🇧🇩','ta':'🇮🇳','te':'🇮🇳','mr':'🇮🇳','gu':'🇮🇳','pa':'🇮🇳',
+  'kn':'🇮🇳','ml':'🇮🇳','si':'🇱🇰','ne':'🇳🇵',
+  'th':'🇹🇭','vi':'🇻🇳','id':'🇮🇩','ms':'🇲🇾','tl':'🇵🇭',
+  'my':'🇲🇲','km':'🇰🇭','lo':'🇱🇦',
+  'mn':'🇲🇳','bo':'🏳️','yue':'🇭🇰',
+  'qu':'🇵🇪','gn':'🇵🇾','nah':'🇲🇽','ht':'🇭🇹',
+  'mi':'🇳🇿','haw':'🇺🇸','sm':'🇼🇸','to':'🇹🇴','fj':'🇫🇯','tpi':'🇵🇬'
 };
 
 // ========================================================================
@@ -343,6 +353,62 @@ const LANGUAGES = [
   {name:"Georgian",code:"ka",lat:42.0,lng:43.5,country:"Georgia",speakers:"4M+",tier:"regional",minZoom:4,family:"Kartvelian",hello:{text:"გამარჯობა",pr:"ga-mar-JO-ba"},alphabet:"ა ბ გ დ ე ვ ზ თ ი კ ლ მ ნ ო პ ჟ რ ს ტ უ ფ ქ ღ ყ შ ჩ ც ძ წ ჭ ხ ჯ ჰ",grammar:"Unique script. Agglutinative. No grammatical gender."},
   {name:"Armenian",code:"hy",lat:40.2,lng:44.5,country:"Armenia",speakers:"6M+",tier:"regional",minZoom:4,family:"Indo-European",hello:{text:"Բարև",pr:"ba-REV"},alphabet:"Ա Բ Գ Դ Ե Զ Է Ը Թ Ժ Ի Լ Խ Ծ Կ Հ Ձ Ղ Ճ Մ Յ Ն Շ Ո Չ Պ Ջ Ռ Ս Վ Տ Ր Ց Ւ Փ Ք Օ Ֆ",grammar:"Own unique alphabet since 405 AD. Highly inflected."},
   {name:"Azerbaijani",code:"az",lat:40.4,lng:49.8,country:"Azerbaijan",speakers:"23M+",tier:"regional",minZoom:4,family:"Turkic",hello:{text:"Salam",pr:"sa-LAM"},alphabet:"A B C Ç D E Ə F G Ğ H X I İ J K Q L M N O Ö P R S Ş T U Ü V Y Z",grammar:"Agglutinative. Vowel harmony. Latin script since 1991."},
+  // ========== AFRICA ==========
+  {name:"Swahili",code:"sw",lat:-6.8,lng:37.0,country:"Tanzania",speakers:"100M+",tier:"major",minZoom:2,family:"Niger-Congo > Bantu",hello:{text:"Habari",pr:"ha-BA-ree"},alphabet:"A-Z (Latin)",grammar:"Agglutinative. Noun class system with 18 classes."},
+  {name:"Amharic",code:"am",lat:9.0,lng:38.7,country:"Ethiopia",speakers:"57M+",tier:"regional",minZoom:4,family:"Afro-Asiatic > Semitic",hello:{text:"ሰላም",pr:"se-LAM"},alphabet:"Ge'ez script (Fidel) — syllabary with 33 base characters × 7 forms",grammar:"SOV order. Ge'ez script. Verb-heavy morphology."},
+  {name:"Yoruba",code:"yo",lat:7.5,lng:3.9,country:"Nigeria",speakers:"47M+",tier:"regional",minZoom:4,family:"Niger-Congo > Volta-Niger",hello:{text:"Bawo",pr:"BA-wo"},alphabet:"A B D E Ẹ F G Gb H I J K L M N O Ọ P R S Ṣ T U W Y",grammar:"Tonal (3 tones). SVO order. Serial verb constructions."},
+  {name:"Igbo",code:"ig",lat:6.4,lng:7.5,country:"Nigeria",speakers:"45M+",tier:"regional",minZoom:5,family:"Niger-Congo > Volta-Niger",hello:{text:"Nnọọ",pr:"nno-oh"},alphabet:"A B Ch D E F G Gb Gh Gw H I J K Kp Kw L M N Ṅ Nw Ny O Ọ P R S Sh T U Ụ V W Y Z",grammar:"Tonal. Rich vowel harmony."},
+  {name:"Hausa",code:"ha",lat:12.0,lng:8.5,country:"Nigeria",speakers:"80M+",tier:"major",minZoom:3,family:"Afro-Asiatic > Chadic",hello:{text:"Sannu",pr:"SAN-noo"},alphabet:"A B Ɓ C D Ɗ E F G H I J K Ƙ L M N O P R S Sh T Ts U W Y Ƴ Z",grammar:"SVO order. Tonal. Gender system."},
+  {name:"Zulu",code:"zu",lat:-28.5,lng:30.5,country:"South Africa",speakers:"27M+",tier:"regional",minZoom:5,family:"Niger-Congo > Bantu",hello:{text:"Sawubona",pr:"sa-wu-BO-na"},alphabet:"A-Z (Latin)",grammar:"Agglutinative. Click consonants. 15 noun classes."},
+  {name:"Xhosa",code:"xh",lat:-32.0,lng:27.5,country:"South Africa",speakers:"19M+",tier:"regional",minZoom:5,family:"Niger-Congo > Bantu",hello:{text:"Molo",pr:"MO-lo"},alphabet:"A-Z (Latin)",grammar:"18 noun classes. 3 click consonants (c, q, x)."},
+  {name:"Afrikaans",code:"af",lat:-33.9,lng:18.5,country:"South Africa",speakers:"7M+",tier:"regional",minZoom:5,family:"Indo-European > Germanic",hello:{text:"Hallo",pr:"HA-lo"},alphabet:"A-Z",grammar:"SVO. No verb conjugation. Double negation required."},
+  {name:"Somali",code:"so",lat:5.2,lng:46.2,country:"Somalia",speakers:"22M+",tier:"regional",minZoom:5,family:"Afro-Asiatic > Cushitic",hello:{text:"Salaan",pr:"sa-LAAN"},alphabet:"A-Z (Latin, since 1972)",grammar:"SOV order. Tonal. Complex verb morphology."},
+  {name:"Malagasy",code:"mg",lat:-18.9,lng:47.5,country:"Madagascar",speakers:"25M+",tier:"regional",minZoom:5,family:"Austronesian > Malayo-Polynesian",hello:{text:"Manao ahoana",pr:"ma-NAO a-HO-na"},alphabet:"A-Z (Latin, no C Q U W X)",grammar:"VOS word order (rare). Austronesian origin despite location."},
+  {name:"Wolof",code:"wo",lat:14.7,lng:-17.4,country:"Senegal",speakers:"12M+",tier:"regional",minZoom:5,family:"Niger-Congo > Atlantic",hello:{text:"Nanga def",pr:"NAN-ga def"},alphabet:"A-Z (Latin)",grammar:"SVO. No grammatical gender. Consonant mutation."},
+  {name:"Berber (Tamazight)",code:"ber",lat:33.0,lng:-5.0,country:"Morocco",speakers:"25M+",tier:"regional",minZoom:5,family:"Afro-Asiatic > Berber",hello:{text:"ⴰⵣⵓⵍ",pr:"a-ZUL"},alphabet:"Tifinagh: ⴰ ⴱ ⴳ ⴷ ⴹ ⴻ ⴼ ⴽ ⵀ ⵃ ⵄ ⵅ ⵇ ⵉ ⵊ ⵍ ⵎ ⵏ ⵓ ⵔ ⵕ ⵖ ⵙ ⵚ ⵛ ⵜ ⵟ ⵡ ⵢ ⵣ",grammar:"VSO order. Tifinagh script (ancient). Complex verb system."},
+  // ========== MIDDLE EAST / CENTRAL ASIA ==========
+  {name:"Persian",code:"fa",lat:32.4,lng:53.7,country:"Iran",speakers:"110M+",tier:"major",minZoom:2,family:"Indo-European > Iranian",hello:{text:"سلام",pr:"sa-LAM"},alphabet:"Arabic script + پ چ ژ گ",grammar:"SOV order. No grammatical gender. Extensive use of ezafe."},
+  {name:"Kurdish",code:"ku",lat:36.2,lng:43.0,country:"Iraq/Turkey",speakers:"30M+",tier:"regional",minZoom:5,family:"Indo-European > Iranian",hello:{text:"Slav",pr:"SLAV"},alphabet:"Latin (Kurmanji) / Arabic (Sorani)",grammar:"SOV order. 2 genders. Ergative-absolutive."},
+  {name:"Uzbek",code:"uz",lat:41.3,lng:69.3,country:"Uzbekistan",speakers:"34M+",tier:"regional",minZoom:4,family:"Turkic",hello:{text:"Salom",pr:"sa-LOM"},alphabet:"A-Z (Latin since 1993)",grammar:"Agglutinative. Vowel harmony. SOV order."},
+  {name:"Kazakh",code:"kk",lat:48.0,lng:67.0,country:"Kazakhstan",speakers:"13M+",tier:"regional",minZoom:4,family:"Turkic",hello:{text:"Сәлем",pr:"sa-LEM"},alphabet:"Cyrillic (switching to Latin)",grammar:"Agglutinative. Vowel harmony. SOV."},
+  {name:"Pashto",code:"ps",lat:34.5,lng:69.2,country:"Afghanistan",speakers:"60M+",tier:"regional",minZoom:4,family:"Indo-European > Iranian",hello:{text:"سلام",pr:"sa-LAM"},alphabet:"Arabic script + extra letters",grammar:"SOV. Ergative alignment. 2 genders."},
+  {name:"Urdu",code:"ur",lat:30.4,lng:69.3,country:"Pakistan",speakers:"230M+",tier:"major",minZoom:2,family:"Indo-European > Indo-Aryan",hello:{text:"السلام علیکم",pr:"as-sa-LA-mu a-LAI-kum"},alphabet:"Nastaliq Arabic script",grammar:"SOV. Same grammar as Hindi, different script."},
+  // ========== SOUTH ASIA ==========
+  {name:"Bengali",code:"bn",lat:23.7,lng:90.4,country:"Bangladesh",speakers:"270M+",tier:"major",minZoom:2,family:"Indo-European > Indo-Aryan",hello:{text:"হ্যালো",pr:"HAE-lo"},alphabet:"Bengali script: অ আ ই ঈ উ ঊ ঋ এ ঐ ও ঔ + consonants",grammar:"SOV order. No grammatical gender. Classifiers required."},
+  {name:"Tamil",code:"ta",lat:11.0,lng:78.5,country:"India (Tamil Nadu)",speakers:"78M+",tier:"regional",minZoom:4,family:"Dravidian",hello:{text:"வணக்கம்",pr:"va-NAK-kam"},alphabet:"Tamil script: அ ஆ இ ஈ உ ஊ எ ஏ ஐ ஒ ஓ ஔ",grammar:"SOV. Agglutinative. No grammatical gender (animate/inanimate)."},
+  {name:"Telugu",code:"te",lat:17.4,lng:78.5,country:"India (Telangana)",speakers:"83M+",tier:"regional",minZoom:4,family:"Dravidian",hello:{text:"నమస్కారం",pr:"na-mas-KA-ram"},alphabet:"Telugu script",grammar:"SOV. Agglutinative. 3 genders."},
+  {name:"Marathi",code:"mr",lat:19.0,lng:73.0,country:"India (Maharashtra)",speakers:"83M+",tier:"regional",minZoom:4,family:"Indo-European > Indo-Aryan",hello:{text:"नमस्कार",pr:"na-mas-KAR"},alphabet:"Devanagari",grammar:"SOV. 3 genders. Agglutinative verb forms."},
+  {name:"Gujarati",code:"gu",lat:23.0,lng:72.6,country:"India (Gujarat)",speakers:"57M+",tier:"regional",minZoom:5,family:"Indo-European > Indo-Aryan",hello:{text:"નમસ્તે",pr:"na-mas-TE"},alphabet:"Gujarati script",grammar:"SOV. 3 genders. Postpositions."},
+  {name:"Punjabi",code:"pa",lat:31.5,lng:74.3,country:"India/Pakistan",speakers:"150M+",tier:"regional",minZoom:4,family:"Indo-European > Indo-Aryan",hello:{text:"ਸਤ ਸ੍ਰੀ ਅਕਾਲ",pr:"sat-sree-a-KAL"},alphabet:"Gurmukhi / Shahmukhi",grammar:"SOV. Tonal language. 2 genders."},
+  {name:"Kannada",code:"kn",lat:15.3,lng:75.7,country:"India (Karnataka)",speakers:"44M+",tier:"regional",minZoom:5,family:"Dravidian",hello:{text:"ನಮಸ್ಕಾರ",pr:"na-mas-KA-ra"},alphabet:"Kannada script",grammar:"SOV. Agglutinative. 3 genders."},
+  {name:"Malayalam",code:"ml",lat:10.5,lng:76.3,country:"India (Kerala)",speakers:"38M+",tier:"regional",minZoom:5,family:"Dravidian",hello:{text:"നമസ്കാരം",pr:"na-mas-KA-ram"},alphabet:"Malayalam script",grammar:"SOV. Agglutinative. No grammatical gender."},
+  {name:"Sinhala",code:"si",lat:7.9,lng:80.6,country:"Sri Lanka",speakers:"17M+",tier:"regional",minZoom:5,family:"Indo-European > Indo-Aryan",hello:{text:"ආයුබෝවන්",pr:"a-yu-BO-wan"},alphabet:"Sinhala script",grammar:"SOV. Literary vs colloquial forms differ greatly."},
+  {name:"Nepali",code:"ne",lat:27.7,lng:85.3,country:"Nepal",speakers:"32M+",tier:"regional",minZoom:5,family:"Indo-European > Indo-Aryan",hello:{text:"नमस्ते",pr:"na-mas-TE"},alphabet:"Devanagari",grammar:"SOV. Honorific system. 2 genders."},
+  // ========== SOUTHEAST ASIA ==========
+  {name:"Thai",code:"th",lat:13.8,lng:100.5,country:"Thailand",speakers:"60M+",tier:"major",minZoom:3,family:"Kra-Dai > Tai",hello:{text:"สวัสดี",pr:"sa-wat-DEE"},alphabet:"กขฃคฅฆงจฉชซฌญฎฏฐฑฒณดตถทธนบปผฝพฟภมยรลวศษสหฬอฮ",grammar:"Tonal (5 tones). No conjugation. SVO. No spaces between words."},
+  {name:"Vietnamese",code:"vi",lat:16.0,lng:108.0,country:"Vietnam",speakers:"85M+",tier:"major",minZoom:3,family:"Austroasiatic > Vietic",hello:{text:"Xin chào",pr:"sin CHOW"},alphabet:"A Ă Â B C D Đ E Ê G H I K L M N O Ô Ơ P Q R S T U Ư V X Y",grammar:"Tonal (6 tones). SVO. Classifiers. No inflection."},
+  {name:"Indonesian",code:"id",lat:-6.2,lng:107.0,country:"Indonesia",speakers:"200M+",tier:"major",minZoom:2,family:"Austronesian > Malayo-Polynesian",hello:{text:"Halo",pr:"HA-lo"},alphabet:"A-Z (Latin)",grammar:"SVO. No tenses. Affixes change meaning. No tones."},
+  {name:"Malay",code:"ms",lat:3.1,lng:101.7,country:"Malaysia",speakers:"77M+",tier:"regional",minZoom:4,family:"Austronesian > Malayo-Polynesian",hello:{text:"Hai",pr:"Hi"},alphabet:"A-Z (Latin) / Jawi (Arabic)",grammar:"SVO. Mutually intelligible with Indonesian."},
+  {name:"Tagalog",code:"tl",lat:14.6,lng:121.0,country:"Philippines",speakers:"82M+",tier:"regional",minZoom:4,family:"Austronesian > Philippine",hello:{text:"Kumusta",pr:"ku-MUS-ta"},alphabet:"A-Z (Latin)",grammar:"VSO order. Focus system. Austronesian alignment."},
+  {name:"Burmese",code:"my",lat:19.8,lng:96.2,country:"Myanmar",speakers:"43M+",tier:"regional",minZoom:5,family:"Sino-Tibetan > Tibeto-Burman",hello:{text:"မင်္ဂလာပါ",pr:"min-ga-LA-ba"},alphabet:"Myanmar script (circular letters)",grammar:"SOV. Tonal. Particle-heavy."},
+  {name:"Khmer",code:"km",lat:11.6,lng:104.9,country:"Cambodia",speakers:"17M+",tier:"regional",minZoom:5,family:"Austroasiatic > Khmer",hello:{text:"សួស្តី",pr:"su-os-DEI"},alphabet:"Khmer script (largest alphabet: 74 letters)",grammar:"SVO. No tones. Largest alphabet in the world."},
+  {name:"Lao",code:"lo",lat:18.0,lng:102.6,country:"Laos",speakers:"30M+",tier:"regional",minZoom:5,family:"Kra-Dai > Tai",hello:{text:"ສະບາຍດີ",pr:"sa-BAI-dee"},alphabet:"Lao script",grammar:"Tonal (6 tones). SVO. Related to Thai."},
+  // ========== EAST ASIA ==========
+  {name:"Mongolian",code:"mn",lat:47.9,lng:106.9,country:"Mongolia",speakers:"6M+",tier:"regional",minZoom:5,family:"Mongolic",hello:{text:"Сайн уу",pr:"sain uu"},alphabet:"Cyrillic (+ traditional vertical script revival)",grammar:"SOV. Agglutinative. Vowel harmony."},
+  {name:"Tibetan",code:"bo",lat:29.7,lng:91.1,country:"Tibet/China",speakers:"6M+",tier:"regional",minZoom:5,family:"Sino-Tibetan > Tibeto-Burman",hello:{text:"བཀྲ་ཤིས་བདེ་ལེགས",pr:"ta-shi DE-lek"},alphabet:"Tibetan script",grammar:"SOV. Honorific system. Written form very different from spoken."},
+  {name:"Cantonese",code:"yue",lat:22.3,lng:114.2,country:"Hong Kong/China",speakers:"85M+",tier:"regional",minZoom:4,family:"Sino-Tibetan > Sinitic",hello:{text:"你好",pr:"nei HOU"},alphabet:"Same Chinese characters, different pronunciation",grammar:"Tonal (6-9 tones). SVO. More tones than Mandarin."},
+  // ========== AMERICAS ==========
+  {name:"Quechua",code:"qu",lat:-13.5,lng:-72.0,country:"Peru",speakers:"10M+",tier:"regional",minZoom:4,family:"Quechuan",hello:{text:"Allillanchu",pr:"ah-yi-YAN-chu"},alphabet:"A Ch Chh Ch' H I K Kh K' L Ll M N Ñ P Ph P' Q Qh Q' R S T Th T' U W Y",grammar:"SOV. Agglutinative. Evidentiality markers. No grammatical gender."},
+  {name:"Guarani",code:"gn",lat:-25.3,lng:-57.6,country:"Paraguay",speakers:"7M+",tier:"regional",minZoom:5,family:"Tupi-Guarani",hello:{text:"Mba'éichapa",pr:"mba-ei-CHA-pa"},alphabet:"A-Z + Ã Ẽ Ĩ Õ Ũ Ỹ Ĝ",grammar:"SOV. Nasal harmony. Official language alongside Spanish."},
+  {name:"Nahuatl",code:"nah",lat:19.5,lng:-99.5,country:"Mexico",speakers:"1.7M+",tier:"regional",minZoom:5,family:"Uto-Aztecan",hello:{text:"Niltze",pr:"NIL-tse"},alphabet:"A-Z (Latin)",grammar:"Agglutinative. Polysynthetic. Language of the Aztecs."},
+  {name:"Haitian Creole",code:"ht",lat:19.0,lng:-72.3,country:"Haiti",speakers:"12M+",tier:"regional",minZoom:5,family:"French Creole",hello:{text:"Bonjou",pr:"bon-JU"},alphabet:"A-Z (Latin)",grammar:"SVO. French-based creole. No verb conjugation."},
+  // ========== OCEANIA ==========
+  {name:"Maori",code:"mi",lat:-38.0,lng:176.0,country:"New Zealand",speakers:"200K+",tier:"regional",minZoom:5,family:"Austronesian > Polynesian",hello:{text:"Kia ora",pr:"KEY-a OR-a"},alphabet:"A E H I K M N Ng O P R T U W Wh",grammar:"VSO. Only 15 letters. Polynesian family."},
+  {name:"Hawaiian",code:"haw",lat:20.8,lng:-156.3,country:"Hawaii (US)",speakers:"24K+",tier:"minority",minZoom:6,family:"Austronesian > Polynesian",hello:{text:"Aloha",pr:"a-LO-ha"},alphabet:"A E H I K L M N O P U W ʻ",grammar:"VSO. Only 13 letters (+ ʻokina). Polynesian family."},
+  {name:"Samoan",code:"sm",lat:-13.8,lng:-172.0,country:"Samoa",speakers:"510K+",tier:"regional",minZoom:6,family:"Austronesian > Polynesian",hello:{text:"Talofa",pr:"ta-LO-fa"},alphabet:"A E F G I L M N O P S T U V",grammar:"VSO. Ergative. Formal vs informal registers."},
+  {name:"Tongan",code:"to",lat:-21.2,lng:-175.2,country:"Tonga",speakers:"187K+",tier:"minority",minZoom:7,family:"Austronesian > Polynesian",hello:{text:"Mālō e lelei",pr:"MA-lo e le-LEI"},alphabet:"A E F H I K L M N Ng O P S T U V ʻ",grammar:"VSO. Definitive vs indefinite accent."},
+  {name:"Fijian",code:"fj",lat:-17.8,lng:178.0,country:"Fiji",speakers:"350K+",tier:"regional",minZoom:6,family:"Austronesian > Oceanic",hello:{text:"Bula",pr:"BU-la"},alphabet:"A-Z (Latin)",grammar:"VOS. Inclusive vs exclusive 'we'."},
+  {name:"Tok Pisin",code:"tpi",lat:-6.0,lng:147.0,country:"Papua New Guinea",speakers:"4M+",tier:"regional",minZoom:5,family:"English Creole",hello:{text:"Gude",pr:"GU-de"},alphabet:"A-Z (Latin)",grammar:"SVO. English-based creole. Official language of PNG."},
   // ========== ADD NEW LANGUAGES BELOW ==========
 ];
 
@@ -588,23 +654,101 @@ function initBaseLangSelect(){
   sel.addEventListener('change',e=>{baseLang=e.target.value});
 }
 
+// ========================================================================
+//  LINGUISTIC FAMILY TREE
+// ========================================================================
+const LANG_TREE={
+  'Indo-European':{
+    'Germanic':['en','de','nl','sv','da','no','is','af','sco','nds','bar','ksh','pfl','swg','sli','gsw','gsw-FR','fo','frr','stq','fy','vls','li','lb','en-US'],
+    'Romance':['fr','es','it','pt','ro','ca','gl','oc','co','sc','an','ast','nap','scn','pms','lij','fur','lmo','vec','wa','rm','fr-CA','es-MX','pt-BR','ro-MD','ht','rup'],
+    'Slavic':['ru','pl','uk','cs','sk','bg','sr','hr','bs','sl','be','mk','cnr','szl','csb','hsb','dsb','wen','rue'],
+    'Celtic':['cy','ga','gd','br','gv','kw'],
+    'Baltic':['lv','lt'],
+    'Hellenic':['el'],
+    'Indo-Aryan':['hi','bn','mr','gu','pa','ne','si','ur'],
+    'Iranian':['fa','ku','ps'],
+    'Albanian':['sq'],
+    'Armenian':['hy']
+  },
+  'Uralic':{'Finnic':['fi','et','krl','vro','liv'],'Ugric':['hu'],'Sami':['se','smj','sma']},
+  'Turkic':{'Common Turkic':['tr','az','uz','kk']},
+  'Afro-Asiatic':{'Semitic':['ar','he','am','mt'],'Chadic':['ha'],'Berber':['ber'],'Cushitic':['so']},
+  'Sino-Tibetan':{'Sinitic':['zh-CN','yue'],'Tibeto-Burman':['my','bo']},
+  'Kra-Dai':{'Tai':['th','lo']},
+  'Austroasiatic':{'Vietic':['vi'],'Khmer':['km']},
+  'Austronesian':{'Malayo-Polynesian':['id','ms','tl','mg'],'Polynesian':['mi','haw','sm','to'],'Oceanic':['fj','tpi']},
+  'Niger-Congo':{'Bantu':['sw','zu','xh'],'Volta-Niger':['yo','ig'],'Atlantic':['wo']},
+  'Dravidian':{'South Dravidian':['ta','kn','ml'],'South-Central':['te']},
+  'Japonic':{'Japanese':['ja']},
+  'Koreanic':{'Korean':['ko']},
+  'Kartvelian':{'Georgian':['ka']},
+  'Mongolic':{'Mongolian':['mn']},
+  'Quechuan':{'Quechua':['qu']},
+  'Tupi-Guarani':{'Guarani':['gn']},
+  'Uto-Aztecan':{'Nahuatl':['nah']},
+  'Language Isolate':{'Basque':['eu']}
+};
+
 function initLangCheckboxes(){
   const list=document.getElementById('lang-checks-list');
-  LANGUAGES.forEach(lang=>{
-    const flag=FLAGS[lang.code]||'🏳️';
-    const sz=langSizes[lang.code]||28;
-    const div=document.createElement('div');div.className='lang-check';
-    div.innerHTML=`
-      <input type="checkbox" id="chk-${lang.code}" value="${lang.code}" ${checkedLangs.has(lang.code)?'checked':''}>
-      <span class="flag-sm">${flag}</span>
-      <label for="chk-${lang.code}" style="flex:1">${lang.name}</label>
-      <input type="range" id="sz-${lang.code}" min="10" max="60" value="${sz}" style="width:50px" oninput="setLangSize('${lang.code}',this.value)">
-      <span id="szv-${lang.code}" style="font-size:9px;color:var(--amber);min-width:28px">${sz}px</span>`;
-    div.querySelector('input[type=checkbox]').addEventListener('change',e=>{
-      if(e.target.checked)checkedLangs.add(lang.code);else checkedLangs.delete(lang.code);
-      updateVisibility();resolveCollisions();saveState();
+  const langMap={};
+  LANGUAGES.forEach(l=>{langMap[l.code]=l});
+  // Build tree UI
+  Object.entries(LANG_TREE).forEach(([family,branches])=>{
+    // Family header
+    const famDiv=document.createElement('div');
+    famDiv.style.cssText='margin-top:8px;padding:4px 0;border-top:1px solid var(--border)';
+    famDiv.innerHTML=`<div style="font-size:10px;color:var(--green);font-weight:bold;letter-spacing:1px;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:4px" class="tree-fam" data-fam="${family}">
+      <span class="tree-arrow" style="transition:transform .2s;font-size:8px">▶</span> ${family}
+      <span style="font-size:9px;color:var(--dim);margin-left:auto">${Object.values(branches).flat().length}</span>
+    </div>`;
+    const famContent=document.createElement('div');
+    famContent.style.cssText='display:none;padding-left:8px';
+    famContent.className='tree-fam-content';
+    Object.entries(branches).forEach(([branch,codes])=>{
+      // Branch header
+      const brDiv=document.createElement('div');
+      brDiv.style.cssText='margin-top:4px';
+      brDiv.innerHTML=`<div style="font-size:9px;color:var(--cyan);cursor:pointer;display:flex;align-items:center;gap:4px" class="tree-branch">
+        <span class="tree-arrow" style="transition:transform .2s;font-size:7px">▶</span> ${branch}
+        <span style="font-size:8px;color:var(--dim);margin-left:auto">${codes.length}</span>
+      </div>`;
+      const brContent=document.createElement('div');
+      brContent.style.cssText='display:none;padding-left:12px';
+      brContent.className='tree-branch-content';
+      codes.forEach(code=>{
+        const lang=langMap[code];
+        if(!lang)return;
+        const flag=FLAGS[code]||'🏳️';
+        const sz=langSizes[code]||28;
+        const div=document.createElement('div');div.className='lang-check';
+        div.innerHTML=`
+          <input type="checkbox" id="chk-${code}" value="${code}" ${checkedLangs.has(code)?'checked':''}>
+          <span class="flag-sm">${flag}</span>
+          <label for="chk-${code}" style="flex:1">${lang.name}</label>
+          <input type="range" id="sz-${code}" min="10" max="60" value="${sz}" style="width:50px" oninput="setLangSize('${code}',this.value)">
+          <span id="szv-${code}" style="font-size:9px;color:var(--amber);min-width:28px">${sz}px</span>`;
+        div.querySelector('input[type=checkbox]').addEventListener('change',e=>{
+          if(e.target.checked)checkedLangs.add(code);else checkedLangs.delete(code);
+          updateVisibility();resolveCollisions();saveState();
+        });
+        brContent.appendChild(div);
+      });
+      brDiv.querySelector('.tree-branch').addEventListener('click',()=>{
+        const open=brContent.style.display!=='none';
+        brContent.style.display=open?'none':'block';
+        brDiv.querySelector('.tree-arrow').style.transform=open?'':'rotate(90deg)';
+      });
+      brDiv.appendChild(brContent);
+      famContent.appendChild(brDiv);
     });
-    list.appendChild(div);
+    famDiv.querySelector('.tree-fam').addEventListener('click',()=>{
+      const open=famContent.style.display!=='none';
+      famContent.style.display=open?'none':'block';
+      famDiv.querySelector('.tree-arrow').style.transform=open?'':'rotate(90deg)';
+    });
+    famDiv.appendChild(famContent);
+    list.appendChild(famDiv);
   });
 }
 
