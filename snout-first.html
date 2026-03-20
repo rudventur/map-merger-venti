@@ -218,6 +218,20 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 
 <canvas id="snoutMap"></canvas>
 
+<!-- Firebase SDK (compat mode for CDN) -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+<!-- Snout First modules -->
+<script src="js/firebase-config.js"></script>
+<script src="js/distance.js"></script>
+<script src="js/pet-registration.js"></script>
+<script src="js/feeding.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/wandering.js"></script>
+<script src="js/petuserbox.js"></script>
+
 <script>
 // ═══════════════════════════════════════════════════════════════
 //  Snout First — Pet Map (same tile engine as ArtSpace City)
@@ -895,10 +909,338 @@ function toggleFullscreen() {
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+//  FIREBASE INTEGRATION
+// ═══════════════════════════════════════════════════════════════
+let firebaseReady = false;
+let activeWalkTracker = null;
+let activeWalkPetId = null;
+const DEFAULT_CHANNEL = 'snoutfirst_global';
+
+async function initFirebaseIntegration() {
+  if (!initFirebase()) {
+    console.warn('Firebase not available — running in local mode');
+    return;
+  }
+  const uid = await ensureAuth();
+  if (!uid) {
+    console.warn('Auth failed — running in local mode');
+    return;
+  }
+  firebaseReady = true;
+
+  // Prompt for username if not set
+  if (!localStorage.getItem('rv_username')) {
+    const name = prompt('What\'s your name? (for pet community)', 'Anonymous Walker');
+    if (name) setUserName(name);
+  }
+
+  // Start notification listener
+  startNotificationListener();
+  onNotification((notif) => {
+    toast(notif.message);
+  });
+
+  // Load Firebase pets and merge with local
+  await syncPetsFromFirebase();
+
+  // Watch for wandering pets
+  watchForDisconnects(DEFAULT_CHANNEL, (petId, data) => {
+    const wp = new WanderingPet(petId, DEFAULT_CHANNEL, data.lat, data.lng, data);
+    wp.start();
+  });
+
+  // Listen for real-time pet updates
+  db.ref('snoutfirst/pets').on('child_changed', () => {
+    syncPetsFromFirebase();
+  });
+
+  toast('🐾 Connected to Snout First network!');
+}
+
+async function syncPetsFromFirebase() {
+  if (!firebaseReady) return;
+  try {
+    const fbPets = await getAllPets();
+    // Merge Firebase pets into local state
+    fbPets.forEach(fbPet => {
+      const exists = S.pets.findIndex(p => p._fbId === fbPet.id);
+      const localPet = {
+        _fbId: fbPet.id,
+        name: fbPet.name,
+        species: fbPet.species || 'dog',
+        breed: fbPet.breed || '',
+        bio: fbPet.bio || '',
+        tags: fbPet.personality_tags || [],
+        mood: fbPet.mood || 'happy',
+        lat: fbPet.home_lat,
+        lon: fbPet.home_lng,
+        timestamp: fbPet.created_at,
+        status: fbPet.status || 'home',
+        current_walker: fbPet.current_walker,
+        registered_by: fbPet.registered_by,
+        owner_name: fbPet.owner_name,
+        photo_base64: fbPet.photo_base64 || '',
+        stats: fbPet.stats || {}
+      };
+      if (exists >= 0) {
+        S.pets[exists] = localPet;
+      } else {
+        S.pets.push(localPet);
+        // Add sniff entry
+        S.sniffs.push({
+          petIndex: S.pets.length - 1,
+          caption: fbPet.bio || fbPet.name + ' joined the pack!',
+          mood: fbPet.mood || 'happy',
+          timestamp: fbPet.created_at,
+          wags: 0,
+          wagged: false
+        });
+      }
+    });
+  } catch (e) {
+    console.warn('Firebase sync error:', e);
+  }
+}
+
+// ── Handler functions (called by PETuserBox) ──
+async function handleTakeOut(petId) {
+  if (!firebaseReady) { toast('Not connected to network 🐾'); return; }
+  const walkId = await takeOutPet(petId, DEFAULT_CHANNEL);
+  if (walkId) {
+    activeWalkPetId = petId;
+    activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
+    activeWalkTracker.start();
+    toast('🚶 Let\'s go for a walk! 🐾');
+    closeUserbox();
+    await syncPetsFromFirebase();
+  } else {
+    toast('This pet is not available right now 🐾');
+  }
+}
+
+async function handleReturnHome(petId) {
+  if (!firebaseReady) return;
+  await returnPetHome(petId, DEFAULT_CHANNEL, activeWalkTracker);
+  const dist = activeWalkTracker ? activeWalkTracker.getDistanceKm() : 0;
+  activeWalkTracker = null;
+  activeWalkPetId = null;
+  toast(`🏠 Pet returned home! ${dist}km walked 🐾`);
+  closeUserbox();
+  await syncPetsFromFirebase();
+}
+
+async function handlePickUp(petId) {
+  if (!firebaseReady) return;
+  const walkId = await pickUpWanderingPet(petId, DEFAULT_CHANNEL);
+  if (walkId) {
+    activeWalkPetId = petId;
+    activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
+    activeWalkTracker.start();
+    toast('🎾 Picked up wandering pet! 🐾');
+    closeUserbox();
+  }
+}
+
+function handleFeedPet(petId, petName) {
+  const section = document.getElementById('pet-feed-section-' + petId);
+  if (section) {
+    if (section.innerHTML) { section.innerHTML = ''; return; }
+    renderFeedingForm(petId, petName, section);
+  }
+}
+
+function handleEditPet(petId) {
+  toast('Edit coming soon! 🐾');
+}
+
+// ── Override savePetPin to also save to Firebase ──
+const _originalSavePetPin = savePetPin;
+savePetPin = async function() {
+  const name = document.getElementById('pinName').value.trim();
+  if (!name) { toast('Every pet needs a name! 🐾'); return; }
+
+  const petData = {
+    name,
+    species: document.getElementById('pinSpecies').value,
+    breed: document.getElementById('pinBreed').value.trim(),
+    bio: document.getElementById('pinBio').value.trim(),
+    tags: document.getElementById('pinTags').value.split(',').map(t => t.trim()).filter(Boolean),
+    mood: document.getElementById('pinMood').value,
+    lat: S._pendingPin.lat,
+    lng: S._pendingPin.lon || S._pendingPin.lng,
+    contact: ''
+  };
+
+  // Check for photo input
+  const photoInput = document.getElementById('pinPhoto');
+  if (photoInput && photoInput.files && photoInput.files[0]) {
+    try {
+      petData.photo_base64 = await photoToBase64(photoInput.files[0]);
+    } catch (e) { console.warn('Photo encode failed:', e); }
+  }
+
+  if (firebaseReady) {
+    const petId = await registerPet(petData);
+    toast(`${getSpeciesEmoji(petData.species)} ${name} registered on Snout First!`);
+    await syncPetsFromFirebase();
+  } else {
+    // Local fallback (original behavior)
+    const pet = {
+      name: petData.name,
+      species: petData.species,
+      breed: petData.breed,
+      bio: petData.bio,
+      tags: petData.tags,
+      mood: petData.mood,
+      lat: petData.lat,
+      lon: petData.lng,
+      timestamp: Date.now()
+    };
+    S.pets.push(pet);
+    S.sniffs.push({
+      petIndex: S.pets.length - 1,
+      caption: pet.bio || pet.name + ' just joined the pack!',
+      mood: pet.mood,
+      timestamp: pet.timestamp,
+      wags: 0,
+      wagged: false
+    });
+    savePets();
+    toast(`${getSpeciesEmoji(pet.species)} ${name} pinned to the map!`);
+  }
+
+  closePinModal();
+  document.getElementById('pinName').value = '';
+  document.getElementById('pinBreed').value = '';
+  document.getElementById('pinBio').value = '';
+  document.getElementById('pinTags').value = '';
+  S.pinMode = false;
+  const btn = document.querySelector('.hbtn.paw');
+  if (btn) btn.classList.remove('active');
+  cv.style.cursor = '';
+};
+
+// ── Override openUserbox to use PETuserBox for Firebase pets ──
+const _originalOpenUserbox = openUserbox;
+openUserbox = function(petIdx, screenX, screenY) {
+  const pet = S.pets[petIdx];
+  if (!pet) return;
+  activeUserboxPetIndex = petIdx;
+
+  const ub = document.getElementById('petUserbox');
+
+  if (pet._fbId && firebaseReady) {
+    // Use full PETuserBox
+    const content = ub.querySelector('.ub-actions') ? ub : ub;
+    // Build a container and render
+    ub.innerHTML = `
+      <button class="ub-close" onclick="closeUserbox()">&times;</button>
+      <div id="ub-fb-content"></div>
+    `;
+    renderPetUserboxFull({
+      id: pet._fbId,
+      name: pet.name,
+      species: pet.species,
+      breed: pet.breed,
+      bio: pet.bio,
+      emoji: getSpeciesEmoji(pet.species),
+      personality_tags: pet.tags,
+      mood: pet.mood,
+      status: pet.status || 'home',
+      current_walker: pet.current_walker,
+      registered_by: pet.registered_by,
+      owner_name: pet.owner_name,
+      photo_base64: pet.photo_base64,
+      stats: pet.stats || {},
+      created_at: pet.timestamp
+    }, document.getElementById('ub-fb-content'));
+  } else {
+    // Original local userbox
+    _originalOpenUserbox(petIdx, screenX, screenY);
+    return;
+  }
+
+  // Position
+  let left = screenX + 20, top = screenY - 60;
+  if (left + 270 > window.innerWidth) left = screenX - 280;
+  if (top < 56) top = 56;
+  if (top + 300 > window.innerHeight) top = window.innerHeight - 310;
+  if (left < 0) left = 10;
+  ub.style.left = left + 'px';
+  ub.style.top = top + 'px';
+  ub.classList.add('show');
+};
+
+// ── Add photo input to pin modal ──
+function addPhotoToModal() {
+  const bioLabel = document.querySelector('#pinModal label[for="pinBio"], #pinModal label:nth-of-type(4)');
+  if (!bioLabel) return;
+  // Check if already added
+  if (document.getElementById('pinPhoto')) return;
+  const photoHtml = document.createElement('div');
+  photoHtml.innerHTML = `
+    <label style="font-family:'VT323',monospace;color:rgba(255,204,102,.7);font-size:.85rem;display:block;margin:8px 0 3px">Pet Photo (optional)</label>
+    <input id="pinPhoto" type="file" accept="image/*" style="width:100%;background:rgba(0,0,0,.4);color:#ffcc66;border:2px solid rgba(204,136,51,.4);padding:6px 8px;border-radius:8px;font-family:'VT323',monospace;font-size:.95rem">
+  `;
+  bioLabel.parentNode.insertBefore(photoHtml, bioLabel);
+}
+
+// ── Draw distance badge for active walk ──
+const _originalDrawPets = drawPets;
+drawPets = function() {
+  _originalDrawPets();
+
+  // Draw walk distance badge if walking
+  if (activeWalkTracker && activeWalkPetId) {
+    const petIdx = S.pets.findIndex(p => p._fbId === activeWalkPetId);
+    if (petIdx >= 0) {
+      const p = worldToScreen(S.pets[petIdx].lat, S.pets[petIdx].lon || S.pets[petIdx].lng);
+      if (p.x > -100 && p.x < cv.width + 100) {
+        const dist = activeWalkTracker.getDistanceKm();
+        const mins = activeWalkTracker.getDurationMins();
+        const text = `📏 ${dist}km · ⏱️${mins}m`;
+
+        cx.font = '11px "VT323", monospace';
+        const tw = cx.measureText(text).width + 10;
+        cx.fillStyle = 'rgba(26,18,10,0.9)';
+        cx.fillRect(p.x - tw / 2, p.y + 22, tw, 18);
+        cx.strokeStyle = '#88cc44';
+        cx.lineWidth = 1;
+        cx.strokeRect(p.x - tw / 2, p.y + 22, tw, 18);
+        cx.fillStyle = '#88cc44';
+        cx.textAlign = 'center';
+        cx.fillText(text, p.x, p.y + 35);
+      }
+    }
+  }
+
+  // Draw status indicators for all pets
+  S.pets.forEach((pet, i) => {
+    if (!pet._fbId) return;
+    const p = worldToScreen(pet.lat, pet.lon || pet.lng);
+    if (p.x < -40 || p.x > cv.width + 40 || p.y < -40 || p.y > cv.height + 40) return;
+
+    // Status dot
+    const colors = { home: '#88cc44', walking: '#ffcc66', wandering: '#ff6666' };
+    cx.beginPath();
+    cx.arc(p.x + 16, p.y - 16, 4, 0, Math.PI * 2);
+    cx.fillStyle = colors[pet.status] || '#88cc44';
+    cx.fill();
+    cx.strokeStyle = '#1a120a';
+    cx.lineWidth = 1.5;
+    cx.stroke();
+  });
+};
+
 // ── Init ──
 loadPets();
 seedDemoPets();
+addPhotoToModal();
 render();
+
+// Init Firebase after render starts
+setTimeout(initFirebaseIntegration, 500);
 </script>
 </body>
 </html>
