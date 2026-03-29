@@ -384,6 +384,7 @@ function loop() {
   drawFlights();           // 9. Real-time flights
   drawRedStrings();        // 10. Red string connections
   drawConspiracyStrings(); // 10b. Greyed-out conspiracy strings (all modes)
+  drawCemeteryOverlay();   // 10c. Cemetery fog + tombstone pins
   drawListings();          // 11. ArtSpace pins
   drawSearchResults();     // 11b. Search sprinkle discoveries
   drawComments();          // 12. Conspiracy comments
@@ -463,6 +464,7 @@ function loop() {
 })();
 
 // ── BOOT ──
+loadCemeteries();
 document.getElementById('SS').textContent = G.listings.length;
 updateZoomUI(); // Initialize zoom display (G now exists)
 const countryList = document.getElementById('countryList');

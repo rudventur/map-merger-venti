@@ -264,6 +264,7 @@ function drawListings() {
     : G.listings;
 
   list.forEach(l => {
+    if (l.cemetery) return; // drawn by cemetery.js
     const s = worldToScreen(l.lat, l.lng);
     if (s.x < -30 || s.x > cv.width + 30 || s.y < -40 || s.y > cv.height + 20) return;
     const col = getPCol(l);
@@ -272,7 +273,7 @@ function drawListings() {
     ctx.beginPath(); ctx.moveTo(s.x - 4, s.y - 5); ctx.lineTo(s.x, s.y + 2); ctx.lineTo(s.x + 4, s.y - 5); ctx.fill();
     ctx.shadowBlur = 0;
     ctx.fillStyle = '#000'; ctx.font = '10px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText(l.artSpace?.offer?.types?.length > 0 ? '\u{1F3E0}' : '\u{1F9E9}', s.x, s.y - 12);
+    ctx.fillText(l.cemetery ? '\u{1FAA6}' : l.artSpace?.offer?.types?.length > 0 ? '\u{1F3E0}' : '\u{1F9E9}', s.x, s.y - 12);
     if (z >= 11) {
       ctx.fillStyle = col.bg; ctx.font = "9px 'VT323',monospace"; ctx.textAlign = 'center';
       ctx.fillText(l.username || '', s.x, s.y + 12);
@@ -681,7 +682,7 @@ function findCommentAt(sx, sy) {
 
 // ── MODALS ──
 function openNewPin(lat, lng) {
-  document.getElementById('MB').innerHTML = '<button class="mcl" onclick="closeModal()">\u2715</button><div class="mh">\u{1F4CC} NEW ARTSPACE</div><div class="mf"><label>YOUR NAME</label><input type="text" id="pU" placeholder="username..." maxlength="30"></div><div class="mf"><label>SIGNATURE</label><input type="text" id="pS" placeholder="your vibe..." maxlength="60"></div><div class="mf"><label>SPACE TYPES</label><div class="chips">' + TYPES.map(t => '<span class="chip" onclick="this.classList.toggle(\'on\')">' + t + '</span>').join('') + '</div></div><div class="mf"><label>DESCRIPTION</label><textarea id="pD" placeholder="What do you have or seek?"></textarea></div><div class="mf"><label>I AM</label><select id="pR"><option value="offer">\u{1F3E0} Offering</option><option value="seek">\u{1F9E9} Seeking</option><option value="both">\u{1F3E0}\u{1F9E9} Both</option></select></div><div class="mf"><label>EXCHANGE</label><div class="chips"><span class="chip on" onclick="this.classList.toggle(\'on\')">\u{1F49A} FREE</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F504} SWAP</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u2615 DONATION</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F4B8} PAID</span></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><div class="mf"><label>FROM</label><input type="date" id="pF"></div><div class="mf"><label>TO</label><input type="date" id="pT"></div></div><button class="msave" onclick="savePin(' + lat + ',' + lng + ')">\u{1F4BE} PUBLISH</button>';
+  document.getElementById('MB').innerHTML = '<button class="mcl" onclick="closeModal()">\u2715</button><div class="mh">\u{1F4CC} NEW ARTSPACE</div><div class="mf"><label>YOUR NAME</label><input type="text" id="pU" placeholder="username..." maxlength="30"></div><div class="mf"><label>SIGNATURE</label><input type="text" id="pS" placeholder="your vibe..." maxlength="60"></div><div class="mf"><label>SPACE TYPES</label><div class="chips">' + TYPES.map(t => '<span class="chip" onclick="this.classList.toggle(\'on\')">' + t + '</span>').join('') + '</div></div><div class="mf"><label>DESCRIPTION</label><textarea id="pD" placeholder="What do you have or seek?"></textarea></div><div class="mf"><label>I AM</label><select id="pR"><option value="offer">\u{1F3E0} Offering</option><option value="seek">\u{1F9E9} Seeking</option><option value="both">\u{1F3E0}\u{1F9E9} Both</option></select></div><div class="mf"><label>EXCHANGE</label><div class="chips"><span class="chip on" onclick="this.classList.toggle(\'on\')">\u{1F49A} FREE</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F504} SWAP</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u2615 DONATION</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1F4B8} PAID</span><span class="chip" onclick="this.classList.toggle(\'on\')">\u{1FAA6} RIP</span></div></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:7px"><div class="mf"><label>FROM</label><input type="date" id="pF"></div><div class="mf"><label>TO</label><input type="date" id="pT"></div></div><button class="msave" onclick="savePin(' + lat + ',' + lng + ')">\u{1F4BE} PUBLISH</button>';
   document.getElementById('MO').classList.add('open');
 }
 
@@ -691,7 +692,8 @@ function savePin(lat, lng) {
   const desc = document.getElementById('pD').value.trim();
   const role = document.getElementById('pR').value;
   const types = [...document.querySelectorAll('#MB .chips .chip.on')].map(c => c.textContent);
-  const l = { id: 'p' + Date.now(), lat, lng, username: user, signature: sig, artSpace: { active: true,
+  const isCemetery = types.some(t => t.includes('Cemetery'));
+  const l = { id: 'p' + Date.now(), lat, lng, username: user, signature: sig, cemetery: isCemetery, artSpace: { active: true,
     offer: role === 'seek' ? { types: [], desc: '', exchange: [] } : { types, desc, exchange: types, dateFrom: document.getElementById('pF').value, dateTo: document.getElementById('pT').value },
     seek: role === 'offer' ? { types: [], desc: '', exchange: [] } : { types, desc, exchange: ['\u{1F504} SKILLS'], dateFrom: document.getElementById('pF').value, dateTo: document.getElementById('pT').value }
   }};
@@ -711,7 +713,8 @@ function openView(p) {
     const dates = fmtD(data.dateFrom, data.dateTo);
     return '<div class="msec ' + (isO ? 'msec-o' : 'msec-s') + '"><div class="mst">' + (isO ? '\u{1F3E0} OFFERING' : '\u{1F9E9} SEEKING') + '</div><div class="mchips">' + chips + '</div>' + (data.desc ? '<div class="mdesc">' + esc(data.desc) + '</div>' : '') + (dates ? '<div class="mdates">\u{1F4C5} ' + dates + '</div>' : '') + (data.exchange?.length ? '<div class="mxch">' + data.exchange.join(' \u00B7 ') + '</div>' : '') + '</div>';
   };
-  document.getElementById('MB').innerHTML = '<button class="mcl" onclick="closeModal()">\u2715</button><div class="mbt" style="color:' + col.bg + ';text-shadow:0 0 6px ' + col.bg + '">' + (io && is ? '\u{1F3E0}\u{1F9E9} HOST+SEEKER' : io ? '\u{1F3E0} SPACE' : '\u{1F9E9} SEEKING') + '</div><div class="mu">' + esc(p.username || 'Anon') + '</div>' + (p.signature ? '<div class="msig">"' + esc(p.signature) + '"</div>' : '') + sec(art.offer || {}, true) + sec(art.seek || {}, false) + '<button class="mcon" onclick="showToast(\'Find ' + esc(p.username || '') + ' \u2014 auth coming soon!\',\'#00bfff\');closeModal()">\u{1F4AC} CONNECT</button>';
+  const badge = p.cemetery ? '\u{1FAA6} CEMETERY' : (io && is ? '\u{1F3E0}\u{1F9E9} HOST+SEEKER' : io ? '\u{1F3E0} SPACE' : '\u{1F9E9} SEEKING');
+  document.getElementById('MB').innerHTML = '<button class="mcl" onclick="closeModal()">\u2715</button><div class="mbt" style="color:' + col.bg + ';text-shadow:0 0 6px ' + col.bg + '">' + badge + '</div><div class="mu">' + esc(p.username || 'Anon') + '</div>' + (p.signature ? '<div class="msig">"' + esc(p.signature) + '"</div>' : '') + sec(art.offer || {}, true) + sec(art.seek || {}, false) + '<button class="mcon" onclick="showToast(\'Find ' + esc(p.username || '') + ' \u2014 auth coming soon!\',\'#00bfff\');closeModal()">\u{1F4AC} CONNECT</button>';
   document.getElementById('MO').classList.add('open');
 }
 

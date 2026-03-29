@@ -43,8 +43,8 @@ const TILE_URLS = {
 
 const RAIL_TILE_URL = 'https://a.tiles.openrailwaymap.org/standard/{z}/{x}/{y}.png';
 
-const PCOLS = { free: { bg: '#00ff41', bd: '#00cc33' }, swap: { bg: '#00bfff', bd: '#0088bb' }, donation: { bg: '#ffaa00', bd: '#cc8800' }, fee: { bg: '#ff4488', bd: '#bb2266' }, seek: { bg: '#ffe600', bd: '#ccaa00' } };
-const TYPES = ['&#128566; Print','&#127994; Ceramics','&#128247; Darkroom','&#129683; Wood','&#129525; Textile','&#127912; Paint','&#128297; Metal','&#128187; Digital','&#127807; Garden','&#10024; Other'];
+const PCOLS = { free: { bg: '#00ff41', bd: '#00cc33' }, swap: { bg: '#00bfff', bd: '#0088bb' }, donation: { bg: '#ffaa00', bd: '#cc8800' }, fee: { bg: '#ff4488', bd: '#bb2266' }, seek: { bg: '#ffe600', bd: '#ccaa00' }, rip: { bg: '#8a8a8a', bd: '#555555' } };
+const TYPES = ['&#128566; Print','&#127994; Ceramics','&#128247; Darkroom','&#129683; Wood','&#129525; Textile','&#127912; Paint','&#128297; Metal','&#128187; Digital','&#127807; Garden','&#129702; Cemetery','&#10024; Other'];
 
 const COUNTRIES = [
   { code:'GB', name:'United Kingdom', lat:54.0, lng:-2.0, bbox:[49.9,-8.6,60.9,1.8] },
