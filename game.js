@@ -366,6 +366,8 @@ function loop() {
   if (G.frameN % 15 === 0 && G.veh === 'car') carCheckStationProximity();
   if (G.frameN % 600 === 0) weatherCheck();
   if (G.frameN % 600 === 0) rainRadarCheck();
+  if (G.frameN % 300 === 0) mushroomCheck();
+  if (G.frameN % 300 === 0) wildlifeCheck();
 
   // ── RENDER PIPELINE ──
   ctx.fillStyle = '#0a0a12'; ctx.fillRect(0, 0, cv.width, cv.height);
@@ -387,6 +389,8 @@ function loop() {
   drawCemeteryOverlay();   // 10c. Cemetery fog + tombstone pins
   drawListings();          // 11. ArtSpace pins
   drawSearchResults();     // 11b. Search sprinkle discoveries
+  drawMushrooms();         // 11c. iNaturalist fungi sightings
+  drawWildlife();          // 11d. iNaturalist wildlife sightings
   drawComments();          // 12. Conspiracy comments
   // Mode-specific atmospheres
   drawTrainAtmosphere();   // 13a. Train: clouds, sunshine
