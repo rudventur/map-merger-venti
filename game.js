@@ -63,29 +63,15 @@ function toggleAnalogMode() {
 // Joystick state (set by touch events on the joystick zone)
 let _joyAngle = 0, _joyForce = 0; // angle in radians, force 0..1
 
-// ── SEARCH ──
-document.getElementById('goBtn').addEventListener('click', goCity);
-document.getElementById('CI').addEventListener('keydown', e => { if (e.key === 'Enter') goCity(); });
+// ── SEARCH (uses 3-tab system from search-panel.js) ──
+document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+// Backwards compat: goCity still works if called
 async function goCity() {
-  const name = document.getElementById('CI').value.trim(); if (!name) return;
-  showToast('Finding ' + name + '...', '#00bfff');
-  try {
-    const r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(name) + '&format=json&limit=8', { headers: { 'User-Agent': 'ArtSpaceCity/1.0' } });
-    const d = await r.json();
-    if (d[0]) {
-      G.pos.lat = parseFloat(d[0].lat); G.pos.lng = parseFloat(d[0].lon);
-      showToast('Welcome to ' + name + '!', '#00ff41');
-      detectCountryFromCoords(G.pos.lat, G.pos.lng);
-      if (G.veh === 'train') trainLoadAround();
-      if (G.veh === 'bus') loadBusData();
-      if (G.veh === 'plane') flyLoadAirports();
-      if (G.veh === 'boat') fetchWaterBodies();
-      if (showFlights) fetchFlights();
-      if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng);
-      // Sprinkle extra search results across the map
-      sprinkleSearchResults(name, d);
-    } else showToast('Not found!', '#ff4444');
-  } catch (e) { showToast('Network error', '#ff4444'); }
+  const name = document.getElementById('CI').value || document.getElementById('searchInput').value.trim();
+  if (!name) return;
+  document.getElementById('searchInput').value = name;
+  setSearchTab('places');
+  doSearch();
 }
 
 // ── SEARCH SPRINKLE ──
