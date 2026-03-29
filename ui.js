@@ -223,6 +223,7 @@ function drawListings() {
     : G.listings;
 
   list.forEach(l => {
+    if (l.cemetery) return; // drawn by cemetery.js
     const s = worldToScreen(l.lat, l.lng);
     if (s.x < -30 || s.x > cv.width + 30 || s.y < -40 || s.y > cv.height + 20) return;
     const col = getPCol(l);
