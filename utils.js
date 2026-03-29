@@ -36,9 +36,11 @@ function showToast(msg, color) {
 
 function getPCol(l) {
   if (!l?.artSpace?.active) return PCOLS.swap;
+  if (l.cemetery) return PCOLS.rip;
   const a = l.artSpace;
   if (!a.offer?.types?.length && a.seek?.types?.length) return PCOLS.seek;
   const e = a.offer?.exchange || [];
+  if (e.some(x => x.includes('RIP'))) return PCOLS.rip;
   if (e.some(x => x.includes('FREE'))) return PCOLS.free;
   if (e.some(x => x.includes('SWAP'))) return PCOLS.swap;
   if (e.some(x => x.includes('DONATION'))) return PCOLS.donation;
