@@ -10,6 +10,8 @@ const G = {
   listings: [...DEMO], selectedCountry: null,
   showOffersOnly: false, showRedStrings: false, commentMode: false,
   searchResults: [],  // sprinkled search discoveries
+  // 360° analog movement
+  analogMode: false, heading: 0, velocity: 0,
   comments: [
     { lat:51.51, lng:-0.13, text:"This kiln is amazing", from:"NeonWanderer42", timestamp:"2026-03-12" },
     { lat:52.52, lng:13.40, text:"Collab on large-scale prints?", from:"CosmicNomad7", timestamp:"2026-03-14" },
@@ -39,7 +41,27 @@ document.querySelectorAll('.db[data-dir]').forEach(btn => {
   btn.addEventListener('pointerup', () => { G.keys[k] = false; btn.classList.remove('pressed'); });
   btn.addEventListener('pointerleave', () => { G.keys[k] = false; btn.classList.remove('pressed'); });
 });
-function centerPlayer() {}
+function centerPlayer() { toggleAnalogMode(); }
+
+// ── ANALOG / 360° MODE ──
+function toggleAnalogMode() {
+  G.analogMode = !G.analogMode;
+  G.velocity = 0;
+  const dpad = document.querySelector('.dpad');
+  const joystick = document.getElementById('joystickZone');
+  if (G.analogMode) {
+    if (dpad) dpad.style.display = 'none';
+    if (joystick) joystick.style.display = 'block';
+    showToast('\u{1F3AE} 360\u00B0 Analog mode! Touch/drag to steer', '#00bfff');
+  } else {
+    if (dpad) dpad.style.display = '';
+    if (joystick) joystick.style.display = 'none';
+    showToast('\u{1F4F1} Classic D-Pad mode', '#ffe600');
+  }
+}
+
+// Joystick state (set by touch events on the joystick zone)
+let _joyAngle = 0, _joyForce = 0; // angle in radians, force 0..1
 
 // ── SEARCH ──
 document.getElementById('goBtn').addEventListener('click', goCity);
@@ -179,6 +201,12 @@ function setV(btn) {
 }
 
 // ── MOVEMENT ──
+// Analog movement constants
+const TURN_SPEED = 3.0;    // degrees per frame
+const ACCEL = 0.06;        // velocity units per frame
+const FRICTION = 0.94;     // velocity multiplier when no input
+const MAX_VEL = 1.0;       // max velocity (multiplied by vehicle spd)
+
 function updateMovement() {
   const k = G.keys;
   const up = k.ArrowUp || k.w || k.W;
@@ -186,6 +214,39 @@ function updateMovement() {
   const lt = k.ArrowLeft || k.a || k.A;
   const rt = k.ArrowRight || k.d || k.D;
   const mv = up || dn || lt || rt;
+
+  // ── ANALOG 360° MODE ──
+  if (G.analogMode && G.veh !== 'plane') {
+    const spd = VEH[G.veh]?.spd || VEH.walk.spd;
+    // Joystick input (touch) takes priority over keyboard
+    if (_joyForce > 0.05) {
+      // Joystick: angle sets heading directly, force sets velocity
+      G.heading = _joyAngle * 180 / Math.PI;
+      G.velocity = Math.min(MAX_VEL, _joyForce * MAX_VEL);
+    } else {
+      // Keyboard analog: left/right = turn, up/down = accel/brake
+      if (lt) G.heading -= TURN_SPEED;
+      if (rt) G.heading += TURN_SPEED;
+      G.heading = ((G.heading % 360) + 360) % 360;
+      if (up) G.velocity = Math.min(MAX_VEL, G.velocity + ACCEL);
+      else if (dn) G.velocity = Math.max(-MAX_VEL * 0.4, G.velocity - ACCEL * 1.5);
+      else G.velocity *= FRICTION;
+    }
+    if (Math.abs(G.velocity) < 0.005) { G.velocity = 0; return; }
+    // Convert heading + velocity to lat/lng delta
+    const rad = G.heading * Math.PI / 180;
+    const dlng = Math.sin(rad) * G.velocity * spd;
+    const dlat = -Math.cos(rad) * G.velocity * spd; // screen-up = heading 0 = north = +lat, but cos(0)=1, so negate for math
+    const nl = G.pos.lat - dlat; // minus because: heading 0 (north) → +lat
+    const ng = G.pos.lng + dlng;
+    // Set direction for sprite
+    if (Math.abs(dlng) > Math.abs(dlat)) G.dir = dlng > 0 ? 'right' : 'left';
+    else G.dir = dlat < 0 ? 'up' : 'down';
+    G.pos.lat = nl; G.pos.lng = ng;
+    return;
+  }
+
+  // ── CLASSIC MODE (unchanged logic below) ──
 
   if (G.veh === 'plane') {
     planeUpdateControls(); // mode-plane.js handles all plane movement
@@ -200,40 +261,32 @@ function updateMovement() {
     if (rt) { ng += s; G.dir = 'right'; }
     const sn = snapToTrack(nl, ng);
     if (sn.snapped && sn.tight) {
-      // On track — full speed
       G.pos.lat = sn.lat; G.pos.lng = sn.lng;
     } else if (sn.snapped && !sn.tight) {
-      // Gap jumping — slower, pulled toward track
       G.pos.lat = sn.lat; G.pos.lng = sn.lng;
     } else {
-      // Off track — crawl speed
       const slow = VEH.walk.spd * 0.4;
       if (up) G.pos.lat += slow; if (dn) G.pos.lat -= slow;
       if (lt) G.pos.lng -= slow; if (rt) G.pos.lng += slow;
     }
 
   } else if (G.veh === 'boat') {
-    // ── BOAT: water boundary enforcement ──
     if (!mv) return;
     if (boatNearWater) {
-      // On water — full boat speed
       const spd = curBoat.spd;
       let nl = G.pos.lat, ng = G.pos.lng;
       if (up) { nl += spd; G.dir = 'up'; }
       if (dn) { nl -= spd; G.dir = 'down'; }
       if (lt) { ng -= spd; G.dir = 'left'; }
       if (rt) { ng += spd; G.dir = 'right'; }
-      // Check if new position is still on water
       if (isOnWater(nl, ng)) {
         G.pos.lat = nl; G.pos.lng = ng;
       } else {
-        // Would leave water — allow very slow crawl (dragging boat ashore)
         const crawl = VEH.walk.spd * 0.15;
         if (up) G.pos.lat += crawl; if (dn) G.pos.lat -= crawl;
         if (lt) G.pos.lng -= crawl; if (rt) G.pos.lng += crawl;
       }
     } else {
-      // On land — barely move (dragging boat to water)
       const crawl = VEH.walk.spd * 0.15;
       if (up) { G.pos.lat += crawl; G.dir = 'up'; }
       if (dn) { G.pos.lat -= crawl; G.dir = 'down'; }
@@ -249,10 +302,8 @@ function updateMovement() {
     if (rt) { G.pos.lng += spd; G.dir = 'right'; }
 
   } else if (G.veh === 'car') {
-    // ── CAR: road snapping + fuel + speed by road type ──
     if (!mv) return;
     if (carFuel <= 0 && !curCar.isElectric) {
-      // Out of fuel — can't move
       if (G.frameN % 60 === 0) showToast('\u26FD OUT OF FUEL! Find a station!', '#ff2244');
       return;
     }
@@ -262,12 +313,9 @@ function updateMovement() {
     if (dn) { nl -= baseSpd; G.dir = 'down'; }
     if (lt) { ng -= baseSpd; G.dir = 'left'; }
     if (rt) { ng += baseSpd; G.dir = 'right'; }
-    // Snap to road
     const snap = carSnapToRoad(nl, ng);
     if (snap.snapped && snap.tight) {
-      // On road — apply road speed multiplier
       const mult = ROAD_SPEEDS[snap.roadType] || 1.0;
-      // SUV bonus on bad roads
       const offRoadBonus = (curCar.id === 'suv' && mult < 0.5) ? 1.5 : 1.0;
       const finalSpd = baseSpd * mult * offRoadBonus;
       nl = G.pos.lat; ng = G.pos.lng;
@@ -279,20 +327,16 @@ function updateMovement() {
       G.pos.lat = snap2.lat; G.pos.lng = snap2.lng;
       carOnRoad = true;
     } else if (snap.snapped && !snap.tight) {
-      // Near road — pulled toward it
       G.pos.lat = snap.lat; G.pos.lng = snap.lng;
       carOnRoad = false;
     } else {
-      // Off road — slow (SUV less slow)
       const offMult = curCar.id === 'suv' ? 0.5 : 0.25;
       const slow = baseSpd * offMult;
       if (up) G.pos.lat += slow; if (dn) G.pos.lat -= slow;
       if (lt) G.pos.lng -= slow; if (rt) G.pos.lng += slow;
       carOnRoad = false;
     }
-    // Track distance for odometer
     carOdometer += haversine(G.pos.lat, G.pos.lng, G.pos.lat - (up ? baseSpd : dn ? -baseSpd : 0), G.pos.lng);
-    // Burn fuel
     carBurnFuel();
 
   } else {
@@ -359,6 +403,69 @@ function loop() {
 
   requestAnimationFrame(loop);
 }
+
+// ── VIRTUAL JOYSTICK ──
+(function() {
+  const zone = document.getElementById('joystickZone');
+  const jcv = document.getElementById('joystickCanvas');
+  if (!jcv) return;
+  const jcx = jcv.getContext('2d');
+  const CX = 60, CY = 60, R = 50, KR = 18;
+  let knobX = CX, knobY = CY, active = false;
+
+  function drawJoystick() {
+    jcx.clearRect(0, 0, 120, 120);
+    // Outer ring
+    jcx.strokeStyle = 'rgba(0,255,65,0.2)'; jcx.lineWidth = 2;
+    jcx.beginPath(); jcx.arc(CX, CY, R, 0, Math.PI * 2); jcx.stroke();
+    // Cross-hairs
+    jcx.strokeStyle = 'rgba(0,255,65,0.06)'; jcx.lineWidth = 1;
+    jcx.beginPath(); jcx.moveTo(CX, CY - R); jcx.lineTo(CX, CY + R); jcx.stroke();
+    jcx.beginPath(); jcx.moveTo(CX - R, CY); jcx.lineTo(CX + R, CY); jcx.stroke();
+    // Heading indicator (N marker)
+    const hRad = G.heading * Math.PI / 180;
+    const nx = CX + Math.sin(hRad) * (R - 6), ny = CY - Math.cos(hRad) * (R - 6);
+    jcx.fillStyle = 'rgba(255,230,0,0.4)'; jcx.beginPath(); jcx.arc(nx, ny, 3, 0, Math.PI * 2); jcx.fill();
+    // Knob
+    jcx.fillStyle = active ? 'rgba(0,255,65,0.6)' : 'rgba(0,255,65,0.25)';
+    jcx.shadowColor = '#00ff41'; jcx.shadowBlur = active ? 12 : 4;
+    jcx.beginPath(); jcx.arc(knobX, knobY, KR, 0, Math.PI * 2); jcx.fill();
+    jcx.shadowBlur = 0;
+    jcx.strokeStyle = 'rgba(0,255,65,0.5)'; jcx.lineWidth = 2;
+    jcx.beginPath(); jcx.arc(knobX, knobY, KR, 0, Math.PI * 2); jcx.stroke();
+    // Speed arc
+    if (G.velocity > 0.01) {
+      jcx.strokeStyle = 'rgba(0,191,255,0.4)'; jcx.lineWidth = 3;
+      jcx.beginPath(); jcx.arc(CX, CY, R + 4, -Math.PI / 2, -Math.PI / 2 + (G.velocity / MAX_VEL) * Math.PI * 2); jcx.stroke();
+    }
+    requestAnimationFrame(drawJoystick);
+  }
+  drawJoystick();
+
+  function updateKnob(clientX, clientY) {
+    const rect = jcv.getBoundingClientRect();
+    let dx = clientX - rect.left - CX;
+    let dy = clientY - rect.top - CY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist > R) { dx = dx / dist * R; dy = dy / dist * R; }
+    knobX = CX + dx; knobY = CY + dy;
+    const force = Math.min(1, dist / R);
+    if (force > 0.1) {
+      _joyAngle = Math.atan2(dx, -dy); // angle: 0=up, pi/2=right
+      _joyForce = force;
+    } else {
+      _joyForce = 0;
+    }
+  }
+
+  function resetKnob() { knobX = CX; knobY = CY; active = false; _joyForce = 0; }
+
+  // Touch events
+  jcv.addEventListener('pointerdown', e => { active = true; jcv.setPointerCapture(e.pointerId); updateKnob(e.clientX, e.clientY); });
+  jcv.addEventListener('pointermove', e => { if (active) updateKnob(e.clientX, e.clientY); });
+  jcv.addEventListener('pointerup', () => resetKnob());
+  jcv.addEventListener('pointercancel', () => resetKnob());
+})();
 
 // ── BOOT ──
 loadCemeteries();
