@@ -67,10 +67,11 @@ let _joyAngle = 0, _joyForce = 0; // angle in radians, force 0..1
 document.getElementById('searchInput').addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
 // Backwards compat: goCity still works if called
 async function goCity() {
-  const name = document.getElementById('CI').value || document.getElementById('searchInput').value.trim();
+  const el = document.getElementById('searchInput') || document.getElementById('CI');
+  const name = el ? el.value.trim() : '';
   if (!name) return;
-  document.getElementById('searchInput').value = name;
-  setSearchTab('places');
+  if (el) el.value = name;
+  if (typeof setSearchTab === 'function') setSearchTab('places');
   doSearch();
 }
 

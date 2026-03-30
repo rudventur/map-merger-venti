@@ -96,7 +96,7 @@ let lightningLastFetch = 0;
 let blitzWs = null;
 let blitzConnected = false;
 let blitzRetries = 0;
-const BLITZ_MAX_RETRIES = 3;
+const BLITZ_MAX_RETRIES = 1;
 let thunderSoundsQueued = [];
 
 // Audio context for thunder
