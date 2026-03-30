@@ -7,39 +7,55 @@
 //  OVERLAY CONTROL — all toggles in one place
 // ══════════════════════════════════════════════════════════════════════
 
-const OVERLAY_DEFS = [
-  { id: 'ov-weather',   label: '\u{1F326} Weather',    key: 'weather',   col: '#00bfff', get: () => G.overlays.weather,  toggle: () => { G.overlays.weather = !G.overlays.weather; if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng); }},
-  { id: 'ov-radar',     label: '\u{1F327} Radar',      key: 'radar',     col: '#00bfff', get: () => rainRadarEnabled,    toggle: () => toggleRainRadar() },
-  { id: 'ov-lightning',  label: '\u26A1 Lightning',    key: 'lightning',  col: '#ffe600', get: () => typeof blitzEnabled !== 'undefined' && blitzEnabled, toggle: () => { if (typeof toggleBlitzortung === 'function') toggleBlitzortung(); }},
-  { id: 'ov-clouds',    label: '\u2601 Clouds',       key: 'clouds',    col: '#aabbcc', get: () => typeof cloudLayersEnabled !== 'undefined' && cloudLayersEnabled, toggle: () => { if (typeof toggleCloudLayers === 'function') toggleCloudLayers(); }},
-  { id: 'ov-mushroom',  label: '\u{1F344} Mushrooms',  key: 'mushroom',  col: '#c97b2a', get: () => mushroomEnabled,     toggle: () => toggleMushrooms() },
-  { id: 'ov-wildlife',  label: '\u{1F43E} Wildlife',   key: 'wildlife',  col: '#b5651d', get: () => wildlifeEnabled,     toggle: () => toggleWildlife() },
-  { id: 'ov-cemetery',  label: '\u{1FAA6} Cemetery',   key: 'cemetery',  col: '#8a8a8a', get: () => G.overlays.pins,     toggle: () => { G.overlays.pins = !G.overlays.pins; }},
-  { id: 'ov-flights',   label: '\u2708 Flights',      key: 'flights',   col: '#00bfff', get: () => showFlights,         toggle: () => toggleFlights() },
-  { id: 'ov-grid',      label: '\u{1F4CA} Grid',       key: 'grid',      col: '#00ff41', get: () => G.overlays.grid,     toggle: () => { G.overlays.grid = !G.overlays.grid; }},
-  { id: 'ov-pins',      label: '\u{1F4CC} ArtSpaces',  key: 'pins',      col: '#00ff41', get: () => G.overlays.pins,     toggle: () => { G.overlays.pins = !G.overlays.pins; }},
-  { id: 'ov-compass',   label: '\u{1F9ED} Compass',    key: 'compass',   col: '#00ff41', get: () => G.overlays.compass,  toggle: () => { G.overlays.compass = !G.overlays.compass; }},
-  { id: 'ov-transit',   label: '\u{1F682} Transit',    key: 'transit',   col: '#ff6600', get: () => G.overlays.transit,  toggle: () => { G.overlays.transit = !G.overlays.transit; }},
+const OVERLAY_SECTIONS = [
+  { title: '\u{1F326} WEATHER & RADAR', items: [
+    { key: 'weather',    label: '\u{1F326} Weather HUD',       col: '#00bfff', get: () => G.overlays.weather,                    toggle: () => { G.overlays.weather = !G.overlays.weather; if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng); }},
+    { key: 'radar',      label: '\u{1F327} Precip Radar',      col: '#00bfff', get: () => rainRadarEnabled,                      toggle: () => toggleRainRadar() },
+    { key: 'lightning',  label: '\u26A1 Lightning Strikes',    col: '#ffe600', get: () => blitzEnabled,                          toggle: () => toggleBlitzortung() },
+    { key: 'clouds',     label: '\u2601 Cloud Layers',         col: '#aabbcc', get: () => cloudLayersEnabled,                    toggle: () => toggleCloudLayers() },
+    { key: 'wind',       label: '\u{1F32C} Wind Arrows',       col: '#66ccff', get: () => windOverlayEnabled,                    toggle: () => toggleWindOverlay() },
+    { key: 'temp',       label: '\u{1F321} Temperature Tint',  col: '#ff6644', get: () => tempOverlayEnabled,                    toggle: () => toggleTempOverlay() },
+    { key: 'humidity',   label: '\u{1F4A7} Humidity / Fog',     col: '#6699cc', get: () => humidityOverlayEnabled,                toggle: () => toggleHumidityOverlay() },
+    { key: 'visibility', label: '\u{1F441} Visibility Fog',     col: '#99aabb', get: () => G.overlays.weather,                    toggle: () => { G.overlays.weather = !G.overlays.weather; if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng); }},
+    { key: 'pressure',   label: '\u{1F4CA} Pressure (HUD)',     col: '#88aacc', get: () => G.overlays.weather,                    toggle: () => { G.overlays.weather = !G.overlays.weather; if (G.overlays.weather) fetchWeather(G.pos.lat, G.pos.lng); }},
+  ]},
+  { title: '\u{1F33F} NATURE', items: [
+    { key: 'mushroom',  label: '\u{1F344} Mushrooms',          col: '#c97b2a', get: () => mushroomEnabled,   toggle: () => toggleMushrooms() },
+    { key: 'wildlife',  label: '\u{1F43E} Wildlife',           col: '#b5651d', get: () => wildlifeEnabled,   toggle: () => toggleWildlife() },
+    { key: 'cemetery',  label: '\u{1FAA6} Cemeteries',         col: '#8a8a8a', get: () => G.overlays.pins,   toggle: () => { G.overlays.pins = !G.overlays.pins; }},
+  ]},
+  { title: '\u{1F5FA} MAP & TRANSPORT', items: [
+    { key: 'pins',      label: '\u{1F4CC} ArtSpaces',          col: '#00ff41', get: () => G.overlays.pins,     toggle: () => { G.overlays.pins = !G.overlays.pins; }},
+    { key: 'flights',   label: '\u2708 Live Flights',          col: '#00bfff', get: () => showFlights,         toggle: () => toggleFlights() },
+    { key: 'transit',   label: '\u{1F682} Transit',            col: '#ff6600', get: () => G.overlays.transit,  toggle: () => { G.overlays.transit = !G.overlays.transit; }},
+    { key: 'grid',      label: '\u{1F4CA} Grid',               col: '#00ff41', get: () => G.overlays.grid,     toggle: () => { G.overlays.grid = !G.overlays.grid; }},
+    { key: 'compass',   label: '\u{1F9ED} Compass',            col: '#00ff41', get: () => G.overlays.compass,  toggle: () => { G.overlays.compass = !G.overlays.compass; }},
+  ]},
 ];
 
 function buildOverlayPanel() {
   const panel = document.getElementById('overlayPanel');
   if (!panel) return;
-  let html = '';
-  OVERLAY_DEFS.forEach(d => {
-    const on = d.get();
-    html += '<div class="ov-row" data-ovkey="' + d.key + '" onclick="toggleOverlayRow(\'' + d.key + '\')">'
-      + '<div class="ov-dot" style="background:' + (on ? d.col : '#333') + '"></div>'
-      + '<span class="ov-label">' + d.label + '</span>'
-      + '<span class="ov-status" style="color:' + (on ? d.col : '#555') + '">' + (on ? 'ON' : 'OFF') + '</span>'
-      + '</div>';
+  let html = '<div class="ov-head">\u2699 LAYERS<button class="ov-close" onclick="toggleOverlayPanel()">\u2715</button></div>';
+  OVERLAY_SECTIONS.forEach(sec => {
+    html += '<div class="ov-section">' + sec.title + '</div>';
+    sec.items.forEach(d => {
+      const on = d.get();
+      html += '<div class="ov-row" onclick="toggleOverlayRow(\'' + d.key + '\')">'
+        + '<div class="ov-dot" style="background:' + (on ? d.col : '#333') + '"></div>'
+        + '<span class="ov-label">' + d.label + '</span>'
+        + '<span class="ov-status" style="color:' + (on ? d.col : '#555') + '">' + (on ? 'ON' : 'OFF') + '</span>'
+        + '</div>';
+    });
   });
   panel.innerHTML = html;
 }
 
 function toggleOverlayRow(key) {
-  const def = OVERLAY_DEFS.find(d => d.key === key);
-  if (def) def.toggle();
+  for (const sec of OVERLAY_SECTIONS) {
+    const def = sec.items.find(d => d.key === key);
+    if (def) { def.toggle(); break; }
+  }
   buildOverlayPanel(); // refresh UI
 }
 

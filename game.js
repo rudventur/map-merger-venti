@@ -383,6 +383,11 @@ function loop() {
   drawPlaneAtmosphere();   // 13b. Plane: lightning, rain, wind
   drawUfoAtmosphere();     // 13c. UFO: aurora, static, lightning
   drawWeather();           // 14. General weather overlay
+  drawCloudOverlay();      // 14b. Standalone cloud layer (non-plane)
+  drawLightningOverlay();  // 14c. Standalone lightning strikes (non-plane)
+  drawWindOverlay();       // 14d. Wind direction arrows
+  drawTempOverlay();       // 14e. Temperature colour tint
+  drawHumidityOverlay();   // 14f. Humidity fog effect
   drawPlayer();            // 15. Player sprite
   drawPlaneAtmosphereEnd();// 15b. End turbulence shake
   drawHUD();               // 16. Compass + coords

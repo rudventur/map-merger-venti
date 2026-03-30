@@ -53,8 +53,12 @@ canvas#world{position:fixed;inset:0;z-index:1}
 .stab:hover{color:#00ff41}
 
 /* ── OVERLAY PANEL ── */
-.ov-panel{position:fixed;top:56px;right:52px;z-index:920;background:rgba(0,0,0,0.96);border:2px solid #00ff41;border-radius:4px;padding:8px 10px;display:none;min-width:180px;max-height:65vh;overflow-y:auto}
-.ov-row{display:flex;align-items:center;gap:6px;padding:4px 3px;cursor:pointer;border-radius:3px;transition:background .1s}
+.ov-panel{position:fixed;top:56px;right:52px;z-index:920;background:rgba(0,0,0,0.96);border:2px solid #00ff41;border-radius:4px;padding:0;display:none;min-width:210px;max-height:70vh;overflow-y:auto}
+.ov-head{display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-bottom:1px solid rgba(0,255,65,0.2);font-family:'Press Start 2P',monospace;font-size:.24rem;color:#00ff41;position:sticky;top:0;background:rgba(0,0,0,0.98);z-index:1}
+.ov-close{background:none;border:1px solid #ff2244;color:#ff2244;padding:1px 4px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:.18rem;border-radius:2px}
+.ov-close:hover{background:#ff2244;color:#000}
+.ov-section{font-family:'Press Start 2P',monospace;font-size:.16rem;color:rgba(0,255,65,0.3);padding:8px 10px 3px;text-transform:uppercase;letter-spacing:1px;border-top:1px solid rgba(0,255,65,0.08)}
+.ov-row{display:flex;align-items:center;gap:6px;padding:4px 10px;cursor:pointer;border-radius:3px;transition:background .1s}
 .ov-row:hover{background:rgba(0,255,65,0.05)}
 .ov-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .15s}
 .ov-label{font-family:'VT323',monospace;font-size:.85rem;color:rgba(0,255,65,0.6);flex:1}
