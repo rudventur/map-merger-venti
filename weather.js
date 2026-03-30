@@ -376,12 +376,13 @@ function drawCloudOverlay() {
 // ── Draw standalone lightning strikes (when not in plane mode) ──
 function drawLightningOverlay() {
   if (!blitzEnabled || G.veh === 'plane') return; // plane has its own
-  if (typeof lightningStrikes === 'undefined' || lightningStrikes.length === 0) return;
+  if (typeof realLightningStrikes === 'undefined' || realLightningStrikes.length === 0) return;
   const now = Date.now();
-  lightningStrikes.forEach(s => {
+  realLightningStrikes.forEach(s => {
     const age = now - s.time;
     if (age > 60000) return; // max 1 min
-    const scr = worldToScreen(s.lat, s.lng);
+    const lat = s.lat, lng = s.lon || s.lng;
+    const scr = worldToScreen(lat, lng);
     if (scr.x < -20 || scr.x > cv.width + 20 || scr.y < -20 || scr.y > cv.height + 20) return;
     const fade = Math.max(0, 1 - age / 60000);
     // Flash
