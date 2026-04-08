@@ -100,6 +100,63 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 /* ── BONE DIVIDER ── */
 .bone-divider{text-align:center;color:rgba(204,136,51,0.2);font-size:.7rem;margin:8px 0;letter-spacing:4px}
 
+/* ── MAP SPOT STYLES ── */
+.hbtn.spot{border-color:#e6a820;color:#e6a820}.hbtn.spot:hover,.hbtn.spot.active{background:#e6a820;color:#1a120a}
+.hbtn.clown{border-color:#ff69b4;color:#ff69b4}.hbtn.clown:hover,.hbtn.clown.active{background:#ff69b4;color:#1a120a}
+
+/* Spot creation modal */
+.spot-type-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:8px 0}
+.spot-type-btn{background:rgba(0,0,0,0.4);border:2px solid rgba(204,136,51,0.3);color:#ffcc66;padding:8px 6px;border-radius:10px;cursor:pointer;font-family:'VT323',monospace;font-size:.9rem;text-align:center;transition:all .15s}
+.spot-type-btn:hover{border-color:#cc8833;background:rgba(204,136,51,0.1)}
+.spot-type-btn.selected{border-color:#ffcc66;background:rgba(204,136,51,0.2);box-shadow:0 0 8px rgba(255,204,102,0.3)}
+.spot-type-btn .st-emoji{font-size:1.4rem;display:block;margin-bottom:2px}
+
+/* Timer fields */
+.timer-section{border:1px solid rgba(204,136,51,0.2);border-radius:10px;padding:8px;margin:8px 0;background:rgba(0,0,0,0.2)}
+.timer-row{display:flex;gap:6px;align-items:center;margin:4px 0}
+.timer-row select,.timer-row input{flex:1}
+
+/* Spot detail panel */
+.spot-detail{position:fixed;top:54px;right:0;bottom:0;width:300px;background:rgba(26,18,10,0.97);border-left:3px solid #cc8833;z-index:960;display:none;overflow-y:auto;padding:14px}
+.spot-detail.show{display:block}
+.spot-detail .sd-close{position:absolute;top:8px;right:10px;background:none;border:1px solid rgba(204,136,51,0.4);color:#cc8833;padding:2px 8px;border-radius:8px;cursor:pointer;font-size:.85rem}
+.spot-detail .sd-close:hover{background:#cc8833;color:#1a120a}
+.spot-detail .sd-emoji{font-size:2.5rem;text-align:center;margin:8px 0}
+.spot-detail .sd-title{font-family:'Bubblegum Sans',cursive;color:#ffcc66;font-size:1.4rem;text-align:center;margin-bottom:4px}
+.spot-detail .sd-desc{color:rgba(255,204,102,0.7);font-size:.95rem;font-style:italic;border-left:3px solid rgba(204,136,51,0.3);padding-left:8px;margin:8px 0}
+.spot-detail .sd-timer{background:rgba(136,204,68,0.08);border:1px solid rgba(136,204,68,0.2);border-radius:8px;padding:6px 10px;margin:6px 0;color:#88cc44;font-size:.95rem;text-align:center}
+.spot-detail .sd-meta{color:rgba(255,204,102,0.4);font-size:.8rem;margin:4px 0}
+.spot-detail .sd-reactions{display:flex;gap:8px;justify-content:center;margin:10px 0}
+.spot-detail .sd-react-btn{background:rgba(0,0,0,0.3);border:1px solid rgba(204,136,51,0.3);border-radius:10px;padding:4px 10px;cursor:pointer;font-size:1rem;transition:all .15s}
+.spot-detail .sd-react-btn:hover{background:rgba(204,136,51,0.15);border-color:#cc8833}
+.spot-detail .sd-react-btn.reacted{background:rgba(204,136,51,0.2);border-color:#ffcc66}
+.sd-comments{margin-top:10px;border-top:1px solid rgba(204,136,51,0.15);padding-top:8px}
+.sd-comment{background:rgba(0,0,0,0.2);border-radius:8px;padding:6px 8px;margin:4px 0}
+.sd-comment .sc-text{color:rgba(255,204,102,0.75);font-size:.9rem}
+.sd-comment .sc-meta{color:rgba(255,204,102,0.3);font-size:.72rem}
+.sd-comment-input{display:flex;gap:4px;margin-top:6px}
+.sd-comment-input input{flex:1}
+
+/* Expired spot badge */
+.spot-expired{opacity:0.5}
+.expired-badge{color:#ff6666;font-size:.75rem;font-weight:bold}
+
+/* Clown status */
+.clown-badge{position:fixed;bottom:12px;right:120px;z-index:1000;background:rgba(26,18,10,0.95);border:2px solid #ff69b4;color:#ff69b4;padding:4px 10px;border-radius:12px;font-family:'VT323',monospace;font-size:.85rem;display:none}
+.clown-badge.show{display:block}
+
+/* Spots panel (left side) */
+.spots-panel{position:fixed;top:54px;left:0;bottom:0;width:280px;background:rgba(26,18,10,0.97);border-right:3px solid #e6a820;z-index:950;display:none;overflow-y:auto;padding:10px}
+.spots-panel.show{display:block}
+.spots-panel h3{font-family:'Bubblegum Sans',cursive;color:#e6a820;font-size:1rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.spot-list-item{background:rgba(0,0,0,0.3);border:2px solid rgba(230,168,32,0.2);border-radius:10px;padding:8px;margin:4px 0;cursor:pointer;transition:all .15s}
+.spot-list-item:hover{border-color:#e6a820;background:rgba(230,168,32,0.08)}
+.spot-list-item .sli-head{display:flex;align-items:center;gap:6px}
+.spot-list-item .sli-emoji{font-size:1.3rem}
+.spot-list-item .sli-title{color:#ffcc66;font-family:'Bubblegum Sans',cursive;font-size:.95rem}
+.spot-list-item .sli-timer{color:#88cc44;font-size:.8rem;margin-top:2px}
+.spot-list-item .sli-dist{color:rgba(255,204,102,0.35);font-size:.75rem}
+
 /* ── D-PAD ── */
 .dpad{position:fixed;bottom:50px;right:10px;z-index:800;display:grid;grid-template-columns:32px 32px 32px;grid-template-rows:32px 32px 32px;gap:2px}
 .db{background:rgba(26,18,10,0.88);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .1s}
@@ -119,14 +176,18 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
   </div>
   <div class="hsep"></div>
   <button class="hbtn paw" onclick="togglePinPet()">&#128062; PIN PET</button>
+  <button class="hbtn spot" onclick="toggleSpotMode()">&#128205; SPOT</button>
   <button class="hbtn" onclick="toggleTrail()">&#128017; TRAIL</button>
   <button class="hbtn" onclick="togglePack()">&#128058; PACK</button>
+  <button class="hbtn" onclick="toggleSpotsPanel()">&#128506; SPOTS</button>
+  <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown">&#129313; SHOW ME</button>
 </div>
 
 <!-- STATS -->
 <div class="stats">
   <div class="spill">&#128062; Pets: <b id="petCount">0</b></div>
   <div class="spill">&#128017; Sniffs: <b id="sniffCount">0</b></div>
+  <div class="spill">&#128205; Spots: <b id="spotCount">0</b></div>
 </div>
 
 <!-- ZOOM -->
@@ -212,6 +273,60 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
     <button class="hbtn red" onclick="deletePetFromUserbox()">&#128465; Remove</button>
   </div>
 </div>
+
+<!-- SPOT CREATION MODAL -->
+<div class="modal-overlay" id="spotModal">
+  <div class="modal" style="max-width:380px">
+    <h2>&#128205; New Map Spot</h2>
+    <label>Type</label>
+    <div class="spot-type-grid" id="spotTypeGrid"></div>
+    <label>Title</label>
+    <input id="spotTitle" placeholder="Rex — Best Boy Ever">
+    <label>Description</label>
+    <textarea id="spotDesc" rows="2" placeholder="Golden retriever who loved tennis balls..."></textarea>
+    <div class="timer-section" id="spotTimerSection" style="display:none">
+      <label style="margin-top:0">Timer</label>
+      <div class="timer-row">
+        <select id="spotTimerMode">
+          <option value="time_since">Time Since (count up)</option>
+          <option value="countdown">Countdown (count down)</option>
+          <option value="expires">Expires (auto-hide)</option>
+        </select>
+      </div>
+      <div class="timer-row">
+        <input id="spotTimerLabel" placeholder="Label (e.g. Passed)" style="flex:1">
+      </div>
+      <div class="timer-row" id="spotTimerDateRow">
+        <input id="spotTimerDate" type="date">
+        <input id="spotTimerTime" type="time">
+      </div>
+      <div class="timer-row" id="spotTimerDurationRow" style="display:none">
+        <input id="spotTimerDuration" type="number" placeholder="Duration (hours)" min="1">
+        <span style="color:rgba(255,204,102,0.5);font-size:.8rem">hours</span>
+      </div>
+    </div>
+    <div id="spotGpsDisplay" style="color:rgba(255,204,102,0.4);font-size:.8rem;margin:6px 0"></div>
+    <div class="btn-row">
+      <button class="hbtn" onclick="closeSpotModal()">Cancel</button>
+      <button class="hbtn spot" onclick="saveSpot()">&#128205; Place Spot</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPOT DETAIL PANEL -->
+<div class="spot-detail" id="spotDetailPanel">
+  <button class="sd-close" onclick="closeSpotDetail()">&times;</button>
+  <div id="spotDetailContent"></div>
+</div>
+
+<!-- SPOTS LIST PANEL -->
+<div class="spots-panel" id="spotsPanel">
+  <h3>&#128506; Nearby Spots <button class="close-btn" onclick="toggleSpotsPanel()">&#10005;</button></h3>
+  <div id="spotsListContent"></div>
+</div>
+
+<!-- CLOWN STATUS BADGE -->
+<div class="clown-badge" id="clownBadge">&#129313; You're visible</div>
 
 <!-- BACK TO ARTSPACE -->
 <a class="back-btn" href="index.html">&#128072; ArtSpace City</a>
