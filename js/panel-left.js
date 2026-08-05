@@ -6,9 +6,6 @@
 
 (function () {
 
-// ── Constants ──
-const HOLD_MS = 700; // hold duration to unlock LOST tab
-
 // ── Inject panel HTML ──
 function injectLeftPanel() {
   const html = `
@@ -219,6 +216,35 @@ function injectLeftPanel() {
       text-align: center; padding: 4px; line-height: 1.4;
     }
 
+    /* Minimap (per tab) */
+    .lp-minimap-wrap {
+      position: relative; width: 100%; height: 78px;
+      border-radius: 9px; overflow: hidden; margin-bottom: 6px;
+      border: 1.5px solid rgba(204,136,51,0.3); cursor: pointer;
+      background: #d4c5a9; flex-shrink: 0;
+    }
+    .lp-minimap-wrap canvas { display: block; width: 100%; height: 100%; }
+    .lp-minimap-empty {
+      position: absolute; inset: 0; display: none; align-items: center;
+      justify-content: center; text-align: center; padding: 0 8px;
+      color: rgba(26,18,10,0.55); font-size: .65rem;
+      font-family: 'VT323', monospace; background: rgba(212,197,169,0.88);
+    }
+
+    /* Per-tile quick action buttons */
+    .lp-tile-btns { display: flex; gap: 4px; margin-top: 4px; }
+    .lp-tile-btn {
+      font-size: .62rem; padding: 2px 6px; border-radius: 5px;
+      cursor: pointer; font-family: 'VT323', monospace;
+      border: 1px solid rgba(204,136,51,0.35);
+      background: rgba(204,136,51,0.08); color: #cc8833;
+    }
+    .lp-tile-btn:hover { background: rgba(204,136,51,0.18); }
+    .lp-tile-btn.lost { border-color: rgba(255,60,60,0.4); color: #ff6666; background: rgba(255,30,30,0.08); }
+    .lp-tile-btn.lost:hover { background: rgba(255,30,30,0.18); }
+    .lp-tile-btn.found { border-color: rgba(136,204,68,0.4); color: #88cc44; background: rgba(136,204,68,0.08); }
+    .lp-tile-btn.found:hover { background: rgba(136,204,68,0.18); }
+
     /* Add pet button */
     .lp-add-btn {
       margin: 5px; padding: 5px;
@@ -267,7 +293,173 @@ function injectLeftPanel() {
 let lpOpen = true;
 let lpActiveTab = 'pets';
 let lpNotes = JSON.parse(localStorage.getItem('sf_notes') || '[]');
-let lpLostHoldTimer = null;
+
+// ── Minimap engine (self-contained — shares the main map's tile cache when present) ──
+const lpMmCache = {};
+function lpMmLon2Tile(lon, z) { return ((lon + 180) / 360) * Math.pow(2, z); }
+function lpMmLat2Tile(lat, z) {
+  const r = lat * Math.PI / 180;
+  return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
+}
+function lpMmTileUrl(x, y, z) {
+  if (typeof tileUrl === 'function') return tileUrl(x, y, z);
+  const sub = ['a', 'b', 'c'][(x + y) % 3];
+  return `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+}
+function lpMmLoadTile(url) {
+  if (typeof loadTile === 'function') return loadTile(url); // reuse main map's cache — no duplicate downloads
+  if (!lpMmCache[url]) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => { img._loaded = true; };
+    img.src = url;
+    lpMmCache[url] = img;
+  }
+  return lpMmCache[url];
+}
+
+// Tile-space deltas scale linearly with 2^z, so we can size-fit a bbox in one shot
+function lpFitZoom(markers, w, h) {
+  if (markers.length <= 1) return 13;
+  const lons = markers.map(m => m.lon), lats = markers.map(m => m.lat);
+  const x0 = lpMmLon2Tile(Math.min(...lons), 0), x1 = lpMmLon2Tile(Math.max(...lons), 0);
+  const y0 = lpMmLat2Tile(Math.max(...lats), 0), y1 = lpMmLat2Tile(Math.min(...lats), 0);
+  const dx = Math.max(Math.abs(x1 - x0), 0.0005);
+  const dy = Math.max(Math.abs(y1 - y0), 0.0005);
+  const TILE = 256, pad = 0.75;
+  const zx = Math.log2((w * pad) / (dx * TILE));
+  const zy = Math.log2((h * pad) / (dy * TILE));
+  return Math.max(2, Math.min(15, Math.floor(Math.min(zx, zy))));
+}
+
+function lpBoundsCenter(pets) {
+  const withLoc = pets.filter(p => typeof p.lat === 'number' && typeof (p.lon ?? p.lng) === 'number');
+  if (!withLoc.length) return (typeof S !== 'undefined') ? { lat: S.lat, lon: S.lon } : { lat: 51.505, lon: -0.09 };
+  const lats = withLoc.map(p => p.lat), lons = withLoc.map(p => p.lon ?? p.lng);
+  return { lat: (Math.min(...lats) + Math.max(...lats)) / 2, lon: (Math.min(...lons) + Math.max(...lons)) / 2 };
+}
+
+function lpDrawMinimap(canvas, centerLat, centerLon, markers) {
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 200, h = canvas.clientHeight || 78;
+  if (!w || !h) return;
+  if (canvas.width !== Math.round(w * dpr)) canvas.width = Math.round(w * dpr);
+  if (canvas.height !== Math.round(h * dpr)) canvas.height = Math.round(h * dpr);
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const z = lpFitZoom(markers, w, h);
+  const TILE = 256;
+  const cxT = lpMmLon2Tile(centerLon, z), cyT = lpMmLat2Tile(centerLat, z);
+  const x0 = Math.floor(cxT - w / 2 / TILE) - 1, x1 = Math.ceil(cxT + w / 2 / TILE) + 1;
+  const y0 = Math.floor(cyT - h / 2 / TILE) - 1, y1 = Math.ceil(cyT + h / 2 / TILE) + 1;
+  const maxT = Math.pow(2, z);
+
+  ctx.filter = 'sepia(0.3) saturate(1.15) brightness(1.05) hue-rotate(-8deg)';
+  for (let y = y0; y <= y1; y++) {
+    for (let x = x0; x <= x1; x++) {
+      if (y < 0 || y >= maxT) continue;
+      const wx = ((x % maxT) + maxT) % maxT;
+      const sx = w / 2 + (x - cxT) * TILE, sy = h / 2 + (y - cyT) * TILE;
+      const img = lpMmLoadTile(lpMmTileUrl(wx, y, z));
+      if (img._loaded && img.naturalWidth) ctx.drawImage(img, sx, sy, TILE + 1, TILE + 1);
+      else { ctx.fillStyle = '#d4c5a9'; ctx.fillRect(sx, sy, TILE + 1, TILE + 1); }
+    }
+  }
+  ctx.filter = 'none';
+
+  markers.forEach(m => {
+    const tx = lpMmLon2Tile(m.lon, z), ty = lpMmLat2Tile(m.lat, z);
+    const sx = w / 2 + (tx - cxT) * TILE, sy = h / 2 + (ty - cyT) * TILE;
+    if (sx < -10 || sx > w + 10 || sy < -10 || sy > h + 10) return;
+    if (m.pulse) {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 11 + Math.sin(Date.now() / 220) * 3, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,30,30,0.55)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(sx, sy, m.big ? 7 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = m.color || '#cc8833';
+    ctx.fill();
+    ctx.strokeStyle = '#1a120a';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    if (m.emoji) {
+      ctx.font = '10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(m.emoji, sx, sy);
+    }
+  });
+}
+
+let lpMmTimer = null;
+function lpStartMinimapLoop() {
+  if (lpMmTimer) return;
+  lpMmTimer = setInterval(() => {
+    const canvas = document.getElementById('lpMinimap');
+    if (canvas && canvas._mmDraw) canvas._mmDraw();
+  }, 400);
+}
+
+function lpMountMinimap(center, markers, emptyMsg) {
+  const canvas = document.getElementById('lpMinimap');
+  if (!canvas) return;
+  const wrap = canvas.closest('.lp-minimap-wrap');
+  const emptyEl = wrap ? wrap.querySelector('.lp-minimap-empty') : null;
+  if (emptyEl) {
+    if (!markers.length && emptyMsg) { emptyEl.textContent = emptyMsg; emptyEl.style.display = 'flex'; }
+    else emptyEl.style.display = 'none';
+  }
+  canvas._mmDraw = () => lpDrawMinimap(canvas, center.lat, center.lon, markers);
+  canvas._mmDraw();
+  if (wrap) {
+    wrap.onclick = () => {
+      if (typeof S !== 'undefined') { S.lat = center.lat; S.lon = center.lon; }
+      if (typeof zoomTarget !== 'undefined') zoomTarget = 14;
+    };
+  }
+  lpStartMinimapLoop();
+}
+
+function lpMountTabMinimap() {
+  const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
+  const emoji = p => (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
+
+  if (lpActiveTab === 'pets') {
+    const markers = pets.filter(p => typeof p.lat === 'number').map(p => ({
+      lat: p.lat, lon: p.lon ?? p.lng,
+      color: p.lost ? '#ff3333' : (p.status === 'walking' ? '#ffcc66' : '#88cc44'),
+      emoji: emoji(p), pulse: !!p.lost
+    }));
+    lpMountMinimap(lpBoundsCenter(pets), markers, 'No pets on the map yet 🐾');
+  } else if (lpActiveTab === 'gps') {
+    const markers = pets.filter(p => typeof p.lat === 'number').map(p => ({
+      lat: p.lat, lon: p.lon ?? p.lng,
+      color: p.gps ? '#88cc44' : 'rgba(204,136,51,0.5)',
+      emoji: emoji(p), big: !!p.gps
+    }));
+    lpMountMinimap(lpBoundsCenter(pets), markers, 'No pets registered yet');
+  } else if (lpActiveTab === 'lost') {
+    const lostPets = pets.filter(p => p.lost);
+    if (lostPets.length) {
+      const markers = lostPets.map(p => ({
+        lat: p.lostLat || p.lat, lon: p.lostLon || (p.lon ?? p.lng),
+        color: '#ff3333', emoji: emoji(p), pulse: true, big: true
+      }));
+      lpMountMinimap(lpBoundsCenter(lostPets.map(p => ({ lat: p.lostLat || p.lat, lon: p.lostLon || p.lon }))), markers, '');
+    } else {
+      const markers = pets.filter(p => typeof p.lat === 'number').map(p => ({
+        lat: p.lat, lon: p.lon ?? p.lng, color: 'rgba(136,204,68,0.55)', emoji: emoji(p)
+      }));
+      lpMountMinimap(lpBoundsCenter(pets), markers, 'No pets currently lost 🎾');
+    }
+  }
+}
 
 // ── Toggle ──
 function lpToggle() {
@@ -295,17 +487,20 @@ function lpRender() {
   else if (lpActiveTab === 'gps') el.innerHTML = lpRenderGPS();
   else if (lpActiveTab === 'notebook') lpRenderNotebook(el);
   else if (lpActiveTab === 'lost') el.innerHTML = lpRenderLost();
+  lpMountTabMinimap();
   lpBindContent();
 }
 
 // ── Pets tab ──
 function lpRenderPets() {
   const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
+  const minimap = '<div class="lp-minimap-wrap"><canvas id="lpMinimap"></canvas><div class="lp-minimap-empty"></div></div>';
   if (!pets.length) {
-    return '<div style="color:rgba(255,204,102,0.3);text-align:center;padding:16px;font-style:italic;font-size:.8rem">No pets yet...<br>Drop a pin or register one!</div>' +
+    return minimap +
+      '<div style="color:rgba(255,204,102,0.3);text-align:center;padding:16px;font-style:italic;font-size:.8rem">No pets yet...<br>Drop a pin or register one!</div>' +
       '<div class="lp-drop-zone" id="lpDropZone">drop from map or friends panel</div>';
   }
-  return '<div class="lp-drop-zone" id="lpDropZone">drop from map or friends panel</div>' +
+  return minimap + '<div class="lp-drop-zone" id="lpDropZone">drop from map or friends panel</div>' +
     pets.map((p, i) => {
       const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
       const dotClass = p.lost ? 'lost' : (p.status === 'walking' ? 'walk' : '');
@@ -317,6 +512,12 @@ function lpRenderPets() {
           ${p.lost ? '<span style="color:#ff3333;font-size:.65rem;margin-left:4px">LOST</span>' : ''}
         </div>
         <div class="lp-pt-breed">${p.breed || p.species || ''} · ${p.lost ? '🔴 LOST' : (p.status || 'home')}</div>
+        <div class="lp-tile-btns">
+          <span class="lp-tile-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Go</span>
+          ${p.lost
+            ? `<span class="lp-tile-btn found" onclick="lpMarkFound(${i})">✅ Found</span>`
+            : `<span class="lp-tile-btn lost" onclick="lpMarkLost(${i})">🔴 Lost</span>`}
+        </div>
       </div>`;
     }).join('');
 }
@@ -324,8 +525,9 @@ function lpRenderPets() {
 // ── GPS tab ──
 function lpRenderGPS() {
   const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
-  if (!pets.length) return '<div style="color:rgba(255,204,102,0.3);text-align:center;padding:16px;font-size:.8rem">No pets registered yet.</div>';
-  return pets.map((p, i) => {
+  const minimap = '<div class="lp-minimap-wrap"><canvas id="lpMinimap"></canvas><div class="lp-minimap-empty"></div></div>';
+  if (!pets.length) return minimap + '<div style="color:rgba(255,204,102,0.3);text-align:center;padding:16px;font-size:.8rem">No pets registered yet.</div>';
+  return minimap + pets.map((p, i) => {
     const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
     const hasGPS = p.gps || false;
     const hasDevice = p.gpsDevice || false;
@@ -337,6 +539,7 @@ function lpRenderGPS() {
       <div class="lp-gps-row">
         <span class="lp-gps-btn" onclick="lpToggleGPS(${i})">${hasGPS ? '📍 GPS on' : '📍 GPS off'}</span>
         <span class="lp-gps-btn device ${hasDevice ? 'linked' : ''}" onclick="lpLinkDevice(${i})">${hasDevice ? '🔗 tracker linked' : '+ link device'}</span>
+        <span class="lp-gps-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Go</span>
       </div>
       <div style="color:rgba(255,204,102,0.25);font-size:.6rem;margin-top:4px;font-family:'VT323',monospace">
         ${hasDevice ? '⚡ live tracking active — placeholder for device API' : 'No tracker device linked yet'}
@@ -379,9 +582,10 @@ function lpRenderNotebook(el) {
     const i = lpNotes.length - 1 - ri;
     const pet = n.petIdx >= 0 && pets[n.petIdx] ? pets[n.petIdx].name : 'General';
     const ago = lpTimeAgo(n.ts);
+    const goBtn = n.petIdx >= 0 ? `<span class="lp-tile-btn" style="margin-left:5px" onclick="if(typeof panToPet==='function')panToPet(${n.petIdx})">🎯</span>` : '';
     return `<div class="lp-note">
       <div class="lp-note-head">
-        <span class="lp-note-label">🐾 ${pet}</span>
+        <span class="lp-note-label">🐾 ${pet}${goBtn}</span>
         <button class="lp-note-del" onclick="lpDeleteNote(${i})">✕</button>
       </div>
       <div class="lp-note-txt">${lpEscape(n.text)}</div>
@@ -420,9 +624,10 @@ window.lpDeleteNote = function(i) {
 function lpRenderLost() {
   const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
   const lostMode = document.getElementById('lpRoot').classList.contains('lost-mode');
+  const minimap = '<div class="lp-minimap-wrap"><canvas id="lpMinimap"></canvas><div class="lp-minimap-empty"></div></div>';
 
   if (!pets.length) {
-    return '<div style="color:rgba(255,80,80,0.4);text-align:center;padding:16px;font-size:.8rem">No pets registered.<br>Register a pet first.</div>';
+    return minimap + '<div style="color:rgba(255,80,80,0.4);text-align:center;padding:16px;font-size:.8rem">No pets registered.<br>Register a pet first.</div>';
   }
 
   const petBtns = pets.map((p, i) => {
@@ -432,6 +637,9 @@ function lpRenderLost() {
       return `<button class="lp-lost-pet-btn active-lost" onclick="lpMarkFound(${i})">
         ${em} ${p.name} <span style="margin-left:auto;font-size:.75rem">🔴 LOST</span>
       </button>
+      <div class="lp-tile-btns" style="margin:-2px 0 6px">
+        <span class="lp-tile-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Last seen</span>
+      </div>
       <button class="lp-found-btn" onclick="lpMarkFound(${i})">✅ ${p.name} IS FOUND!</button>`;
     }
     return `<button class="lp-lost-pet-btn" onclick="lpMarkLost(${i})">
@@ -446,7 +654,7 @@ function lpRenderLost() {
       </div>`
     : '';
 
-  return `<div class="lp-lost-header">🔴 Lost Pet Alert</div>
+  return minimap + `<div class="lp-lost-header">🔴 Lost Pet Alert</div>
     <div class="lp-lost-info">Tap a pet to mark lost.<br>The whole network will be alerted.</div>
     ${petBtns}
     ${socialBtns}`;
@@ -488,21 +696,6 @@ window.lpMarkFound = function(i) {
   lpRender();
 };
 
-// ── LOST tab hold-to-unlock ──
-function bindLostTabHold() {
-  const tab = document.getElementById('lpLostTab');
-  if (!tab) return;
-  tab.addEventListener('pointerdown', () => {
-    lpLostHoldTimer = setTimeout(() => {
-      lpSwitchTab('lost');
-    }, HOLD_MS);
-  });
-  tab.addEventListener('pointerup', () => clearTimeout(lpLostHoldTimer));
-  tab.addEventListener('pointerleave', () => clearTimeout(lpLostHoldTimer));
-  // Prevent normal click from switching
-  tab.addEventListener('click', e => e.stopPropagation());
-}
-
 // ── Bind content interactions ──
 function lpBindContent() {
   // Drop zone for dragged pets
@@ -540,7 +733,7 @@ function lpBindContent() {
   // Pet tile click → pan to pet
   document.querySelectorAll('.lp-pet-tile[data-pidx]').forEach(tile => {
     tile.addEventListener('click', e => {
-      if (e.target.classList.contains('lp-pt-opts')) return;
+      if (e.target.closest('.lp-pt-opts') || e.target.closest('.lp-tile-btn')) return;
       const i = parseInt(tile.dataset.pidx);
       if (typeof panToPet === 'function') panToPet(i);
     });
@@ -592,11 +785,9 @@ function init() {
   document.getElementById('lpTabBar').addEventListener('click', e => {
     const tab = e.target.closest('.lp-tab');
     if (!tab) return;
-    if (tab.dataset.lptab === 'lost') return; // handled by hold
     lpSwitchTab(tab.dataset.lptab);
   });
 
-  bindLostTabHold();
   bindAddBtn();
   lpRender();
 
