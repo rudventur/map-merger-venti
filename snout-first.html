@@ -456,6 +456,9 @@ function zoomOut() { zoomTarget = Math.max(ZOOM_MIN, zoomTarget - 0.5); }
 
 // Scroll wheel — trackpad-friendly
 document.addEventListener('wheel', e => {
+  // Only zoom the map when the cursor is actually over the map canvas —
+  // otherwise let panels, modals, and scrollable lists scroll normally.
+  if (e.target !== cv) return;
   const px = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
   const delta = -px / 340;
   const clamped = Math.max(-0.6, Math.min(0.6, delta));
