@@ -205,6 +205,15 @@ function injectRightPanel() {
     .rp-tree-label { font-family: 'Bubblegum Sans', cursive; color: #ffcc66; font-size: .78rem; }
     .rp-tree-sub { color: rgba(255,204,102,0.35); font-size: .65rem; }
 
+    /* Real vet locator */
+    .rp-vet-search { margin-bottom: 8px; }
+    .rp-vet-status {
+      color: rgba(255,204,102,0.45); font-size: .68rem;
+      text-align: center; padding: 4px 2px; font-family: 'VT323', monospace;
+      line-height: 1.4;
+    }
+    .rp-vet-status.err { color: rgba(255,120,120,0.7); }
+
     /* Doglost embed */
     .rp-doglost-frame {
       width: 100%; height: 220px; border: none;
@@ -281,6 +290,85 @@ const CHARITIES_PL = [
 // ── State ──
 let rpOpen = true;
 let rpActiveTab = 'friends';
+let rpNearbyVets = [];
+let rpNearbySearchCenter = null;
+let rpNearbyLoading = false;
+let rpNearbyError = '';
+
+// ── Real vet locator (OpenStreetMap Overpass API — free, no key) ──
+function rpGetGeoPosition() {
+  const geoCall = new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('no geolocation')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      err => reject(err),
+      { timeout: 8000 }
+    );
+  });
+  // Some browsers never call back at all if a permission prompt sits unanswered
+  // (backgrounded tab, locked-down config) — geolocation's own `timeout` option
+  // doesn't cover that wait, so a hard client-side ceiling keeps the button from
+  // getting stuck on "Sniffing out nearby vets..." forever.
+  const hardCeiling = new Promise((_, reject) => setTimeout(() => reject(new Error('geo timeout')), 10000));
+  return Promise.race([geoCall, hardCeiling]);
+}
+
+async function rpFetchNearbyVets(lat, lon, radius) {
+  radius = radius || 8000; // metres
+  const query = `[out:json][timeout:15];(node["amenity"="veterinary"](around:${radius},${lat},${lon});way["amenity"="veterinary"](around:${radius},${lat},${lon}););out center;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: query });
+  if (!res.ok) throw new Error('bad response: ' + res.status);
+  const data = await res.json();
+  const results = (data.elements || []).map(el => {
+    const elat = el.lat ?? (el.center && el.center.lat);
+    const elon = el.lon ?? (el.center && el.center.lon);
+    if (elat == null || elon == null) return null;
+    const dist = (typeof haversine === 'function') ? haversine({ lat, lng: lon }, { lat: elat, lng: elon }) : null;
+    return {
+      name: (el.tags && el.tags.name) || 'Unnamed vet clinic',
+      lat: elat, lon: elon,
+      phone: (el.tags && (el.tags.phone || el.tags['contact:phone'])) || '',
+      dist
+    };
+  }).filter(Boolean);
+  results.sort((a, b) => (a.dist ?? 1e9) - (b.dist ?? 1e9));
+  return results.slice(0, 10);
+}
+
+window.rpSearchNearbyVets = async function(useGeo) {
+  rpNearbyLoading = true;
+  rpNearbyError = '';
+  rpRender();
+  try {
+    let lat, lon, label;
+    if (useGeo) {
+      const pos = await rpGetGeoPosition();
+      lat = pos.lat; lon = pos.lon; label = 'your location';
+    } else {
+      lat = (typeof S !== 'undefined') ? S.lat : 51.505;
+      lon = (typeof S !== 'undefined') ? S.lon : -0.09;
+      label = 'the map centre';
+    }
+    rpNearbySearchCenter = { lat, lon, label };
+    rpNearbyVets = await rpFetchNearbyVets(lat, lon);
+    if (!rpNearbyVets.length) {
+      rpNearbyError = `No vets found in OpenStreetMap near ${label} — try panning somewhere more built-up 🐾`;
+    }
+  } catch (e) {
+    rpNearbyVets = [];
+    rpNearbyError = useGeo
+      ? "Couldn't get your location — check location permissions 🐾"
+      : "Couldn't sniff out nearby vets — check your connection 🐾";
+  }
+  rpNearbyLoading = false;
+  rpRender();
+};
+
+window.rpPinNearbyVet = function(i) {
+  const v = rpNearbyVets[i];
+  if (!v) return;
+  if (typeof addServicePin === 'function') addServicePin('vet', v.name, v.lat, v.lon);
+};
 
 function rpToggle() {
   rpOpen = !rpOpen;
@@ -393,6 +481,32 @@ function rpRenderVets() {
     </div>`
   ).join('');
 
+  const nearbyCards = rpNearbyVets.map((v, i) =>
+    `<div class="rp-link">
+      <div class="rp-lname">
+        <a href="https://www.google.com/maps?q=${v.lat},${v.lon}" target="_blank" rel="noopener">🏥 ${v.name}</a>
+        <span class="rp-pin-btn" onclick="rpPinNearbyVet(${i})">+ map</span>
+      </div>
+      <div class="rp-laddr">${v.dist != null ? v.dist.toFixed(1) + ' km away' : 'distance unknown'}${v.phone ? ' · 📞 ' + v.phone : ''}</div>
+    </div>`
+  ).join('');
+
+  const searchSection = `
+    <div class="rp-vet-search">
+      <div class="rp-charity-label">🔎 FIND VETS NEARBY (live)</div>
+      <div style="display:flex;gap:4px;margin-bottom:4px">
+        <button class="rp-add-btn" style="flex:1;margin:0" onclick="rpSearchNearbyVets(false)">🗺️ Near map centre</button>
+        <button class="rp-add-btn" style="flex:1;margin:0" onclick="rpSearchNearbyVets(true)">📍 Near me</button>
+      </div>
+      ${rpNearbyLoading ? '<div class="rp-vet-status">🐾 Sniffing out nearby vets...</div>' : ''}
+      ${!rpNearbyLoading && rpNearbyError ? `<div class="rp-vet-status err">${rpNearbyError}</div>` : ''}
+      ${!rpNearbyLoading && !rpNearbyError && rpNearbySearchCenter && rpNearbyVets.length
+        ? `<div class="rp-vet-status">Found ${rpNearbyVets.length} near ${rpNearbySearchCenter.label} · via OpenStreetMap</div>`
+        : ''}
+      ${nearbyCards}
+    </div>
+  `;
+
   const ukCharities = CHARITIES_UK.map(c =>
     `<a class="rp-charity-btn" href="${c.url}" target="_blank" rel="noopener">${c.label}</a>`
   ).join('');
@@ -413,8 +527,12 @@ function rpRenderVets() {
       </div>
     </div>`;
 
-  return cards +
-    `<button class="rp-add-btn" onclick="rpAddVet()">+ add vet / clinic</button>` +
+  return searchSection +
+    `<div class="rp-charity-section" style="margin-top:2px">
+      <div class="rp-charity-label">⭐ TRUSTED / SAVED</div>
+      ${cards}
+      <button class="rp-add-btn" onclick="rpAddVet()">+ add vet / clinic</button>
+    </div>` +
     `<div class="rp-charity-section">
       <div class="rp-charity-label">🇬🇧 UK ORGANISATIONS</div>
       <div class="rp-charity-grid">${ukCharities}</div>
