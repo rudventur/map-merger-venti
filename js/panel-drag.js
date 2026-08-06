@@ -10,13 +10,13 @@
 // ── Service pins (vets / food banks on the map) ──
 const servicePins = [];
 
-window.addServicePin = function(type, name) {
+window.addServicePin = function(type, name, lat, lon) {
   if (typeof S === 'undefined') return;
-  // Place at current map centre
+  // Explicit coords (e.g. a real vet locator result) win; otherwise scatter near map centre
   servicePins.push({
     type, name,
-    lat: S.lat + (Math.random() - 0.5) * 0.005,
-    lon: S.lon + (Math.random() - 0.5) * 0.005,
+    lat: (typeof lat === 'number') ? lat : S.lat + (Math.random() - 0.5) * 0.005,
+    lon: (typeof lon === 'number') ? lon : S.lon + (Math.random() - 0.5) * 0.005,
   });
   if (typeof toast === 'function') toast(`📍 ${name} pinned on map!`);
 };
