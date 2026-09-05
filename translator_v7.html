@@ -132,6 +132,43 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 #grammar-modal{background:var(--panel);border:1px solid var(--green);border-radius:12px;max-width:700px;width:100%;max-height:85vh;overflow-y:auto;box-shadow:0 0 50px rgba(0,255,65,.15)}
 #grammar-body{padding:1.5rem}
 
+/* GRAMMAR GRAPHIC MODAL — word-order alignment grid */
+#grammargraphic-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
+#grammargraphic-modal{background:var(--panel);border:1px solid var(--cyan);border-radius:12px;max-width:900px;width:100%;max-height:88vh;overflow-y:auto;box-shadow:0 0 50px rgba(0,240,255,.15)}
+#gg-body{padding:1rem 1.5rem 1.5rem}
+.gg-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--dim);margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.gg-legend span{display:inline-flex;align-items:center;gap:5px}
+.gg-legend i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.gg-row{display:grid;grid-template-columns:170px 64px 1fr;align-items:center;gap:10px;padding:7px 4px}
+.gg-row.gg-header{padding-bottom:10px;margin-bottom:2px;border-bottom:1px solid var(--border);font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:1px}
+.gg-row.gg-main{background:rgba(0,240,255,.06);border-radius:6px}
+.gg-lang{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gg-lang b{color:var(--cyan);font-size:9px;font-weight:normal;letter-spacing:1px}
+.gg-order-label{font-size:10px;color:var(--dim);font-family:'Fira Code',monospace;text-align:center}
+.gg-track{position:relative;height:28px;background:rgba(255,255,255,.03);border-radius:5px;
+  background-image:linear-gradient(90deg,transparent 33.28%,var(--border) 33.28%,var(--border) 33.6%,transparent 33.6%),
+                    linear-gradient(90deg,transparent 66.28%,var(--border) 66.28%,var(--border) 66.6%,transparent 66.6%);}
+.gg-slot{position:absolute;top:50%;transform:translate(-50%,-50%)}
+.gg-chip{display:inline-block;min-width:22px;text-align:center;padding:3px 7px;border-radius:4px;font-size:11px;font-weight:bold;color:#000;font-family:'Fira Code',monospace}
+.gg-tick{font-size:9px;letter-spacing:1px;white-space:nowrap}
+
+/* WORD GRID MODAL — 300-word list translated + aligned by part of speech */
+#wordgrid-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
+#wordgrid-modal{background:var(--panel);border:1px solid var(--amber);border-radius:12px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(255,184,0,.15)}
+#wg-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 1.5rem;border-bottom:1px solid var(--border)}
+#wg-controls label{font-size:11px;color:var(--text);display:flex;align-items:center;gap:6px;cursor:pointer}
+#wg-status{font-size:10px;color:var(--dim);margin-left:auto}
+#wg-table-wrap{overflow:auto;padding:0 1.5rem 1.5rem;flex:1}
+#wg-table{border-collapse:collapse;width:100%;font-size:12px}
+#wg-table th,#wg-table td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
+#wg-table th{position:sticky;top:0;background:var(--panel);color:var(--cyan);font-size:10px;text-transform:uppercase;letter-spacing:.5px;z-index:2}
+#wg-table th:first-child,#wg-table td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
+.wg-pos{font-size:9px;text-transform:uppercase;letter-spacing:1px}
+.wg-pending{color:var(--dim)}
+.wg-ipa{display:block;font-size:10px;color:var(--cyan);font-style:italic;opacity:.85;white-space:nowrap}
+.wg-ipa.wg-ipa-en{color:var(--amber)}
+.wg-ipa.wg-ipa-na{color:var(--dim);font-style:normal}
+
 /* FOOTER */
 #footer{position:fixed;bottom:0;left:0;right:0;z-index:800;background:linear-gradient(0deg,rgba(10,10,10,.95),rgba(10,10,10,.6));border-top:1px solid var(--border);padding:5px 1rem;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
 
@@ -169,6 +206,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <button class="hdr-btn" onclick="saveToTxt()" title="Save state to .txt">💾 SAVE</button>
     <button class="hdr-btn" onclick="loadFromTxt()" title="Load state from .txt">📂 LOAD</button>
     <button class="hdr-btn" onclick="resetAllState()">↺ RESET</button>
+    <button class="hdr-btn" style="color:var(--cyan);border-color:var(--cyan)" onclick="openGrammarGraphic()" title="Compare word order across languages, aligned to the main language">📐 GRAMMAR GRAPHIC</button>
+    <button class="hdr-btn" style="color:var(--amber);border-color:var(--amber)" onclick="openWordGrid()" title="Translate a core word list, grouped by part of speech">📚 WORD GRID</button>
     <div class="redirect-wrap">
       <button class="hdr-btn" style="color:var(--purple);border-color:var(--purple)" onclick="openRedirectMenu(event)">&#128257; REDIRECT</button>
     </div>
@@ -201,6 +240,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <span class="redirect-card cur">&#127760; Translator <small>(here)</small></span>
       <button class="redirect-card" onclick="goTo('index.html')">&#128506;&#65039; Map Merger</button>
       <button class="redirect-card" onclick="goTo('snout-first.html')">&#128062; Snout First</button>
+      <button class="redirect-card" onclick="goTo('voice-of-god.html')">&#128172; Voice of God</button>
     </div>
   </div>
 </div>
@@ -348,6 +388,32 @@ document.addEventListener('click', e => {
       <button onclick="closeGrammar()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
     </div>
     <div id="grammar-body"></div>
+  </div>
+</div>
+
+<div id="grammargraphic-overlay" onclick="if(event.target===this) closeGrammarGraphic()">
+  <div id="grammargraphic-modal">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Orbitron';color:var(--cyan)">📐 Grammar Graphic — Word Order Alignment</div>
+      <button onclick="closeGrammarGraphic()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+    </div>
+    <div id="gg-body"></div>
+  </div>
+</div>
+
+<div id="wordgrid-overlay" onclick="if(event.target===this) closeWordGrid()">
+  <div id="wordgrid-modal">
+    <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+      <div style="font-family:'Orbitron';color:var(--amber)">📚 Word Grid — Core Vocabulary</div>
+      <button onclick="closeWordGrid()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+    </div>
+    <div id="wg-controls">
+      <label><input type="checkbox" id="wg-exclude-easy"> Exclude easy words (basic pronouns, numbers, colors, greetings...)</label>
+      <button class="tb-btn" id="wg-translate-btn" style="background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:var(--amber)" onclick="translateWordGrid()">TRANSLATE ⚡</button>
+      <button class="tb-btn" id="wg-ipa-btn" style="background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.3);color:var(--cyan)" onclick="generateIpaForGrid()" title="Real IPA per language via the espeak-ng engine (loaded on demand, ~19MB the first time); English gets a simple 'heh-LOH' style respelling instead">🗣️ GENERATE IPA</button>
+      <span id="wg-status"></span>
+    </div>
+    <div id="wg-table-wrap"><table id="wg-table"></table></div>
   </div>
 </div>
 
@@ -598,6 +664,136 @@ const LANGUAGES = [
 ];
 
 // ========================================================================
+//  WORD ORDER — parsed from each language's `grammar` blurb, used by the
+//  Grammar Graphic to align every language's Subject/Verb/Object onto the
+//  currently-chosen main language's slot grid. Defaults to SVO (the most
+//  common order) when the blurb doesn't call one out explicitly.
+// ========================================================================
+const ROLE_NAME={S:'SUBJECT',V:'VERB',O:'OBJECT'};
+const ROLE_COLOR={S:'var(--cyan)',V:'var(--green)',O:'var(--amber)'};
+function wordOrderOf(lang){
+  const m=(lang.grammar||'').match(/\b(SVO|SOV|VSO|VOS|OVS|OSV)\b/);
+  return m?m[1]:'SVO';
+}
+
+// ========================================================================
+//  CORE WORD LIST — ~300 everyday English words tagged by part of speech
+//  and by "easy" (basic pronouns/numbers/colors/greetings a learner already
+//  knows), used by the Word Grid to translate a shared vocabulary into
+//  every selected language, grouped so the same part of speech always
+//  lands in the same column no matter which language is looked at.
+//  Format: [english, partOfSpeech, easy]
+// ========================================================================
+const CORE_WORDS=[
+  // pronouns & question words (easy)
+  ['I','pron',true],['you','pron',true],['he','pron',true],['she','pron',true],['it','pron',true],
+  ['we','pron',true],['they','pron',true],['this','pron',true],['that','pron',true],['who','question',true],
+  ['what','question',true],['where','question',true],['when','question',true],['why','question',true],['how','question',true],['which','question',true],
+  // numbers (easy)
+  ['one','number',true],['two','number',true],['three','number',true],['four','number',true],['five','number',true],
+  ['six','number',true],['seven','number',true],['eight','number',true],['nine','number',true],['ten','number',true],
+  ['hundred','number',true],['thousand','number',true],
+  // colors (easy)
+  ['red','adj',true],['blue','adj',true],['green','adj',true],['yellow','adj',true],['black','adj',true],
+  ['white','adj',true],['orange','adj',true],['purple','adj',true],['pink','adj',true],['brown','adj',true],['gray','adj',true],
+  // days (easy)
+  ['Monday','noun',true],['Tuesday','noun',true],['Wednesday','noun',true],['Thursday','noun',true],
+  ['Friday','noun',true],['Saturday','noun',true],['Sunday','noun',true],
+  // greetings & phrases (easy)
+  ['hello','phrase',true],['goodbye','phrase',true],['please','phrase',true],['thank you','phrase',true],
+  ['sorry','phrase',true],['yes','phrase',true],['no','phrase',true],['welcome','phrase',true],['congratulations','phrase',true],
+  // basic verbs (easy)
+  ['be','verb',true],['have','verb',true],['do','verb',true],['go','verb',true],['come','verb',true],
+  // verbs
+  ['see','verb',false],['know','verb',false],['think','verb',false],['want','verb',false],['need','verb',false],
+  ['like','verb',false],['love','verb',false],['eat','verb',false],['drink','verb',false],['sleep','verb',false],
+  ['walk','verb',false],['run','verb',false],['speak','verb',false],['say','verb',false],['tell','verb',false],
+  ['ask','verb',false],['give','verb',false],['take','verb',false],['make','verb',false],['work','verb',false],
+  ['play','verb',false],['read','verb',false],['write','verb',false],['learn','verb',false],['teach','verb',false],
+  ['buy','verb',false],['sell','verb',false],['open','verb',false],['close','verb',false],['start','verb',false],
+  ['stop','verb',false],['live','verb',false],['die','verb',false],['help','verb',false],['wait','verb',false],
+  ['look','verb',false],['listen','verb',false],['feel','verb',false],['understand','verb',false],['remember','verb',false],
+  ['forget','verb',false],['find','verb',false],['lose','verb',false],['win','verb',false],['try','verb',false],
+  ['use','verb',false],['call','verb',false],['meet','verb',false],['leave','verb',false],['stay','verb',false],
+  ['sit','verb',false],['stand','verb',false],['carry','verb',false],['bring','verb',false],['send','verb',false],
+  ['build','verb',false],['break','verb',false],['fix','verb',false],['clean','verb',false],['wash','verb',false],
+  ['cook','verb',false],['drive','verb',false],['fly','verb',false],['swim','verb',false],['dance','verb',false],
+  ['sing','verb',false],['laugh','verb',false],['cry','verb',false],['smile','verb',false],['hope','verb',false],
+  ['dream','verb',false],['believe','verb',false],['decide','verb',false],['choose','verb',false],['agree','verb',false],
+  ['arrive','verb',false],['return','verb',false],['follow','verb',false],['push','verb',false],['pull','verb',false],
+  ['throw','verb',false],['catch','verb',false],['hold','verb',false],['show','verb',false],['explain','verb',false],
+  ['answer','verb',false],['count','verb',false],['pay','verb',false],['cost','verb',false],['save','verb',false],
+  ['marry','verb',false],['grow','verb',false],['change','verb',false],['continue','verb',false],['finish','verb',false],['begin','verb',false],
+  // nouns — people & family
+  ['man','noun',false],['woman','noun',false],['child','noun',false],['boy','noun',false],['girl','noun',false],
+  ['baby','noun',false],['friend','noun',false],['family','noun',false],['mother','noun',false],['father','noun',false],
+  ['brother','noun',false],['sister','noun',false],['son','noun',false],['daughter','noun',false],['husband','noun',false],
+  ['wife','noun',false],['people','noun',false],['person','noun',false],['name','noun',false],
+  // nouns — home & places
+  ['house','noun',false],['home','noun',false],['room','noun',false],['door','noun',false],['window','noun',false],
+  ['table','noun',false],['chair','noun',false],['bed','noun',false],['kitchen','noun',false],['garden','noun',false],
+  ['city','noun',false],['town','noun',false],['village','noun',false],['country','noun',false],['world','noun',false],
+  ['road','noun',false],['street','noun',false],['school','noun',false],['hospital','noun',false],['market','noun',false],
+  ['shop','noun',false],['church','noun',false],
+  // nouns — transport & things
+  ['car','noun',false],['bus','noun',false],['train','noun',false],['plane','noun',false],['boat','noun',false],
+  ['bicycle','noun',false],['book','noun',false],['pen','noun',false],['paper','noun',false],['phone','noun',false],
+  ['computer','noun',false],['money','noun',false],
+  // nouns — food & drink
+  ['food','noun',false],['water','noun',false],['bread','noun',false],['meat','noun',false],['fish','noun',false],
+  ['fruit','noun',false],['vegetable','noun',false],['milk','noun',false],['egg','noun',false],['salt','noun',false],
+  ['sugar','noun',false],['tea','noun',false],['coffee','noun',false],
+  // nouns — nature
+  ['sun','noun',false],['moon','noun',false],['star','noun',false],['sky','noun',false],['cloud','noun',false],
+  ['rain','noun',false],['snow','noun',false],['wind','noun',false],['fire','noun',false],['earth','noun',false],
+  ['tree','noun',false],['flower','noun',false],['grass','noun',false],['mountain','noun',false],['river','noun',false],
+  ['sea','noun',false],['lake','noun',false],['forest','noun',false],
+  // nouns — animals
+  ['animal','noun',false],['dog','noun',false],['cat','noun',false],['bird','noun',false],['horse','noun',false],
+  ['cow','noun',false],['pig','noun',false],['sheep','noun',false],
+  // nouns — time
+  ['time','noun',false],['day','noun',false],['night','noun',false],['morning','noun',false],['evening','noun',false],
+  ['week','noun',false],['month','noun',false],['year','noun',false],['hour','noun',false],['minute','noun',false],
+  ['today','noun',false],['tomorrow','noun',false],['yesterday','noun',false],['spring','noun',false],['summer','noun',false],
+  ['autumn','noun',false],['winter','noun',false],
+  // nouns — body
+  ['head','noun',false],['eye','noun',false],['ear','noun',false],['nose','noun',false],['mouth','noun',false],
+  ['hand','noun',false],['arm','noun',false],['leg','noun',false],['foot','noun',false],['heart','noun',false],
+  ['body','noun',false],['hair','noun',false],['face','noun',false],
+  // nouns — abstract
+  ['love','noun',false],['life','noun',false],['death','noun',false],['job','noun',false],['teacher','noun',false],
+  ['student','noun',false],['doctor','noun',false],['king','noun',false],['queen','noun',false],['war','noun',false],
+  ['peace','noun',false],['music','noun',false],['art','noun',false],['language','noun',false],['word','noun',false],
+  ['question','noun',false],['problem','noun',false],['idea','noun',false],['story','noun',false],['news','noun',false],
+  ['letter','noun',false],['number','noun',false],['color','noun',false],
+  // adjectives
+  ['big','adj',false],['small','adj',false],['long','adj',false],['short','adj',false],['high','adj',false],
+  ['low','adj',false],['good','adj',false],['bad','adj',false],['new','adj',false],['old','adj',false],
+  ['young','adj',false],['hot','adj',false],['cold','adj',false],['warm','adj',false],['cool','adj',false],
+  ['fast','adj',false],['slow','adj',false],['happy','adj',false],['sad','adj',false],['angry','adj',false],
+  ['afraid','adj',false],['tired','adj',false],['hungry','adj',false],['thirsty','adj',false],['strong','adj',false],
+  ['weak','adj',false],['rich','adj',false],['poor','adj',false],['easy','adj',false],['difficult','adj',false],
+  ['beautiful','adj',false],['ugly','adj',false],['clean','adj',false],['dirty','adj',false],['full','adj',false],
+  ['empty','adj',false],['heavy','adj',false],['light','adj',false],['dark','adj',false],['bright','adj',false],
+  ['quiet','adj',false],['loud','adj',false],['near','adj',false],['far','adj',false],['right','adj',false],
+  ['wrong','adj',false],['true','adj',false],['false','adj',false],['same','adj',false],['different','adj',false],
+  ['first','adj',false],['last','adj',false],['early','adj',false],['late','adj',false],['free','adj',false],
+  ['busy','adj',false],['safe','adj',false],['dangerous','adj',false],
+  // prepositions (mostly easy)
+  ['in','prep',true],['on','prep',true],['at','prep',true],['to','prep',true],['from','prep',true],
+  ['with','prep',true],['without','prep',true],['under','prep',false],['over','prep',false],['between','prep',false],
+  ['behind','prep',false],['before','prep',false],['after','prep',false],['through','prep',false],['into','prep',false],
+  // conjunctions (easy)
+  ['and','conj',true],['or','conj',true],['but','conj',true],['because','conj',true],['if','conj',true],
+  ['although','conj',false],['while','conj',false],['so','conj',true],
+  // adverbs
+  ['very','adv',true],['always','adv',false],['never','adv',false],['sometimes','adv',false],['often','adv',false],
+  ['now','adv',true],['here','adv',true],['there','adv',true],['again','adv',false],['also','adv',false],
+  ['only','adv',false],['just','adv',false],['still','adv',false],['already','adv',false],['soon','adv',false],
+  ['quickly','adv',false],['slowly','adv',false],['well','adv',false],['badly','adv',false]
+];
+
+// ========================================================================
 //  STATE
 // ========================================================================
 let map, markers = [];
@@ -677,6 +873,7 @@ function initApp(){
   initBaseLangSelect();
   initLangCheckboxes();
   initTranslateBar();
+  initWordGrid();
 }
 
 // ========================================================================
@@ -1047,9 +1244,315 @@ function openGrammar(name){
 }
 function closeGrammar(){document.getElementById('grammar-overlay').style.display='none'}
 
+// ========================================================================
+//  GRAMMAR GRAPHIC — word-order alignment grid
+//  The MAIN language (base-lang-select) defines the slot grid header.
+//  Every checked language then places its own Subject/Verb/Object chips
+//  at ITS OWN position along that same three-slot track, so you can see
+//  at a glance where each language's verb (green), subject (cyan) and
+//  object (amber) land relative to the main language's slots.
+// ========================================================================
+function openGrammarGraphic(){
+  const main=LANGUAGES.find(l=>l.code===baseLang);
+  if(!main){alert('Pick a main language in the translate bar first.');return}
+  const others=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==main.code)
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  const mainOrder=wordOrderOf(main).split('');
+
+  const legend=`<div class="gg-legend">
+    <span><i style="background:${ROLE_COLOR.S}"></i>Subject</span>
+    <span><i style="background:${ROLE_COLOR.V}"></i>Verb</span>
+    <span><i style="background:${ROLE_COLOR.O}"></i>Object</span>
+    <span style="margin-left:auto">Columns = ${main.name}'s word order. Each row shows where that language's own Subject / Verb / Object actually falls.</span>
+  </div>`;
+
+  const trackHtml=order=>`<div class="gg-track">${order.map((role,i)=>
+    `<div class="gg-slot" style="left:${((i+0.5)/3)*100}%"><span class="gg-chip" style="background:${ROLE_COLOR[role]}">${role}</span></div>`
+  ).join('')}</div>`;
+
+  const headerHtml=`<div class="gg-row gg-header">
+    <div class="gg-lang">Language</div><div class="gg-order-label">Order</div>
+    <div class="gg-track">${mainOrder.map((role,i)=>
+      `<div class="gg-slot" style="left:${((i+0.5)/3)*100}%"><span class="gg-tick" style="color:${ROLE_COLOR[role]}">${ROLE_NAME[role]}</span></div>`
+    ).join('')}</div>
+  </div>`;
+
+  const rowHtml=lang=>{
+    const order=wordOrderOf(lang).split('');
+    return `<div class="gg-row ${lang.code===main.code?'gg-main':''}">
+      <div class="gg-lang">${FLAGS[lang.code]||''} ${lang.name}${lang.code===main.code?' <b>MAIN</b>':''}</div>
+      <div class="gg-order-label">${order.join('-')}</div>
+      ${trackHtml(order)}
+    </div>`;
+  };
+
+  document.getElementById('gg-body').innerHTML=legend+headerHtml+rowHtml(main)+others.map(rowHtml).join('');
+  document.getElementById('grammargraphic-overlay').style.display='flex';
+}
+function closeGrammarGraphic(){document.getElementById('grammargraphic-overlay').style.display='none'}
+
+// ========================================================================
+//  WORD GRID — core vocabulary translated & aligned by part of speech
+//  The MAIN language (base-lang-select) is pinned as the anchor column;
+//  every checked language gets its own column, translated from the
+//  English CORE_WORDS list via MyMemory. Results are cached in
+//  localStorage so repeat visits and re-filters don't re-hit the API.
+// ========================================================================
+const WG_CACHE_KEY='rv-wordcache-v1';
+let wordCache=null;
+const POS_COLOR={pron:'var(--purple)',verb:'var(--green)',noun:'var(--cyan)',adj:'var(--amber)',adv:'#8ab4ff',prep:'#ff8ba7',conj:'#9aa5b1',number:'#ffd166',question:'#ff8ba7',phrase:'#7cf5c4'};
+
+function loadWordCache(){try{return JSON.parse(localStorage.getItem(WG_CACHE_KEY)||'{}')}catch(e){return{}}}
+function saveWordCache(){try{localStorage.setItem(WG_CACHE_KEY,JSON.stringify(wordCache))}catch(e){}}
+
+function wgColumns(){
+  const main=LANGUAGES.find(l=>l.code===baseLang);
+  const others=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==(main&&main.code))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  return (main?[main]:[]).concat(others);
+}
+function wgWordList(){
+  const excludeEasy=document.getElementById('wg-exclude-easy').checked;
+  return excludeEasy?CORE_WORDS.filter(w=>!w[2]):CORE_WORDS;
+}
+
+function openWordGrid(){
+  if(!wordCache) wordCache=loadWordCache();
+  if(!ipaCache) ipaCache=loadIpaCache();
+  if(!LANGUAGES.some(l=>l.code===baseLang)){alert('Pick a main language in the translate bar first.');return}
+  document.getElementById('wordgrid-overlay').style.display='flex';
+  renderWordGrid();
+}
+function closeWordGrid(){document.getElementById('wordgrid-overlay').style.display='none'}
+
+function renderWordGrid(){
+  const words=wgWordList();
+  const cols=wgColumns();
+  const thead=`<thead><tr><th>Word (EN)</th><th>Type</th>${cols.map(l=>
+    `<th>${FLAGS[l.code]||''} ${l.name}${l.code===baseLang?' <span style="color:var(--green)">(MAIN)</span>':''}</th>`).join('')}</tr></thead>`;
+  const rows=words.map(([en,pos])=>{
+    const cells=cols.map(l=>{
+      const lower=en.toLowerCase();
+      if(l.code==='en'){
+        const respelling=ipaCache&&ipaCache[`respell|en|${lower}`];
+        return `<td>${en}${respelling?`<span class="wg-ipa wg-ipa-en">${respelling}</span>`:''}</td>`;
+      }
+      const key=`en|${l.code}|${lower}`;
+      const val=wordCache[key];
+      let ipaLine='';
+      const ipaKey=`ipa|${l.code}|${lower}`;
+      if(ipaCache&&ipaCache[`na|${l.code}`]) ipaLine=`<span class="wg-ipa wg-ipa-na">(IPA n/a for this language)</span>`;
+      else if(ipaCache&&ipaCache[ipaKey]) ipaLine=`<span class="wg-ipa">[${ipaCache[ipaKey]}]</span>`;
+      else if(ipaCache&&ipaKey in ipaCache) ipaLine=`<span class="wg-ipa wg-ipa-na">(pronunciation uncertain)</span>`;
+      return `<td>${val?val:'<span class="wg-pending">…</span>'}${ipaLine}</td>`;
+    }).join('');
+    return `<tr><td>${en}</td><td><span class="wg-pos" style="color:${POS_COLOR[pos]||'#fff'}">${pos}</span></td>${cells}</tr>`;
+  }).join('');
+  document.getElementById('wg-table').innerHTML=thead+`<tbody>${rows}</tbody>`;
+  document.getElementById('wg-status').textContent=`${words.length} words × ${cols.length} languages`;
+}
+
+async function translateWordGrid(){
+  const words=wgWordList();
+  const cols=wgColumns().filter(l=>l.code!=='en');
+  const btn=document.getElementById('wg-translate-btn'),status=document.getElementById('wg-status');
+  const pairs=[];
+  cols.forEach(l=>words.forEach(([en])=>{
+    const key=`en|${l.code}|${en.toLowerCase()}`;
+    if(!wordCache[key]) pairs.push({lang:l,en,key});
+  }));
+  if(pairs.length===0){status.textContent='> All visible words already cached.';return}
+  if(pairs.length>400 && !confirm(`This will make ${pairs.length} requests to the free MyMemory translation API and may take a while or get rate-limited. Continue?`)) return;
+  btn.disabled=true;
+  let done=0;
+  for(let i=0;i<pairs.length;i+=5){
+    const batch=pairs.slice(i,i+5);
+    await Promise.all(batch.map(async p=>{
+      try{
+        const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(p.en)}&langpair=en|${p.lang.code}`;
+        const res=await fetch(url);const data=await res.json();
+        if(data.responseStatus===200) wordCache[p.key]=data.responseData.translatedText;
+      }catch(e){console.warn('Word translate failed',p.lang.name,p.en)}
+      done++;
+    }));
+    status.textContent=`> Translating... ${done}/${pairs.length}`;
+    saveWordCache();
+    renderWordGrid();
+    await new Promise(r=>setTimeout(r,150));
+  }
+  btn.disabled=false;
+  status.textContent=`> Done. ${pairs.length} new translations cached.`;
+}
+
+// ========================================================================
+//  IPA PHONETICS — real IPA per language via the espeak-ng engine (WASM),
+//  loaded on demand (not on page load) since it's an ~19MB one-time
+//  download. English gets a simple "heh-LOH"-style respelling instead of
+//  raw IPA, generated by running espeak's English IPA through a small
+//  phoneme-to-letter converter, per the house style already used for each
+//  language's "hello" (see LANGUAGES[].hello.pr, e.g. "heh-LOH").
+//  Pinned to a specific commit of github.com/ianmarmour/espeak-ng.js via
+//  jsDelivr's GitHub passthrough, so this doesn't break if that repo
+//  changes later. Source is GPL-3.0-or-later — see that repo for license.
+// ========================================================================
+const ESPEAK_CDN = 'https://cdn.jsdelivr.net/gh/ianmarmour/espeak-ng.js@eec88dbcc1482b1a03a76cf9d2025a0acde8982e/src/espeak-ng.js';
+// Voice-code overrides for our codes that don't exactly match an espeak-ng
+// voice id. Anything not listed here is looked up directly (or via its
+// base language subtag) against the engine's own --voices list at runtime,
+// so we never silently rely on a guessed code being right.
+const ESPEAK_VOICE_OVERRIDES={
+  'en':'en-us','en-US':'en-us','fr':'fr-fr','fr-CA':'fr-fr','es-MX':'es-419','pt-BR':'pt-br',
+  'zh-CN':'cmn','no':'nb','ro-MD':'ro','gsw-FR':'de'
+};
+let espeakState=null; // {compiledModule, voices:Set<string>} once loaded
+
+async function loadEspeak(statusEl){
+  if(espeakState) return espeakState;
+  if(statusEl) statusEl.textContent='> Loading IPA engine (espeak-ng, ~19MB, first time only)...';
+  const ESpeakNg=(await import(ESPEAK_CDN)).default;
+  const wasmUrl=ESPEAK_CDN.replace(/\.js$/,'.wasm');
+  const bytes=await (await fetch(wasmUrl)).arrayBuffer();
+  const compiledModule=await WebAssembly.compile(bytes);
+  const instantiateWasm=(imports,successCallback)=>{
+    WebAssembly.instantiate(compiledModule,imports).then(inst=>successCallback(inst,compiledModule));
+    return {};
+  };
+  let voicesOutput='';
+  await ESpeakNg({instantiateWasm,arguments:['--voices'],print:t=>{voicesOutput+=t+'\n'}});
+  const voices=new Set([...voicesOutput.matchAll(/^\s*\d+\s+([\w-]+)/gm)].map(m=>m[1]));
+  espeakState={ESpeakNg,compiledModule,instantiateWasm,voices};
+  return espeakState;
+}
+
+function resolveEspeakVoice(code,voices){
+  if(ESPEAK_VOICE_OVERRIDES[code]) return voices.has(ESPEAK_VOICE_OVERRIDES[code])?ESPEAK_VOICE_OVERRIDES[code]:null;
+  if(voices.has(code)) return code;
+  const base=code.split('-')[0];
+  return voices.has(base)?base:null;
+}
+
+async function phonemizeBatch(state,words,voice){
+  const text=words.join(' , ');
+  const instance=await state.ESpeakNg({
+    instantiateWasm:state.instantiateWasm,
+    arguments:['--phonout','/out.txt','-q','--ipa=3','-v',voice,text],
+  });
+  const raw=instance.FS.readFile('/out.txt',{encoding:'utf8'}).trim();
+  return raw.split('\n');
+}
+
+// ---- English IPA -> simple "heh-LOH" style respelling ----
+const EN_DIPHTHONGS=[['aɪ','eye'],['eɪ','ay'],['oʊ','oh'],['aʊ','ow'],['ɔɪ','oy'],['tʃ','ch'],['dʒ','j']];
+const EN_VOWEL_CHARS=new Set(['æ','ɑ','ɐ','ɔ','ə','ɚ','ɛ','ɜ','ɪ','ʊ','ʌ','ᵻ','i','u','a','e','o']);
+const EN_PHONES={
+  b:'b',d:'d',f:'f',h:'h',k:'k',l:'l',m:'m',n:'n',p:'p',s:'s',t:'t',v:'v',w:'w',z:'z',
+  j:'y',ɡ:'g',ŋ:'ng',ɹ:'r',ɾ:'d',ʃ:'sh',ʒ:'zh',θ:'th',ð:'th',
+  æ:'a',ɑ:'ah',ɐ:'uh',ɔ:'aw',ə:'uh',ɚ:'er',ɛ:'eh',ɜ:'ur',ɪ:'ih',ʊ:'uu',ʌ:'uh',ᵻ:'ih',
+  i:'ee',u:'oo',a:'ah',e:'eh',o:'oh'
+};
+function respellChunkBody(body){
+  let hasVowel=false;
+  for(const ch of body) if(EN_VOWEL_CHARS.has(ch)){hasVowel=true;break}
+  EN_DIPHTHONGS.forEach(([from,to])=>{body=body.split(from).join(' '+to+' ')});
+  let out='',i=0;
+  while(i<body.length){
+    if(body[i]===' '){const end=body.indexOf(' ',i+1);out+=body.slice(i+1,end);i=end+1}
+    else{out+=EN_PHONES[body[i]]||'';i++}
+  }
+  return {text:out,hasVowel};
+}
+function respellEnglishWord(ipaWord){
+  const cleaned=ipaWord.replace(/[ː‍]/g,'');
+  const rawParts=cleaned.split(/(?=[ˈˌ])/).filter(Boolean);
+  if(rawParts.length===0) return '';
+  const chunks=rawParts.map(part=>{
+    const stressed=part.startsWith('ˈ');
+    const {text,hasVowel}=respellChunkBody(part.replace(/^[ˈˌ]/,''));
+    return {text,stressed,hasVowel};
+  });
+  const merged=[];
+  for(let i=0;i<chunks.length;i++){
+    if(!chunks[i].hasVowel&&i<chunks.length-1) chunks[i+1].text=chunks[i].text+chunks[i+1].text;
+    else if(!chunks[i].hasVowel&&merged.length>0) merged[merged.length-1].text+=chunks[i].text;
+    else merged.push(chunks[i]);
+  }
+  return merged.map(c=>c.stressed?c.text.toUpperCase():c.text).join('-');
+}
+function respellEnglish(text){
+  return text.split(' ').map(respellEnglishWord).join(' ');
+}
+
+// ---- Orchestration: generate IPA/respelling for the current grid ----
+const IPA_CACHE_KEY='rv-ipacache-v1';
+let ipaCache=null;
+function loadIpaCache(){try{return JSON.parse(localStorage.getItem(IPA_CACHE_KEY)||'{}')}catch(e){return{}}}
+function saveIpaCache(){try{localStorage.setItem(IPA_CACHE_KEY,JSON.stringify(ipaCache))}catch(e){}}
+
+async function generateIpaForGrid(){
+  if(!ipaCache) ipaCache=loadIpaCache();
+  const btn=document.getElementById('wg-ipa-btn'),status=document.getElementById('wg-status');
+  btn.disabled=true;
+  try{
+    const state=await loadEspeak(status);
+    const words=wgWordList();
+    const cols=wgColumns();
+    let done=0;
+    for(const l of cols){
+      status.textContent=`> Generating IPA... ${done}/${cols.length} languages`;
+      if(l.code==='en'){
+        const missing=words.filter(([en])=>!ipaCache[`respell|en|${en.toLowerCase()}`]);
+        if(missing.length){
+          const lines=await phonemizeBatch(state,missing.map(w=>w[0]),'en-us');
+          missing.forEach(([en],i)=>{ipaCache[`respell|en|${en.toLowerCase()}`]=respellEnglish(lines[i]||'')});
+        }
+      } else {
+        const voice=resolveEspeakVoice(l.code,state.voices);
+        if(!voice){ipaCache[`na|${l.code}`]=true;done++;continue}
+        // IPA is generated from the already-translated word, so it matches what's shown.
+        const targets=words.filter(([en])=>{
+          const wKey=`en|${l.code}|${en.toLowerCase()}`;
+          const iKey=`ipa|${l.code}|${en.toLowerCase()}`;
+          return wordCache[wKey]&&!ipaCache[iKey];
+        });
+        if(targets.length){
+          const lines=await phonemizeBatch(state,targets.map(([en])=>wordCache[`en|${l.code}|${en.toLowerCase()}`]),voice);
+          targets.forEach(([en],i)=>{
+            // If espeak had to switch voices mid-word (its own "(en)...(ja)"
+            // markers), treat the WHOLE word's IPA as unreliable rather than
+            // trying to surgically remove just the switched-in fragment —
+            // e.g. espeak-ng's Japanese voice has no reading for many kanji
+            // and announces "Chinese letter" in English as a fallback for
+            // each one it can't voice, and that fallback's own phonemes
+            // aren't cleanly delimited enough to strip in isolation. Shown
+            // as-is it would read as if it were the word's real pronunciation
+            // — for a pronunciation aid, showing nothing beats showing that.
+            const raw=(lines[i]||'').replace(/[‍]/g,'');
+            const unreliable=/\([a-z]{2,3}(?:-[a-z0-9]+)?\)/i.test(raw);
+            ipaCache[`ipa|${l.code}|${en.toLowerCase()}`]=unreliable?null:(raw.trim()||null);
+          });
+        }
+      }
+      done++;
+      saveIpaCache();
+      renderWordGrid();
+    }
+    status.textContent='> IPA generation complete.';
+  }catch(e){
+    console.error(e);
+    status.textContent='> IPA engine failed to load — see console for details.';
+  }
+  btn.disabled=false;
+}
+
+function initWordGrid(){
+  document.getElementById('wg-exclude-easy').addEventListener('change',()=>{
+    if(document.getElementById('wordgrid-overlay').style.display==='flex') renderWordGrid();
+  });
+}
+
 // ESC key
 document.addEventListener('keydown',e=>{
-  if(e.key==='Escape'){closeGrammar();closeViewMenu();closeRedirectMenu();document.getElementById('side-panel').classList.remove('open');if(moveMode)deselectMarker()}
+  if(e.key==='Escape'){closeGrammar();closeGrammarGraphic();closeWordGrid();closeViewMenu();closeRedirectMenu();document.getElementById('side-panel').classList.remove('open');if(moveMode)deselectMarker()}
 });
 
 // ========================================================================
