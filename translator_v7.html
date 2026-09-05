@@ -155,19 +155,31 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 /* WORD GRID MODAL — 300-word list translated + aligned by part of speech */
 #wordgrid-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
 #wordgrid-modal{background:var(--panel);border:1px solid var(--amber);border-radius:12px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(255,184,0,.15)}
-#wg-controls{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:12px 1.5rem;border-bottom:1px solid var(--border)}
+#wg-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 1.5rem;border-bottom:1px solid var(--border)}
 #wg-controls label{font-size:11px;color:var(--text);display:flex;align-items:center;gap:6px;cursor:pointer}
-#wg-status{font-size:10px;color:var(--dim);margin-left:auto}
+#wg-lang-chips{display:flex;gap:6px;flex-wrap:wrap}
+#wg-count{font-size:10px;color:var(--dim);margin-left:auto}
+#wg-status{font-size:10px;color:var(--cyan)}
+#wg-hint{font-size:10px;color:var(--dim);padding:0 1.5rem 10px}
+#wg-hint b{color:var(--text)}
+#wg-add-lang{background:var(--bg);color:var(--amber);border:1px solid rgba(255,184,0,.3);padding:5px 8px;border-radius:4px;font-family:'Fira Code',monospace;font-size:11px;cursor:pointer}
+.wg-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(255,184,0,.08);border:1px solid rgba(255,184,0,.3);color:var(--amber);border-radius:20px;padding:4px 6px 4px 10px;font-size:11px;white-space:nowrap}
+.wg-chip button{background:none;border:none;color:var(--dim);cursor:pointer;font-size:12px;padding:0 2px}
+.wg-chip button:hover{color:var(--red)}
 #wg-table-wrap{overflow:auto;padding:0 1.5rem 1.5rem;flex:1}
 #wg-table{border-collapse:collapse;width:100%;font-size:12px}
 #wg-table th,#wg-table td{padding:6px 10px;border-bottom:1px solid var(--border);white-space:nowrap;text-align:left}
 #wg-table th{position:sticky;top:0;background:var(--panel);color:var(--cyan);font-size:10px;text-transform:uppercase;letter-spacing:.5px;z-index:2}
 #wg-table th:first-child,#wg-table td:first-child{position:sticky;left:0;background:var(--panel);z-index:1}
 .wg-pos{font-size:9px;text-transform:uppercase;letter-spacing:1px}
-.wg-pending{color:var(--dim)}
 .wg-ipa{display:block;font-size:10px;color:var(--cyan);font-style:italic;opacity:.85;white-space:nowrap}
 .wg-ipa.wg-ipa-en{color:var(--amber)}
 .wg-ipa.wg-ipa-na{color:var(--dim);font-style:normal}
+.wg-mini-btn{background:rgba(255,255,255,.05);border:1px solid var(--border);color:var(--text);border-radius:4px;padding:1px 6px;font-size:10px;cursor:pointer;font-family:'Fira Code',monospace}
+.wg-mini-btn:hover{border-color:var(--cyan);color:var(--cyan)}
+.wg-mini-btn:disabled{opacity:.4;cursor:default}
+.wg-col-btn{background:none;border:none;color:var(--dim);cursor:pointer;font-size:11px;padding:0 2px;text-transform:none;letter-spacing:0}
+.wg-col-btn:hover{color:var(--cyan)}
 
 /* FOOTER */
 #footer{position:fixed;bottom:0;left:0;right:0;z-index:800;background:linear-gradient(0deg,rgba(10,10,10,.95),rgba(10,10,10,.6));border-top:1px solid var(--border);padding:5px 1rem;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
@@ -408,11 +420,13 @@ document.addEventListener('click', e => {
       <button onclick="closeWordGrid()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
     </div>
     <div id="wg-controls">
+      <div id="wg-lang-chips"></div>
+      <select id="wg-add-lang" onchange="addWgLang(this.value);this.value=''"></select>
       <label><input type="checkbox" id="wg-exclude-easy"> Exclude easy words (basic pronouns, numbers, colors, greetings...)</label>
-      <button class="tb-btn" id="wg-translate-btn" style="background:rgba(255,184,0,.1);border:1px solid rgba(255,184,0,.3);color:var(--amber)" onclick="translateWordGrid()">TRANSLATE ⚡</button>
-      <button class="tb-btn" id="wg-ipa-btn" style="background:rgba(0,240,255,.1);border:1px solid rgba(0,240,255,.3);color:var(--cyan)" onclick="generateIpaForGrid()" title="Real IPA per language via the espeak-ng engine (loaded on demand, ~19MB the first time); English gets a simple 'heh-LOH' style respelling instead">🗣️ GENERATE IPA</button>
+      <span id="wg-count"></span>
       <span id="wg-status"></span>
     </div>
+    <div id="wg-hint">Click <b>▶</b> on a word to translate it, <b>🗣️</b> to generate its pronunciation. The ⚡/🗣️ next to a language name do the whole column at once — nothing runs in bulk across every word and language automatically.</div>
     <div id="wg-table-wrap"><table id="wg-table"></table></div>
   </div>
 </div>
@@ -1325,11 +1339,20 @@ const POS_COLOR={pron:'var(--purple)',verb:'var(--green)',noun:'var(--cyan)',adj
 function loadWordCache(){try{return JSON.parse(localStorage.getItem(WG_CACHE_KEY)||'{}')}catch(e){return{}}}
 function saveWordCache(){try{localStorage.setItem(WG_CACHE_KEY,JSON.stringify(wordCache))}catch(e){}}
 
+// The Word Grid keeps its OWN small language list, independent of the map's
+// checked languages (which could be 20+) — so opening it never risks
+// thousands of translation/IPA requests. Starts with just the main
+// language; grow it deliberately with "+ Add language".
+const WG_LANGS_KEY='rv-wordgrid-langs-v1';
+let wgLangs=null;
+function loadWgLangs(){
+  try{const saved=JSON.parse(localStorage.getItem(WG_LANGS_KEY)||'null');if(Array.isArray(saved)&&saved.length)return saved}catch(e){}
+  return null;
+}
+function saveWgLangs(){try{localStorage.setItem(WG_LANGS_KEY,JSON.stringify(wgLangs))}catch(e){}}
+
 function wgColumns(){
-  const main=LANGUAGES.find(l=>l.code===baseLang);
-  const others=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==(main&&main.code))
-    .sort((a,b)=>a.name.localeCompare(b.name));
-  return (main?[main]:[]).concat(others);
+  return wgLangs.map(code=>LANGUAGES.find(l=>l.code===code)).filter(Boolean);
 }
 function wgWordList(){
   const excludeEasy=document.getElementById('wg-exclude-easy').checked;
@@ -1340,68 +1363,122 @@ function openWordGrid(){
   if(!wordCache) wordCache=loadWordCache();
   if(!ipaCache) ipaCache=loadIpaCache();
   if(!LANGUAGES.some(l=>l.code===baseLang)){alert('Pick a main language in the translate bar first.');return}
+  if(!wgLangs) wgLangs=loadWgLangs()||[baseLang];
   document.getElementById('wordgrid-overlay').style.display='flex';
+  renderWgControls();
   renderWordGrid();
 }
+function openWordGridFor(code){
+  if(!wgLangs) wgLangs=loadWgLangs()||[baseLang];
+  if(!wgLangs.includes(code)) wgLangs.push(code);
+  saveWgLangs();
+  openWordGrid();
+}
 function closeWordGrid(){document.getElementById('wordgrid-overlay').style.display='none'}
+
+function addWgLang(code){
+  if(!code||wgLangs.includes(code))return;
+  wgLangs.push(code);
+  saveWgLangs();
+  renderWgControls();
+  renderWordGrid();
+}
+function removeWgLang(code){
+  if(wgLangs.length<=1)return; // always keep at least one column
+  wgLangs=wgLangs.filter(c=>c!==code);
+  saveWgLangs();
+  renderWgControls();
+  renderWordGrid();
+}
+function renderWgControls(){
+  document.getElementById('wg-lang-chips').innerHTML=wgColumns().map(l=>`
+    <span class="wg-chip">${FLAGS[l.code]||''} ${l.name}${wgLangs.length>1?`<button onclick="removeWgLang('${l.code}')" title="Remove">✕</button>`:''}</span>
+  `).join('');
+  const sel=document.getElementById('wg-add-lang');
+  sel.innerHTML='<option value="">+ Add language…</option>'+
+    LANGUAGES.filter(l=>!l.dialectOf&&!wgLangs.includes(l.code)).sort((a,b)=>a.name.localeCompare(b.name))
+      .map(l=>`<option value="${l.code}">${FLAGS[l.code]||''} ${l.name}</option>`).join('');
+}
 
 function renderWordGrid(){
   const words=wgWordList();
   const cols=wgColumns();
   const thead=`<thead><tr><th>Word (EN)</th><th>Type</th>${cols.map(l=>
-    `<th>${FLAGS[l.code]||''} ${l.name}${l.code===baseLang?' <span style="color:var(--green)">(MAIN)</span>':''}</th>`).join('')}</tr></thead>`;
+    `<th>${FLAGS[l.code]||''} ${l.name}${l.code===baseLang?' <span style="color:var(--green)">(MAIN)</span>':''}
+      <button class="wg-col-btn" onclick="translateColumn('${l.code}')" title="Translate every visible word in this column">⚡</button>
+      <button class="wg-col-btn" onclick="ipaColumn('${l.code}')" title="Generate pronunciation for every translated word in this column">🗣️</button>
+    </th>`).join('')}</tr></thead>`;
   const rows=words.map(([en,pos])=>{
-    const cells=cols.map(l=>{
-      const lower=en.toLowerCase();
-      if(l.code==='en'){
-        const respelling=ipaCache&&ipaCache[`respell|en|${lower}`];
-        return `<td>${en}${respelling?`<span class="wg-ipa wg-ipa-en">${respelling}</span>`:''}</td>`;
-      }
-      const key=`en|${l.code}|${lower}`;
-      const val=wordCache[key];
-      let ipaLine='';
-      const ipaKey=`ipa|${l.code}|${lower}`;
-      if(ipaCache&&ipaCache[`na|${l.code}`]) ipaLine=`<span class="wg-ipa wg-ipa-na">(IPA n/a for this language)</span>`;
-      else if(ipaCache&&ipaCache[ipaKey]) ipaLine=`<span class="wg-ipa">[${ipaCache[ipaKey]}]</span>`;
-      else if(ipaCache&&ipaKey in ipaCache) ipaLine=`<span class="wg-ipa wg-ipa-na">(pronunciation uncertain)</span>`;
-      return `<td>${val?val:'<span class="wg-pending">…</span>'}${ipaLine}</td>`;
-    }).join('');
+    const cells=cols.map(l=>renderWgCell(l,en)).join('');
     return `<tr><td>${en}</td><td><span class="wg-pos" style="color:${POS_COLOR[pos]||'#fff'}">${pos}</span></td>${cells}</tr>`;
   }).join('');
   document.getElementById('wg-table').innerHTML=thead+`<tbody>${rows}</tbody>`;
-  document.getElementById('wg-status').textContent=`${words.length} words × ${cols.length} languages`;
+  updateWgCount(words.length,cols.length);
+}
+function updateWgCount(wordCount,colCount){
+  document.getElementById('wg-count').textContent=`${wordCount} words × ${colCount} language${colCount===1?'':'s'}`;
 }
 
-async function translateWordGrid(){
-  const words=wgWordList();
-  const cols=wgColumns().filter(l=>l.code!=='en');
-  const btn=document.getElementById('wg-translate-btn'),status=document.getElementById('wg-status');
-  const pairs=[];
-  cols.forEach(l=>words.forEach(([en])=>{
-    const key=`en|${l.code}|${en.toLowerCase()}`;
-    if(!wordCache[key]) pairs.push({lang:l,en,key});
-  }));
-  if(pairs.length===0){status.textContent='> All visible words already cached.';return}
-  if(pairs.length>400 && !confirm(`This will make ${pairs.length} requests to the free MyMemory translation API and may take a while or get rate-limited. Continue?`)) return;
-  btn.disabled=true;
+function wgEscape(s){return s.replace(/'/g,"\\'")}
+
+function renderWgCell(l,en){
+  const lower=en.toLowerCase();
+  const enSafe=wgEscape(en);
+  if(l.code==='en'){
+    const respelling=ipaCache&&ipaCache[`respell|en|${lower}`];
+    if(respelling) return `<td>${en}<span class="wg-ipa wg-ipa-en">${respelling}</span></td>`;
+    return `<td>${en}<button class="wg-mini-btn" onclick="ipaCellEnglish('${enSafe}',this)" title="Generate pronunciation">🗣️</button></td>`;
+  }
+  const key=`en|${l.code}|${lower}`;
+  const val=wordCache[key];
+  if(!val) return `<td><button class="wg-mini-btn" onclick="translateCell('${l.code}','${enSafe}',this)" title="Translate this word">▶</button></td>`;
+  const ipaKey=`ipa|${l.code}|${lower}`;
+  let ipaBit;
+  if(ipaCache&&ipaCache[`na|${l.code}`]) ipaBit=`<span class="wg-ipa wg-ipa-na">(IPA n/a for this language)</span>`;
+  else if(ipaCache&&ipaCache[ipaKey]) ipaBit=`<span class="wg-ipa">[${ipaCache[ipaKey]}]</span>`;
+  else if(ipaCache&&ipaKey in ipaCache) ipaBit=`<span class="wg-ipa wg-ipa-na">(pronunciation uncertain)</span>`;
+  else ipaBit=`<button class="wg-mini-btn" onclick="ipaCell('${l.code}','${enSafe}',this)" title="Generate pronunciation">🗣️</button>`;
+  return `<td>${val}${ipaBit}</td>`;
+}
+
+async function translateCell(code,en,btnEl){
+  const key=`en|${code}|${en.toLowerCase()}`;
+  if(wordCache[key])return;
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='…'}
+  try{
+    const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(en)}&langpair=en|${code}`;
+    const res=await fetch(url);const data=await res.json();
+    wordCache[key]=data.responseStatus===200?data.responseData.translatedText:'?';
+  }catch(e){
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='▶'}
+    return;
+  }
+  saveWordCache();
+  renderWordGrid();
+}
+
+async function translateColumn(code){
+  const status=document.getElementById('wg-status');
+  const missing=wgWordList().filter(([en])=>!wordCache[`en|${code}|${en.toLowerCase()}`]);
+  if(missing.length===0){status.textContent='> Column already fully translated.';return}
   let done=0;
-  for(let i=0;i<pairs.length;i+=5){
-    const batch=pairs.slice(i,i+5);
-    await Promise.all(batch.map(async p=>{
+  for(let i=0;i<missing.length;i+=5){
+    const batch=missing.slice(i,i+5);
+    await Promise.all(batch.map(async ([en])=>{
+      const key=`en|${code}|${en.toLowerCase()}`;
       try{
-        const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(p.en)}&langpair=en|${p.lang.code}`;
+        const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(en)}&langpair=en|${code}`;
         const res=await fetch(url);const data=await res.json();
-        if(data.responseStatus===200) wordCache[p.key]=data.responseData.translatedText;
-      }catch(e){console.warn('Word translate failed',p.lang.name,p.en)}
+        if(data.responseStatus===200) wordCache[key]=data.responseData.translatedText;
+      }catch(e){console.warn('Word translate failed',code,en)}
       done++;
     }));
-    status.textContent=`> Translating... ${done}/${pairs.length}`;
+    status.textContent=`> Translating column... ${done}/${missing.length}`;
     saveWordCache();
     renderWordGrid();
     await new Promise(r=>setTimeout(r,150));
   }
-  btn.disabled=false;
-  status.textContent=`> Done. ${pairs.length} new translations cached.`;
+  status.textContent=`> Done. ${missing.length} translations cached.`;
 }
 
 // ========================================================================
@@ -1508,60 +1585,96 @@ let ipaCache=null;
 function loadIpaCache(){try{return JSON.parse(localStorage.getItem(IPA_CACHE_KEY)||'{}')}catch(e){return{}}}
 function saveIpaCache(){try{localStorage.setItem(IPA_CACHE_KEY,JSON.stringify(ipaCache))}catch(e){}}
 
-async function generateIpaForGrid(){
-  if(!ipaCache) ipaCache=loadIpaCache();
-  const btn=document.getElementById('wg-ipa-btn'),status=document.getElementById('wg-status');
-  btn.disabled=true;
+// If espeak had to switch voices mid-word (its own "(en)...(ja)" markers),
+// treat the WHOLE word's IPA as unreliable rather than trying to surgically
+// remove just the switched-in fragment — e.g. espeak-ng's Japanese voice
+// has no reading for many kanji and announces "Chinese letter" in English
+// as a fallback for each one it can't voice, and that fallback's own
+// phonemes aren't cleanly delimited enough to strip in isolation. Shown
+// as-is it would read as if it were the word's real pronunciation — for a
+// pronunciation aid, showing nothing beats showing that.
+function cleanIpaResult(raw){
+  const clean=(raw||'').replace(/[‍]/g,'');
+  const unreliable=/\([a-z]{2,3}(?:-[a-z0-9]+)?\)/i.test(clean);
+  return unreliable?null:(clean.trim()||null);
+}
+
+async function ipaCellEnglish(en,btnEl){
+  const lower=en.toLowerCase();
+  const key=`respell|en|${lower}`;
+  if(ipaCache[key])return;
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='…'}
+  const status=document.getElementById('wg-status');
   try{
     const state=await loadEspeak(status);
-    const words=wgWordList();
-    const cols=wgColumns();
-    let done=0;
-    for(const l of cols){
-      status.textContent=`> Generating IPA... ${done}/${cols.length} languages`;
-      if(l.code==='en'){
-        const missing=words.filter(([en])=>!ipaCache[`respell|en|${en.toLowerCase()}`]);
-        if(missing.length){
-          const lines=await phonemizeBatch(state,missing.map(w=>w[0]),'en-us');
-          missing.forEach(([en],i)=>{ipaCache[`respell|en|${en.toLowerCase()}`]=respellEnglish(lines[i]||'')});
-        }
-      } else {
-        const voice=resolveEspeakVoice(l.code,state.voices);
-        if(!voice){ipaCache[`na|${l.code}`]=true;done++;continue}
-        // IPA is generated from the already-translated word, so it matches what's shown.
-        const targets=words.filter(([en])=>{
-          const wKey=`en|${l.code}|${en.toLowerCase()}`;
-          const iKey=`ipa|${l.code}|${en.toLowerCase()}`;
-          return wordCache[wKey]&&!ipaCache[iKey];
-        });
-        if(targets.length){
-          const lines=await phonemizeBatch(state,targets.map(([en])=>wordCache[`en|${l.code}|${en.toLowerCase()}`]),voice);
-          targets.forEach(([en],i)=>{
-            // If espeak had to switch voices mid-word (its own "(en)...(ja)"
-            // markers), treat the WHOLE word's IPA as unreliable rather than
-            // trying to surgically remove just the switched-in fragment —
-            // e.g. espeak-ng's Japanese voice has no reading for many kanji
-            // and announces "Chinese letter" in English as a fallback for
-            // each one it can't voice, and that fallback's own phonemes
-            // aren't cleanly delimited enough to strip in isolation. Shown
-            // as-is it would read as if it were the word's real pronunciation
-            // — for a pronunciation aid, showing nothing beats showing that.
-            const raw=(lines[i]||'').replace(/[‍]/g,'');
-            const unreliable=/\([a-z]{2,3}(?:-[a-z0-9]+)?\)/i.test(raw);
-            ipaCache[`ipa|${l.code}|${en.toLowerCase()}`]=unreliable?null:(raw.trim()||null);
-          });
-        }
-      }
-      done++;
-      saveIpaCache();
-      renderWordGrid();
-    }
-    status.textContent='> IPA generation complete.';
+    const lines=await phonemizeBatch(state,[en],'en-us');
+    ipaCache[key]=respellEnglish(lines[0]||'');
+    saveIpaCache();
   }catch(e){
     console.error(e);
-    status.textContent='> IPA engine failed to load — see console for details.';
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='🗣️'}
+    status.textContent='> IPA engine failed — see console for details.';
+    return;
   }
-  btn.disabled=false;
+  status.textContent='';
+  renderWordGrid();
+}
+
+async function ipaCell(code,en,btnEl){
+  const lower=en.toLowerCase();
+  const wKey=`en|${code}|${lower}`,iKey=`ipa|${code}|${lower}`;
+  if(!wordCache[wKey]||ipaKeyExists(iKey))return;
+  if(btnEl){btnEl.disabled=true;btnEl.textContent='…'}
+  const status=document.getElementById('wg-status');
+  try{
+    const state=await loadEspeak(status);
+    const voice=resolveEspeakVoice(code,state.voices);
+    if(!voice){ipaCache[`na|${code}`]=true;saveIpaCache();status.textContent='';renderWordGrid();return}
+    const lines=await phonemizeBatch(state,[wordCache[wKey]],voice);
+    ipaCache[iKey]=cleanIpaResult(lines[0]);
+    saveIpaCache();
+  }catch(e){
+    console.error(e);
+    if(btnEl){btnEl.disabled=false;btnEl.textContent='🗣️'}
+    status.textContent='> IPA engine failed — see console for details.';
+    return;
+  }
+  status.textContent='';
+  renderWordGrid();
+}
+function ipaKeyExists(iKey){return ipaCache&&(iKey in ipaCache)}
+
+async function ipaColumn(code){
+  const status=document.getElementById('wg-status');
+  const words=wgWordList();
+  try{
+    const state=await loadEspeak(status);
+    if(code==='en'){
+      const missing=words.filter(([en])=>!ipaCache[`respell|en|${en.toLowerCase()}`]);
+      if(missing.length===0){status.textContent='> Column already has pronunciations.';return}
+      const lines=await phonemizeBatch(state,missing.map(w=>w[0]),'en-us');
+      missing.forEach(([en],i)=>{ipaCache[`respell|en|${en.toLowerCase()}`]=respellEnglish(lines[i]||'')});
+      saveIpaCache();
+      status.textContent='> Done.';
+      renderWordGrid();
+      return;
+    }
+    const voice=resolveEspeakVoice(code,state.voices);
+    if(!voice){ipaCache[`na|${code}`]=true;saveIpaCache();status.textContent='> No IPA voice available for this language.';renderWordGrid();return}
+    const targets=words.filter(([en])=>{
+      const lower=en.toLowerCase();
+      return wordCache[`en|${code}|${lower}`]&&!ipaKeyExists(`ipa|${code}|${lower}`);
+    });
+    if(targets.length===0){status.textContent='> Column already has pronunciations (or nothing translated yet).';return}
+    const lines=await phonemizeBatch(state,targets.map(([en])=>wordCache[`en|${code}|${en.toLowerCase()}`]),voice);
+    targets.forEach(([en],i)=>{ipaCache[`ipa|${code}|${en.toLowerCase()}`]=cleanIpaResult(lines[i])});
+    saveIpaCache();
+    status.textContent='> Done.';
+    renderWordGrid();
+  }catch(e){
+    console.error(e);
+    status.textContent='> IPA engine failed — see console for details.';
+  }
 }
 
 function initWordGrid(){
