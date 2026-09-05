@@ -101,12 +101,16 @@ label.switch input{accent-color:var(--green)}
     <button id="u-close" onclick="closeUniverse()" title="Close">✕</button>
   </div>
   <div id="u-body">
-    <textarea id="global-text" rows="2" placeholder="type or SPEAK your soul..."></textarea>
-    <div id="hint">Speech input always listens in English. Pick languages below, then translate.</div>
+    <textarea id="global-text" rows="4" placeholder="type or SPEAK your soul..."></textarea>
+    <div id="hint">Load a .txt or type above, add a language below, then hit that frame's SPEAK to
+      hear the raw text read in its voice — useful if the text is already written in that language.
+      Hit TRANSLATE ALL first if you want SPEAK to read a translation instead.</div>
 
     <div class="controls-row">
       <button class="big-btn" id="voice-btn" onclick="toggleVoice()">🎙 SPEAK TO THE UNIVERSE</button>
       <button class="big-btn" onclick="translateAll()">⚡ TRANSLATE ALL</button>
+      <button class="big-btn" onclick="document.getElementById('txt-file-input').click()">📂 LOAD .TXT</button>
+      <input type="file" id="txt-file-input" accept=".txt,text/plain" style="display:none">
       <button class="big-btn" onclick="clearAllFrames()" style="background:rgba(255,51,51,.15);color:var(--red);box-shadow:none;border:1px solid var(--red)">✕ CLEAR ALL</button>
       <label class="switch"><input type="checkbox" id="autospeak" checked> Auto-speak on translate</label>
     </div>
@@ -222,10 +226,18 @@ function toggleVoice(){
 // ========================================================================
 function speak(text, code){
   if (!('speechSynthesis' in window) || !text) return;
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.lang = (LANG_BY_CODE[code] && LANG_BY_CODE[code].speech) || 'en-US';
-  utter.rate = 0.95;
-  speechSynthesis.speak(utter);
+  const voiceLang = (LANG_BY_CODE[code] && LANG_BY_CODE[code].speech) || 'en-US';
+  // Chrome silently cuts off a single utterance after ~15s of speech, which
+  // would truncate anything longer than a short phrase (e.g. a loaded .txt
+  // file) — split on sentence boundaries and queue each chunk separately.
+  const chunks = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+  chunks.forEach(chunk => {
+    if (!chunk.trim()) return;
+    const utter = new SpeechSynthesisUtterance(chunk.trim());
+    utter.lang = voiceLang;
+    utter.rate = 0.95;
+    speechSynthesis.speak(utter);
+  });
 }
 
 // ========================================================================
@@ -273,12 +285,14 @@ function addLang(code){
       <button class="lf-close" title="Remove">✕</button>
     </div>
     <div class="trans-box pending" id="box-${code}">ready...</div>
-    <button class="lf-speak" id="speak-${code}" disabled>🔊 SPEAK</button>
+    <button class="lf-speak" id="speak-${code}" title="Reads the box above if translated, otherwise the raw text from the top box">🔊 SPEAK</button>
   `;
   frame.querySelector('.lf-close').onclick = () => { frame.remove(); markPicked(code, false); saveState(); };
   frame.querySelector('.lf-speak').onclick = () => {
     const box = document.getElementById('box-' + code);
-    speak(box.textContent, code);
+    const hasTranslation = box.classList.contains('trans-box') && !box.classList.contains('pending') && !box.classList.contains('failed');
+    const text = hasTranslation ? box.textContent : document.getElementById('global-text').value.trim();
+    speak(text, code);
   };
 
   makeDraggable(frame);
@@ -353,6 +367,7 @@ async function translateTo(text, code){
   } catch(e) {
     box.className = 'trans-box failed';
     box.textContent = '⚠ translation unavailable — try again';
+    speakBtn.disabled = false; // SPEAK still falls back to the raw text above
   }
 }
 
@@ -363,10 +378,30 @@ function translateAll(){
 }
 
 // ========================================================================
+//  LOAD .TXT — fills the text box so any frame's own SPEAK button reads it
+//  aloud in that language's voice, or so TRANSLATE ALL can translate it first
+// ========================================================================
+function initTxtLoader(){
+  document.getElementById('txt-file-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      document.getElementById('global-text').value = ev.target.result;
+      saveState();
+    };
+    reader.onerror = () => alert('Could not read that file.');
+    reader.readAsText(file);
+    e.target.value = ''; // allow re-loading the same file name later
+  });
+}
+
+// ========================================================================
 //  INIT
 // ========================================================================
 function initApp(){
   initLangPicker();
+  initTxtLoader();
   const saved = loadState();
   if (saved.text) document.getElementById('global-text').value = saved.text;
   (saved.langs || ['en', 'pl', 'es']).forEach(addLang);
