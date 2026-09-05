@@ -155,6 +155,12 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 /* ── BONE DIVIDER ── */
 .bone-divider{text-align:center;color:rgba(204,136,51,0.2);font-size:.7rem;margin:8px 0;letter-spacing:4px}
 
+/* ── CLOWN + SPOT BUTTON STYLES ── */
+.hbtn.spot{border-color:#e6a820;color:#e6a820}.hbtn.spot:hover,.hbtn.spot.active{background:#e6a820;color:#1a120a}
+.hbtn.clown{border-color:#ff69b4;color:#ff69b4}.hbtn.clown:hover,.hbtn.clown.active{background:#ff69b4;color:#1a120a}
+.clown-badge{position:fixed;bottom:12px;right:120px;z-index:1000;background:rgba(26,18,10,0.95);border:2px solid #ff69b4;color:#ff69b4;padding:4px 10px;border-radius:12px;font-family:'VT323',monospace;font-size:.85rem;display:none}
+.clown-badge.show{display:block}
+
 /* ── D-PAD ── */
 .dpad{position:fixed;bottom:50px;right:10px;z-index:800;display:grid;grid-template-columns:32px 32px 32px;grid-template-rows:32px 32px 32px;gap:2px}
 .db{background:rgba(26,18,10,0.88);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .1s}
@@ -174,8 +180,10 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
   </div>
   <div class="hsep"></div>
   <button class="hbtn paw" onclick="togglePinPet()">&#128062; PIN PET</button>
+  <button class="hbtn spot" onclick="toggleSpotDropMode()">&#128205; SPOT</button>
   <button class="hbtn" onclick="toggleTrail()">&#128017; TRAIL</button>
   <button class="hbtn" onclick="togglePack()">&#128058; PACK</button>
+  <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown">&#129313; SHOW ME</button>
   <div class="redirect-wrap">
     <button class="hbtn" onclick="openRedirectMenu(event)">&#128257; Redirect</button>
   </div>
@@ -511,6 +519,8 @@ function sfuClearData() {
 <div class="stats">
   <div class="spill">&#128062; Pets: <b id="petCount">0</b></div>
   <div class="spill">&#128017; Sniffs: <b id="sniffCount">0</b></div>
+  <div class="spill">&#128205; Spots: <b id="spotCount">0</b></div>
+  <div class="spill">&#129313; Clowns: <b id="clownCount">0</b></div>
 </div>
 
 <!-- ZOOM -->
@@ -600,6 +610,9 @@ function sfuClearData() {
     <button class="hbtn red" onclick="deletePetFromUserbox()">&#128465; Remove</button>
   </div>
 </div>
+
+<!-- CLOWN STATUS BADGE -->
+<div class="clown-badge" id="clownBadge">&#129313; You're visible</div>
 
 <canvas id="snoutMap"></canvas>
 
@@ -1689,5 +1702,6 @@ setTimeout(initFirebaseIntegration, 500);
 <script src="js/panel-drag.js"></script>
 <script src="js/doglost-embed.js"></script>
 <script src="js/map-spots.js"></script>
+<script src="js/clown-markers.js"></script>
 </body>
 </html>
