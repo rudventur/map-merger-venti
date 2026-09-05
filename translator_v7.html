@@ -1225,8 +1225,28 @@ function openPanel(lang){
     <div class="panel-section"><div class="panel-section-title">Alphabet</div><div class="alphabet-display">${lang.alphabet||''}</div></div>
     <div class="panel-section"><div class="panel-section-title">Family</div><div style="font-size:14px">${lang.family}</div></div>
     ${lang.grammar?`<div class="panel-section"><div class="panel-section-title">Quick Grammar</div><div style="font-size:13px;color:var(--dim)">${lang.grammar}</div></div>`:''}
-    <button onclick="openGrammar('${lang.name}')" style="width:100%;margin-top:20px;padding:12px;background:var(--green);color:#000;border:none;font-family:'Orbitron';cursor:pointer;border-radius:6px;font-weight:bold">FULL INFO</button>`;
+    <button onclick="openGrammar('${lang.name}')" style="width:100%;margin-top:20px;padding:12px;background:var(--green);color:#000;border:none;font-family:'Orbitron';cursor:pointer;border-radius:6px;font-weight:bold">FULL INFO</button>
+    <button onclick="openGrammarGraphicFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(0,240,255,.1);border:1px solid var(--cyan);color:var(--cyan);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📐 GRAMMAR GRAPHIC (make main)</button>
+    <button onclick="openWordGridFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(255,184,0,.1);border:1px solid var(--amber);color:var(--amber);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📚 WORD GRID (incl. this language)</button>`;
   panel.classList.add('open');
+}
+
+// Jump into the Grammar Graphic / Word Grid straight from a language's own
+// side panel, instead of requiring the header buttons + manual setup first.
+function openGrammarGraphicFor(code){
+  baseLang=code;
+  const sel=document.getElementById('base-lang-select');
+  if(sel) sel.value=code;
+  openGrammarGraphic();
+}
+function openWordGridFor(code){
+  if(!checkedLangs.has(code)){
+    checkedLangs.add(code);
+    const cb=document.getElementById('chk-'+code);
+    if(cb) cb.checked=true;
+    updateVisibility();resolveCollisions();saveState();
+  }
+  openWordGrid();
 }
 document.getElementById('panel-close').addEventListener('click',()=>document.getElementById('side-panel').classList.remove('open'));
 
