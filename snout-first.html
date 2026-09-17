@@ -158,8 +158,9 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 /* ── CLOWN + SPOT BUTTON STYLES ── */
 .hbtn.spot{border-color:#e6a820;color:#e6a820}.hbtn.spot:hover,.hbtn.spot.active{background:#e6a820;color:#1a120a}
 .hbtn.clown{border-color:#ff69b4;color:#ff69b4}.hbtn.clown:hover,.hbtn.clown.active{background:#ff69b4;color:#1a120a}
-.clown-badge{position:fixed;bottom:12px;right:120px;z-index:1000;background:rgba(26,18,10,0.95);border:2px solid #ff69b4;color:#ff69b4;padding:4px 10px;border-radius:12px;font-family:'VT323',monospace;font-size:.85rem;display:none}
+.clown-badge{position:fixed;bottom:12px;right:120px;z-index:1000;background:rgba(26,18,10,0.95);border:2px solid #ff69b4;color:#ff69b4;padding:4px 10px;border-radius:12px;font-family:'VT323',monospace;font-size:.85rem;display:none;cursor:pointer;transition:transform .1s}
 .clown-badge.show{display:block}
+.clown-badge:active{transform:scale(0.94)}
 
 /* ── D-PAD ── */
 .dpad{position:fixed;bottom:50px;right:10px;z-index:800;display:grid;grid-template-columns:32px 32px 32px;grid-template-rows:32px 32px 32px;gap:2px}
@@ -611,8 +612,8 @@ function sfuClearData() {
   </div>
 </div>
 
-<!-- CLOWN STATUS BADGE -->
-<div class="clown-badge" id="clownBadge">&#129313; You're visible</div>
+<!-- CLOWN STATUS BADGE — click to force-refresh your position now -->
+<div class="clown-badge" id="clownBadge" onclick="refreshClownPosition()" title="Click to update your position now">&#129313; You're visible &#128260;</div>
 
 <canvas id="snoutMap"></canvas>
 
@@ -1461,6 +1462,7 @@ async function handleTakeOut(petId) {
     activeWalkPetId = petId;
     activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
     activeWalkTracker.start();
+    if (typeof syncClownWalkStatus === 'function') syncClownWalkStatus();
     toast('🚶 Let\'s go for a walk! 🐾');
     closeUserbox();
     await syncPetsFromFirebase();
@@ -1475,6 +1477,7 @@ async function handleReturnHome(petId) {
   const dist = activeWalkTracker ? activeWalkTracker.getDistanceKm() : 0;
   activeWalkTracker = null;
   activeWalkPetId = null;
+  if (typeof syncClownWalkStatus === 'function') syncClownWalkStatus();
   toast(`🏠 Pet returned home! ${dist}km walked 🐾`);
   closeUserbox();
   await syncPetsFromFirebase();
@@ -1487,6 +1490,7 @@ async function handlePickUp(petId) {
     activeWalkPetId = petId;
     activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
     activeWalkTracker.start();
+    if (typeof syncClownWalkStatus === 'function') syncClownWalkStatus();
     toast('🎾 Picked up wandering pet! 🐾');
     closeUserbox();
   }

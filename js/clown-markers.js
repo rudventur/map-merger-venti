@@ -31,6 +31,20 @@
     }
   };
 
+  // ── Manual "I'm HERE now" refresh (clown badge / any caller) ──
+  window.refreshClownPosition = function() {
+    if (!clownActive) return;
+    refreshMyPosition();
+    toast('🤡 Position updated!');
+  };
+
+  // ── Instant re-sync when the walking state changes (take out / pick up /
+  //    return home), instead of waiting up to 30s for the auto-timer ──
+  window.syncClownWalkStatus = function() {
+    if (!clownActive) return;
+    refreshMyPosition();
+  };
+
   async function showMe() {
     const pos = await getBestPosition();
     myUid = getMyUid();
@@ -309,10 +323,12 @@
   }
 
   function getMyUid() {
+    // Share the same identity as the rest of Snout First (pet-registration,
+    // wandering, petuserbox all key off getUid()), so "walking" state lines up.
+    if (typeof getUid === 'function') return getUid();
     if (typeof auth !== 'undefined' && auth && auth.currentUser) {
       return auth.currentUser.uid;
     }
-    // Fallback: generate a persistent local ID
     let id = localStorage.getItem('sf_clown_uid');
     if (!id) {
       id = 'local_' + Math.random().toString(36).substr(2, 9);
