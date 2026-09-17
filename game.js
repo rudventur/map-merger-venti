@@ -154,6 +154,7 @@ cv.addEventListener('click', e => {
 // ── VEHICLE CHANGE ──
 function setV(btn) {
   const nv = btn.dataset.v; if (nv === G.veh) return;
+  const prevVeh = G.veh;
   G.veh = nv; planeAirborne = false; boatNearWater = false;
   document.querySelectorAll('.vbtn').forEach(b => b.classList.remove('active')); btn.classList.add('active');
   const v = VEH[G.veh];
@@ -185,6 +186,8 @@ function setV(btn) {
   if (nv === 'boat') { fetchWaterBodies(); setTimeout(openBoatSelector, 300); }
   if (nv === 'bike') setTimeout(openBikeSelector, 300);
   if (nv === 'car') { carLoadRoads(); carLoadStations(); carFetchFuelPrices(); setTimeout(openCarSelector, 300); }
+  if (nv === 'clownwalk' && typeof enterClownWalk === 'function') enterClownWalk();
+  if (prevVeh === 'clownwalk' && typeof exitClownWalk === 'function') exitClownWalk();
 }
 
 // ── MOVEMENT ──

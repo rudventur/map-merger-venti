@@ -9,6 +9,7 @@ function drawPlayer() {
   if (G.veh === 'bike')  { drawBikeSprite(); return; }
   if (G.veh === 'plane') { drawPlaneSprite(); return; }
   if (G.veh === 'car')   { drawCarSprite(); return; }
+  if (G.veh === 'clownwalk' && typeof drawClownSprite === 'function') { drawClownSprite(); return; }
 
   const px = cv.width / 2, py = cv.height / 2;
   const moving = Object.values(G.keys).some(Boolean);

@@ -7,6 +7,10 @@ const firebaseConfig = {
   databaseURL: "https://map-merger-venti-default-rtdb.europe-west1.firebasedatabase.app"
 };
 
+// Shared clown-presence channel — written by both Snout First and Map Merger
+// Venti, so a single "I am here" clown is visible across every app.
+const CLOWN_CHANNEL = 'rudventur_global';
+
 // Init Firebase (loaded via CDN in HTML)
 let firebaseApp, db, auth;
 

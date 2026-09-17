@@ -133,6 +133,19 @@ canvas#world{position:fixed;inset:0;z-index:1}
 .lm-row:hover label{color:#00ff41}
 .lm-preview{width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,255,65,0.15);flex-shrink:0}
 
+/* ── OPTIONS MENU (top strip) ── */
+.options-menu{display:none;position:fixed;background:#000;border:1.5px solid #ff69b4;border-radius:6px;padding:8px 10px;z-index:2100;min-width:220px;box-shadow:0 12px 40px rgba(0,0,0,.7)}
+.options-menu.show{display:block}
+.options-menu .lm-title{color:#ff69b4}
+.options-menu .lm-row input[type="checkbox"]:checked{border-color:#ff69b4;background:#ff69b4}
+.options-menu .lm-hint{font-family:'VT323',monospace;font-size:.72rem;color:rgba(255,105,180,.5);margin:2px 2px 6px;line-height:1.3}
+
+/* ── CLOWN LIVE-LOCATION BADGE ── */
+.clown-badge{position:fixed;bottom:64px;right:10px;z-index:900;background:rgba(0,0,0,0.95);border:2px solid #ff69b4;color:#ff69b4;padding:5px 11px;border-radius:12px;font-family:'VT323',monospace;font-size:.85rem;display:none;cursor:pointer;transition:transform .1s}
+.clown-badge.show{display:block}
+.clown-badge:active{transform:scale(0.94)}
+.clown-badge.desynced{border-color:#888;color:#ccc}
+
 /* ── ZOOM AXIS ── */
 .zoom-axis{position:fixed;top:56px;right:8px;z-index:900;display:flex;flex-direction:column;align-items:center;background:rgba(0,0,0,0.9);border:1.5px solid rgba(0,255,65,0.3);border-radius:4px;padding:3px 2px;width:38px}
 .zoom-axis .zlabel{font-family:'Press Start 2P',monospace;font-size:.16rem;color:rgba(0,255,65,0.4);margin-bottom:2px}
@@ -236,9 +249,21 @@ canvas#world{position:fixed;inset:0;z-index:1}
   <button class="hbtn" id="notebookBtn" style="display:none;border-color:#44ff88;color:#44ff88" onclick="toggleUfoNotebook()">&#128221; LOG</button>
   <button class="hbtn y" id="commentBtn" onclick="toggleCommentMode()">&#128172; NOTE</button>
   <button class="hbtn" id="dashboardBtn" style="border-color:#011289;color:#6688ff" onclick="toggleDashboard()">&#128203; BOARD</button>
+  <button class="hbtn" id="optionsBtn" style="border-color:#ff69b4;color:#ff69b4" onclick="toggleOptionsMenu(event)">&#9881;&#65039; OPTIONS</button>
   <div class="redirect-wrap">
     <button class="hbtn" id="redirectBtn" style="border-color:#c084fc;color:#c084fc" onclick="openRedirectMenu(event)">&#128257; REDIRECT</button>
   </div>
+</div>
+
+<!-- OPTIONS MENU (top strip) -->
+<div class="options-menu" id="optionsMenu">
+  <div class="lm-title">&#9881;&#65039; OPTIONS</div>
+  <div class="lm-section">&#129313; Clown Walk</div>
+  <div class="lm-row" onclick="event.stopPropagation()">
+    <input type="checkbox" id="opt-clown-autorefresh" onchange="toggleClownAutoRefresh(this.checked)">
+    <label for="opt-clown-autorefresh">Auto GPS refresh (every 30s)</label>
+  </div>
+  <div class="lm-hint">When on, Clown Walk mode quietly re-syncs to your real GPS every 30s. When off, it only syncs when you enter the mode or tap the live badge.</div>
 </div>
 
 <!-- VIEW MODE MENU (logo click) — kept outside .hud so its overflow-x:auto
@@ -267,6 +292,7 @@ canvas#world{position:fixed;inset:0;z-index:1}
       <span class="redirect-card cur">&#128506;&#65039; Map Merger <small>(here)</small></span>
       <button class="redirect-card" onclick="goTo('snout-first.html')">&#128062; Snout First</button>
       <button class="redirect-card" onclick="goTo('translator_v7.html')">&#127760; Translator</button>
+      <button class="redirect-card" onclick="goTo('clown-face-maker.html')">&#129313; Clown Face Maker</button>
     </div>
   </div>
 </div>
@@ -308,12 +334,29 @@ function toggleSettingsSubmenu(e) {
   e.currentTarget.classList.toggle('open');
 }
 
+// ── Options menu (top strip) ──
+function toggleOptionsMenu(e) {
+  e.stopPropagation();
+  const menu = document.getElementById('optionsMenu');
+  if (menu.classList.contains('show')) { closeOptionsMenu(); return; }
+  const rect = e.currentTarget.getBoundingClientRect();
+  menu.style.top = (rect.bottom + 8) + 'px';
+  menu.style.left = Math.min(Math.max(rect.left, 8), window.innerWidth - 230) + 'px';
+  const cb = document.getElementById('opt-clown-autorefresh');
+  if (cb && typeof window.clownAutoRefreshEnabled !== 'undefined') cb.checked = window.clownAutoRefreshEnabled;
+  menu.classList.add('show');
+}
+function closeOptionsMenu() {
+  document.getElementById('optionsMenu').classList.remove('show');
+}
+
 document.addEventListener('click', e => {
   if (!e.target.closest('.view-menu') && !e.target.closest('#logoBtn')) closeViewMenu();
+  if (!e.target.closest('.options-menu') && !e.target.closest('#optionsBtn')) closeOptionsMenu();
 });
-window.addEventListener('resize', () => closeViewMenu());
+window.addEventListener('resize', () => { closeViewMenu(); closeOptionsMenu(); });
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeViewMenu(); closeRedirectMenu(); }
+  if (e.key === 'Escape') { closeViewMenu(); closeRedirectMenu(); closeOptionsMenu(); }
 });
 </script>
 
@@ -422,6 +465,7 @@ document.addEventListener('keydown', e => {
 <!-- VEHICLE BAR -->
 <div class="vbar">
   <div class="vbtn active" data-v="walk" onclick="setV(this)">&#128694;<span>WALK</span></div>
+  <div class="vbtn" data-v="clownwalk" onclick="setV(this)">&#129313;<span>CLOWN</span></div>
   <div class="vbtn" data-v="bike" onclick="setV(this)">&#128690;<span>BIKE</span></div>
   <div class="vbtn" data-v="scooter" onclick="setV(this)">&#128757;<span>SCOOT</span></div>
   <div class="vbtn" data-v="car" onclick="setV(this)">&#128663;<span>CAR</span></div>
@@ -433,10 +477,18 @@ document.addEventListener('keydown', e => {
   <div class="spd" id="SPD">SPEED<br>5 km/h</div>
 </div>
 
+<!-- CLOWN LIVE-LOCATION BADGE — click to force-refresh to real GPS -->
+<div class="clown-badge" id="clownLiveBadge" onclick="refreshClownGps()" title="Click to reset to your real GPS position">&#129313; Live at your GPS</div>
+
 <!-- MODAL -->
 <div class="mo" id="MO" onclick="if(event.target===this)closeModal()"><div class="mb" id="MB"></div></div>
 
 <!-- SCRIPTS (order matters!) -->
+<!-- Firebase SDK (compat mode for CDN) — powers the shared clown presence -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+<script src="js/firebase-config.js"></script>
 <script src="config.js"></script>
 <script src="utils.js"></script>
 <script src="tiles.js"></script>
@@ -455,5 +507,6 @@ document.addEventListener('keydown', e => {
 <script src="wildlife.js"></script>
 <script src="ui.js"></script>
 <script src="game.js"></script>
+<script src="js/clown-live.js"></script>
 </body>
 </html>

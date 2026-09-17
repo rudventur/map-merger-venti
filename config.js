@@ -13,6 +13,9 @@ const VEH = {
   boat:    { spd: 0.00028,  em: '&#9973;',   lbl: 'BOAT',   kmh: '40 km/h' },
   plane:   { spd: 0.0042,   em: '&#9992;',   lbl: 'PLANE',  kmh: '850 km/h' },
   ufo:     { spd: 0.0075,   em: '&#128760;', lbl: 'UFO',    kmh: '\u221E km/h' },
+  // Live-location mode: GPS-anchored, shared with the rest of rudventur.com
+  // via the clown presence system (see js/clown-live.js).
+  clownwalk: { spd: 0.000038, em: '&#129313;', lbl: 'CLOWN', kmh: 'GPS live' },
 };
 
 // Smooth zoom: float from 2.0 to 19.0

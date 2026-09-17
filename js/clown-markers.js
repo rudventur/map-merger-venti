@@ -13,7 +13,9 @@
   const STALE_MS   = 5 * 60 * 1000;   // 5 min -> sleeping badge
   const GONE_MS    = 15 * 60 * 1000;   // 15 min -> remove
   const UPDATE_MS  = 30 * 1000;        // auto-update GPS every 30s
-  const CHANNEL    = 'snoutfirst_global';
+  // Shared across every rudventur.com app (see js/firebase-config.js) so a
+  // clown shown here is the same clown shown on Map Merger Venti.
+  const CHANNEL    = (typeof CLOWN_CHANNEL !== 'undefined') ? CLOWN_CHANNEL : 'rudventur_global';
 
   let clownActive = false;
   let myClownRef = null;
@@ -21,6 +23,17 @@
   let clownUpdateTimer = null;
   let clowns = {};  // uid -> { lat, lon, name, last_updated, pet_id, status }
   let myUid = null;
+  let myFaceImg = null;  // custom face from clown-face-maker.html, if saved
+
+  (function loadCustomFace() {
+    try {
+      const dataUrl = localStorage.getItem('rv_clown_face_svg');
+      if (!dataUrl) return;
+      const img = new Image();
+      img.onload = () => { myFaceImg = img; };
+      img.src = dataUrl;
+    } catch (e) { /* localStorage unavailable — fall back to emoji */ }
+  })();
 
   // ── Toggle visibility ──
   window.toggleClownMe = function() {
@@ -219,14 +232,24 @@
       ctx.fillStyle = glowColor + glowAlpha + ')';
       ctx.fill();
 
-      // Clown emoji
+      // Clown emoji (or your custom face from clown-face-maker.html)
       const baseSize = isMe ? 26 : 22;
       const bounce = isStale ? 0 : Math.sin(now * 0.004 + c.lon * 50) * 2;
-      ctx.font = baseSize + 'px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
       ctx.globalAlpha = isStale ? 0.5 : 1;
-      ctx.fillText('🤡', p.x, p.y - 2 + bounce);
+      if (isMe && myFaceImg) {
+        const r = baseSize * 0.8;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(p.x, p.y - 2 + bounce, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(myFaceImg, p.x - r, p.y - 2 + bounce - r, r * 2, r * 2);
+        ctx.restore();
+      } else {
+        ctx.font = baseSize + 'px serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🤡', p.x, p.y - 2 + bounce);
+      }
 
       // Walking pet emoji (beside clown)
       if (c.pet_emoji) {
