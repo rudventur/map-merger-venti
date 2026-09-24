@@ -209,6 +209,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="/RudVentur.com/embed/apple-touch-icon.png">
 <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
+<script src="https://rudventur.github.io/RudVentur.com/embed/popcoin-reward.js" defer></script>
 </head>
 <body>
 
@@ -1258,6 +1259,17 @@ async function translateOne(text,sl,tl){
   return null;
 }
 
+// 🍿 PopCOIN: 0.10 + 1 pip per 4 languages for each new text translated
+// (the same text again earns nothing; the wallet caps rewards at 50 a day)
+function rewardTranslation(text,ok){
+  if(!ok||typeof window.PopCOINReward!=='function')return;
+  const key='rv-tr-rewarded',t=text.toLowerCase().slice(0,120);
+  let done=[];try{done=JSON.parse(localStorage.getItem(key)||'[]')}catch(e){}
+  if(done.includes(t))return;
+  done.push(t);try{localStorage.setItem(key,JSON.stringify(done.slice(-500)))}catch(e){}
+  window.PopCOINReward(Math.min(50,10+Math.floor(ok/4)),'translator');
+}
+
 async function doTranslate(){
   const input=document.getElementById('translate-input'),status=document.getElementById('translate-status'),btn=document.getElementById('btn-translate');
   if(!status)return;
@@ -1280,6 +1292,7 @@ async function doTranslate(){
   trSaveCache();
   const missing=targets.length-ok;
   const allDown=TR_PROVIDERS.every(([n])=>trDown[n]);
+  rewardTranslation(text,ok);
   btn.disabled=false;btn.textContent='TRANSLATE ⚡';
   status.textContent=allDown&&missing
     ?`> ${ok}/${targets.length} translated · free translators are busy right now, try again in a bit`
