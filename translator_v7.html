@@ -1202,6 +1202,62 @@ function initTranslateBar(){
   });
 }
 
+// ── Translation that works at a glance ──
+// Free, keyless services are tried in turn for each language: Google's public
+// endpoint first, then MyMemory, then Lingva. Results are cached on this device,
+// so anything translated before comes back instantly, and a service that runs
+// out (quota / rate limit) is skipped for the rest of the visit.
+const TR_CACHE_KEY='rv-tr-cache-v1';
+let trCache={};try{trCache=JSON.parse(localStorage.getItem(TR_CACHE_KEY)||'{}')}catch(e){}
+function trSaveCache(){
+  try{const k=Object.keys(trCache);if(k.length>4000)k.slice(0,k.length-3000).forEach(x=>delete trCache[x]);
+    localStorage.setItem(TR_CACHE_KEY,JSON.stringify(trCache))}catch(e){}
+}
+const trDown={};  // provider -> true once it says "limit reached"
+class TrLimit extends Error{}
+async function trFetch(url,ms=9000){
+  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),ms);
+  try{return await fetch(url,{signal:ctl.signal})}finally{clearTimeout(t)}
+}
+const TR_PROVIDERS=[
+  ['google',async(text,sl,tl)=>{
+    const r=await trFetch(`https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(text)}`);
+    if(r.status===429||r.status===503)throw new TrLimit();
+    if(!r.ok)return null;
+    const d=await r.json();return d&&d[0]?d[0].map(x=>x[0]).join(''):null;
+  }],
+  ['mymemory',async(text,sl,tl)=>{
+    const r=await trFetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${sl}|${tl}`);
+    if(r.status===429)throw new TrLimit();
+    const d=await r.json();
+    if(d.responseStatus==429||/MYMEMORY WARNING/i.test(d.responseDetails||''))throw new TrLimit();
+    return d.responseStatus==200?d.responseData.translatedText:null;
+  }],
+  ['lingva',async(text,sl,tl)=>{
+    const r=await trFetch(`https://lingva.ml/api/v1/${sl}/${tl}/${encodeURIComponent(text)}`);
+    if(r.status===429)throw new TrLimit();
+    if(!r.ok)return null;
+    const d=await r.json();return d.translation||null;
+  }]
+];
+async function translateOne(text,sl,tl){
+  const key=sl+'|'+tl+'|'+text;
+  if(trCache[key])return trCache[key];
+  // regional codes (pt-BR, es-MX...) fall back to the main language if a service doesn't know them
+  const tls=tl.includes('-')&&tl!=='zh-CN'?[tl,tl.split('-')[0]]:[tl];
+  const src=sl.includes('-')&&sl!=='zh-CN'?sl.split('-')[0]:sl;
+  for(const [name,fn] of TR_PROVIDERS){
+    if(trDown[name])continue;
+    for(const code of tls){
+      try{
+        const out=await fn(text,src,code);
+        if(out&&out.trim()){trCache[key]=out.trim();return trCache[key]}
+      }catch(e){if(e instanceof TrLimit){trDown[name]=true;break}}
+    }
+  }
+  return null;
+}
+
 async function doTranslate(){
   const input=document.getElementById('translate-input'),status=document.getElementById('translate-status'),btn=document.getElementById('btn-translate');
   if(!status)return;
@@ -1209,19 +1265,26 @@ async function doTranslate(){
   const targets=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==baseLang);
   btn.disabled=true;btn.textContent='TRANSLATING...';status.textContent=`> Translating "${text}"...`;
   currentTranslations={};translatingActive=true;
-  let done=0;
-  for(let i=0;i<targets.length;i+=3){
-    const batch=targets.slice(i,i+3);
-    await Promise.all(batch.map(async lang=>{
-      try{
-        const url=`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${baseLang}|${lang.code}`;
-        const res=await fetch(url);const data=await res.json();
-        if(data.responseStatus===200)currentTranslations[lang.code]=data.responseData.translatedText;
-      }catch(e){console.warn('Fail',lang.name)}
-      done++;status.textContent=`> ${done}/${targets.length} complete`;updateMapLabels();
-    }));
-  }
-  btn.disabled=false;btn.textContent='TRANSLATE ⚡';status.textContent='> Done.';updateMapLabels();
+  let done=0,ok=0;
+  // cached ones appear at once; the rest go 6 at a time
+  const queue=[...targets];
+  const worker=async()=>{
+    while(queue.length){
+      const lang=queue.shift();
+      const out=await translateOne(text,baseLang,lang.code);
+      if(out){currentTranslations[lang.code]=out;ok++}
+      done++;status.textContent=`> ${done}/${targets.length} · ${ok} translated`;updateMapLabels();
+    }
+  };
+  await Promise.all(Array.from({length:6},worker));
+  trSaveCache();
+  const missing=targets.length-ok;
+  const allDown=TR_PROVIDERS.every(([n])=>trDown[n]);
+  btn.disabled=false;btn.textContent='TRANSLATE ⚡';
+  status.textContent=allDown&&missing
+    ?`> ${ok}/${targets.length} translated · free translators are busy right now, try again in a bit`
+    :`> Done · ${ok}/${targets.length} translated`+(missing?` · ${missing} not covered by free translators`:'');
+  updateMapLabels();
 }
 
 function updateMapLabels(){
