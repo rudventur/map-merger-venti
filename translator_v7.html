@@ -127,6 +127,18 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .panel-size-control label{font-size:10px;color:var(--cyan)}
 .panel-size-control input[type=range]{flex:1}
 .panel-size-control .sz-val{font-size:11px;color:var(--amber);min-width:30px;text-align:right}
+.panel-speak-btn{background:rgba(0,240,255,.1);border:1px solid var(--cyan);color:var(--cyan);border-radius:50%;width:34px;height:34px;font-size:15px;cursor:pointer;flex-shrink:0;transition:transform .15s,background .15s}
+.panel-speak-btn:hover{background:rgba(0,240,255,.2)}
+.panel-speak-btn:disabled{opacity:.35;cursor:default}
+.panel-speak-btn.speaking{animation:panel-speak-pulse .6s ease-in-out infinite}
+@keyframes panel-speak-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.panel-pronunciation-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.panel-pronunciation-row .respell{color:var(--amber);font-family:'Fira Code',monospace}
+.panel-pronunciation-row .panel-ipa{color:var(--cyan);font-family:'Fira Code',monospace;font-style:italic}
+.panel-ipa-btn{background:rgba(255,184,0,.1);border:1px solid var(--amber);color:var(--amber);border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer;font-family:'Fira Code',monospace}
+.panel-ipa-btn:hover{background:rgba(255,184,0,.2)}
+.panel-ipa-btn:disabled{opacity:.4;cursor:default}
+.panel-voice-note{font-size:11px;color:var(--dim);margin-top:6px}
 
 /* GRAMMAR MODAL */
 #grammar-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
@@ -1323,6 +1335,7 @@ function openPanel(lang){
     <div style="font-size:60px;margin-bottom:8px">${flag}</div>
     <div style="display:flex;align-items:center;gap:10px">
       <div class="panel-lang-name" style="color:${lang.tier==='major'?'var(--green)':(lang.tier==='regional'?'var(--cyan)':'var(--amber)')}">${lang.hello.text}</div>
+      <button class="panel-speak-btn" id="panel-speak-btn" onclick="speakHello('${lang.code}',this)" title="Hear it spoken">🔊</button>
       ${dialectBadge}
     </div>
     <h2 class="panel-lang-name" style="color:#fff;font-size:22px">${lang.name}</h2>
@@ -1333,6 +1346,15 @@ function openPanel(lang){
       <span class="sz-val" id="panel-sz-val">${sz}px</span>
     </div>
     ${translatedBit}
+    <div class="panel-section">
+      <div class="panel-section-title">Pronunciation</div>
+      <div class="panel-pronunciation-row">
+        <span class="respell">${lang.hello.pr||''}</span>
+        <span class="panel-ipa" id="panel-ipa"></span>
+        <button class="panel-ipa-btn" id="panel-ipa-btn" onclick="loadPanelIpa('${lang.code}')">get real IPA</button>
+      </div>
+      <div class="panel-voice-note" id="panel-voice-note"></div>
+    </div>
     <div class="panel-section"><div class="panel-section-title">Alphabet</div><div class="alphabet-display">${lang.alphabet||''}</div></div>
     <div class="panel-section"><div class="panel-section-title">Family</div><div style="font-size:14px">${lang.family}</div></div>
     ${lang.grammar?`<div class="panel-section"><div class="panel-section-title">Quick Grammar</div><div style="font-size:13px;color:var(--dim)">${lang.grammar}</div></div>`:''}
@@ -1340,6 +1362,125 @@ function openPanel(lang){
     <button onclick="openGrammarGraphicFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(0,240,255,.1);border:1px solid var(--cyan);color:var(--cyan);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📐 GRAMMAR GRAPHIC (make main)</button>
     <button onclick="openWordGridFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(255,184,0,.1);border:1px solid var(--amber);color:var(--amber);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📚 WORD GRID (incl. this language)</button>`;
   panel.classList.add('open');
+  hydratePanelIpa(lang.code);
+  updateVoiceNote(lang.code);
+}
+
+// ========================================================================
+//  SIDE-PANEL VOICE — real speech via the browser's own Web Speech API
+//  (speechSynthesis). Deliberately NOT the espeak-ng WASM engine used for
+//  IPA below: that build was compiled with --without-pcaudiolib and has no
+//  audio output at all, text-only. Browser TTS voice coverage varies by
+//  device/OS and won't reach every minority language here — when there's
+//  truly no matching voice we say so rather than pretending a random
+//  fallback voice is "close enough".
+// ========================================================================
+// A handful of our codes map to more than one real-world locale (multiple
+// countries share the language). Where our LANGUAGES entry names a specific
+// country, prefer the matching regional voice over whatever the browser
+// would otherwise default to for the bare base language.
+const SPEECH_LOCALE_OVERRIDES={
+  'en':'en-GB','es':'es-ES','es-MX':'es-MX','fr':'fr-FR','fr-CA':'fr-CA',
+  'pt':'pt-PT','pt-BR':'pt-BR','zh-CN':'zh-CN','ar':'ar-SA','nl':'nl-NL'
+};
+
+function pickVoiceFor(code){
+  if(!('speechSynthesis' in window)) return null;
+  const voices=window.speechSynthesis.getVoices();
+  if(!voices.length) return null;
+  const preferred=(SPEECH_LOCALE_OVERRIDES[code]||code).toLowerCase();
+  const base=preferred.split('-')[0];
+  return voices.find(v=>v.lang.toLowerCase()===preferred)
+      || voices.find(v=>v.lang.toLowerCase().startsWith(base+'-'))
+      || voices.find(v=>v.lang.toLowerCase()===base)
+      || null;
+}
+
+function updateVoiceNote(code){
+  currentPanelLang=code;
+  const note=document.getElementById('panel-voice-note');
+  const btn=document.getElementById('panel-speak-btn');
+  if(!note||!btn) return;
+  if(!('speechSynthesis' in window)){
+    note.textContent='Speech not supported in this browser.';
+    btn.disabled=true;
+    return;
+  }
+  const voice=pickVoiceFor(code);
+  btn.disabled=!voice;
+  note.textContent=voice
+    ? `Voice: ${voice.name} (${voice.lang})`
+    : 'No speaking voice for this language on this device.';
+}
+
+// Voice lists load asynchronously on first use in some browsers — refresh
+// the note for whichever panel is currently open once they're ready.
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged=()=>{
+    if(currentPanelLang) updateVoiceNote(currentPanelLang);
+  };
+}
+
+let currentPanelLang=null;
+
+function speakHello(code,btnEl){
+  currentPanelLang=code;
+  const lang=LANGUAGES.find(l=>l.code===code);if(!lang)return;
+  if(!('speechSynthesis' in window)) return;
+  const voice=pickVoiceFor(code);
+  if(!voice) return; // button is disabled in this case, but guard anyway
+  window.speechSynthesis.cancel();
+  const utter=new SpeechSynthesisUtterance(lang.hello.text);
+  utter.voice=voice;
+  utter.lang=voice.lang;
+  if(btnEl){
+    utter.onstart=()=>btnEl.classList.add('speaking');
+    utter.onend=()=>btnEl.classList.remove('speaking');
+    utter.onerror=()=>btnEl.classList.remove('speaking');
+  }
+  window.speechSynthesis.speak(utter);
+}
+
+// ========================================================================
+//  SIDE-PANEL PRONUNCIATION — real IPA for the "hello" phrase, reusing the
+//  same on-demand espeak-ng engine + cache as the Word Grid (see below).
+// ========================================================================
+function hydratePanelIpa(code){
+  if(!ipaCache) ipaCache=loadIpaCache();
+  const cached=ipaCache[`hello-ipa|${code}`];
+  const out=document.getElementById('panel-ipa');
+  if(cached!==undefined&&out) out.textContent=cached?`[${cached}]`:'(no real IPA available)';
+}
+
+async function loadPanelIpa(code){
+  const lang=LANGUAGES.find(l=>l.code===code);if(!lang)return;
+  if(!ipaCache) ipaCache=loadIpaCache();
+  const key=`hello-ipa|${code}`;
+  const out=document.getElementById('panel-ipa'),btn=document.getElementById('panel-ipa-btn');
+  if(ipaCache[key]!==undefined){
+    if(out) out.textContent=ipaCache[key]?`[${ipaCache[key]}]`:'(no real IPA available)';
+    return;
+  }
+  if(btn){btn.disabled=true;btn.textContent='…'}
+  try{
+    const state=await loadEspeak();
+    const voice=resolveEspeakVoice(code,state.voices);
+    if(!voice){
+      ipaCache[key]=null;saveIpaCache();
+      if(out) out.textContent='(no IPA voice for this language)';
+      if(btn){btn.disabled=false;btn.textContent='get real IPA'}
+      return;
+    }
+    const lines=await phonemizeBatch(state,[lang.hello.text],voice);
+    const clean=cleanIpaResult(lines[0]);
+    ipaCache[key]=clean;
+    saveIpaCache();
+    if(out) out.textContent=clean?`[${clean}]`:'(unreliable result — not shown)';
+  }catch(e){
+    console.error(e);
+    if(out) out.textContent='(IPA engine failed — see console)';
+  }
+  if(btn){btn.disabled=false;btn.textContent='get real IPA'}
 }
 
 // Jump into the Grammar Graphic / Word Grid straight from a language's own
