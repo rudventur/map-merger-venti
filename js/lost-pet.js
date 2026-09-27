@@ -81,7 +81,7 @@ window.activateLostMode = function(pet) {
     document.body.appendChild(lostBannerEl);
   }
   lostBannerEl.innerHTML =
-    `🔴 ${pet.name} IS LOST — Last seen: ${pet.lostLat ? pet.lostLat.toFixed(4) : '?'}° N · ${pet.lostLon ? pet.lostLon.toFixed(4) : '?'}° W &nbsp;|&nbsp;
+    `🔴 ${escHtml(pet.name)} IS LOST — Last seen: ${pet.lostLat ? pet.lostLat.toFixed(4) : '?'}° N · ${pet.lostLon ? pet.lostLon.toFixed(4) : '?'}° W &nbsp;|&nbsp;
      <span style="cursor:pointer;text-decoration:underline" onclick="window.lpMarkFound && lpMarkFound(${(typeof S !== 'undefined' ? S.pets.indexOf(pet) : 0)})">✅ MARK FOUND</span>`;
 
   // Sync panels
@@ -135,25 +135,40 @@ function pushToArtSpaceCity(pet) {
   } catch(e) {}
 }
 
-// ── Firebase broadcast (placeholder) ──
-function broadcastLostToFirebase(pet) {
-  // PLACEHOLDER — replace with actual Firebase write:
-  // db.ref('snoutfirst/lost/' + pet._fbId || pet.name).set({
-  //   name: pet.name, lat: pet.lostLat, lon: pet.lostLon,
-  //   lostAt: pet.lostAt, active: true
-  // });
-  if (typeof db !== 'undefined' && db) {
-    try {
-      const key = (pet._fbId || pet.name.replace(/\s+/g, '_')).toLowerCase();
-      db.ref('snoutfirst/lost/' + key).set({
-        name: pet.name, species: pet.species,
-        lat: pet.lostLat, lon: pet.lostLon,
-        lostAt: pet.lostAt, active: true,
-        owner: localStorage.getItem('rv_username') || 'anonymous'
-      });
-    } catch(e) { console.warn('[lost-pet] Firebase write failed:', e); }
-  }
+// ── Firebase broadcast ──
+// Only your own pets are broadcast, under a key tied to your uid, with the
+// last-seen spot rounded to about 100 m. The database rules check owner_uid.
+function isMine(pet) {
+  return !pet.registered_by || pet.registered_by === getUid();
 }
+function lostKeyFor(pet) {
+  if (pet._fbId) return safeId(pet._fbId);
+  const slug = String(pet.name || 'pet').toLowerCase().replace(/[^a-z0-9]+/g, '_').slice(0, 30);
+  return safeId(getUid() + '_' + slug);
+}
+function broadcastLostToFirebase(pet) {
+  if (typeof isSharing !== 'function' || !isSharing() || !isMine(pet)) return;
+  const data = {
+    name: String(pet.name || '').slice(0, 40),
+    species: String(pet.species || 'other').slice(0, 20),
+    lostAt: firebase.database.ServerValue.TIMESTAMP,
+    active: true,
+    owner: getUserName(),
+    owner_uid: getUid()
+  };
+  if (isFinite(pet.lostLat) && isFinite(pet.lostLon)) {
+    data.lat = roundShared(pet.lostLat);
+    data.lon = roundShared(pet.lostLon);
+  }
+  db.ref('snoutfirst/lost/' + lostKeyFor(pet)).set(data)
+    .catch(e => console.warn('[lost-pet] Firebase write failed:', e));
+}
+// Found again: take the report down (your own pets only).
+window.clearLostFromFirebase = function(pet) {
+  if (!pet || typeof isSharing !== 'function' || !isSharing() || !isMine(pet)) return;
+  db.ref('snoutfirst/lost/' + lostKeyFor(pet)).remove()
+    .catch(e => console.warn('[lost-pet] Firebase remove failed:', e));
+};
 
 // ── Check on load if any pets were lost ──
 function checkOnLoad() {

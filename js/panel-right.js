@@ -431,11 +431,11 @@ function rpRenderMyPets() {
       const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
       return `<div class="rp-link">
         <div class="rp-lname">
-          <span>${em} ${p.name}</span>
+          <span>${em} ${escHtml(p.name)}</span>
           <span class="rp-pin-btn" onclick="if(typeof panToPet==='function')panToPet(${idx})">🎯 Go</span>
         </div>
-        <div class="rp-laddr">${p.breed || p.species || ''}${p.mood ? ' · ' + (typeof MOOD_EM !== 'undefined' ? MOOD_EM[p.mood] : '') + ' ' + p.mood : ''}</div>
-        ${p.bio ? `<div class="rp-laddr" style="font-style:italic">"${p.bio}"</div>` : ''}
+        <div class="rp-laddr">${escHtml(p.breed || p.species || '')}${p.mood ? ' · ' + ((typeof MOOD_EM !== 'undefined' ? MOOD_EM[p.mood] : '') || '') + ' ' + escHtml(p.mood) : ''}</div>
+        ${p.bio ? `<div class="rp-laddr" style="font-style:italic">"${escHtml(p.bio)}"</div>` : ''}
       </div>`;
     }).join('');
 }
@@ -557,14 +557,14 @@ function rpRenderVets() {
   const cards = all.map((v, i) =>
     `<div class="rp-link">
       <div class="rp-lname">
-        <a href="${v.url}" target="_blank" rel="noopener">🏥 ${v.n}</a>
-        <span class="rp-pin-btn" onclick="rpPinOnMap('vet',${i},'${v.n}')">
+        <a href="${safeUrl(v.url)}" target="_blank" rel="noopener">🏥 ${escHtml(v.n)}</a>
+        <span class="rp-pin-btn" onclick="rpPinOnMap('vet',${i},${escJsArg(v.n)})">
           ${v.pinned ? '📍' : '+ map'}
         </span>
       </div>
-      <div class="rp-laddr">${v.a}</div>
+      <div class="rp-laddr">${escHtml(v.a)}</div>
       <div class="rp-ltags">
-        ${v.tags.map(t => `<span class="rp-ltag ${t==='emergency'||t==='24h'?'em':''}">${t}</span>`).join('')}
+        ${v.tags.map(t => `<span class="rp-ltag ${t==='emergency'||t==='24h'?'em':''}">${escHtml(t)}</span>`).join('')}
       </div>
     </div>`
   ).join('');
@@ -572,10 +572,10 @@ function rpRenderVets() {
   const nearbyCards = rpNearbyVets.map((v, i) =>
     `<div class="rp-link">
       <div class="rp-lname">
-        <a href="https://www.google.com/maps?q=${v.lat},${v.lon}" target="_blank" rel="noopener">🏥 ${v.name}</a>
+        <a href="https://www.google.com/maps?q=${Number(v.lat)},${Number(v.lon)}" target="_blank" rel="noopener">🏥 ${escHtml(v.name)}</a>
         <span class="rp-pin-btn" onclick="rpPinNearbyVet(${i})">+ map</span>
       </div>
-      <div class="rp-laddr">${v.dist != null ? v.dist.toFixed(1) + ' km away' : 'distance unknown'}${v.phone ? ' · 📞 ' + v.phone : ''}</div>
+      <div class="rp-laddr">${v.dist != null ? v.dist.toFixed(1) + ' km away' : 'distance unknown'}${v.phone ? ' · 📞 ' + escHtml(v.phone) : ''}</div>
     </div>`
   ).join('');
 
@@ -649,14 +649,14 @@ function rpRenderFood() {
   const cards = FOOD_DATA.map((f, i) =>
     `<div class="rp-link">
       <div class="rp-lname">
-        <a href="${f.url}" target="_blank" rel="noopener">🥣 ${f.n}</a>
-        <span class="rp-pin-btn" onclick="rpPinOnMap('food',${i},'${f.n}')">
+        <a href="${safeUrl(f.url)}" target="_blank" rel="noopener">🥣 ${escHtml(f.n)}</a>
+        <span class="rp-pin-btn" onclick="rpPinOnMap('food',${i},${escJsArg(f.n)})">
           ${f.pinned ? '📍' : '+ map'}
         </span>
       </div>
-      <div class="rp-laddr">${f.a}</div>
+      <div class="rp-laddr">${escHtml(f.a)}</div>
       <div class="rp-ltags">
-        ${f.tags.map(t => `<span class="rp-ltag">${t}</span>`).join('')}
+        ${f.tags.map(t => `<span class="rp-ltag">${escHtml(t)}</span>`).join('')}
       </div>
     </div>`
   ).join('');
