@@ -1,7 +1,11 @@
 // ═══════════════════════════════════════════════════════════════
-//  panel-right.js — Snout First Right Panel
-//  Tabs: Pack · Family · Home · Vets · Food (LOCKED)
-//  Additive only — reads S.pets, writes nothing upstream
+//  panel-right.js — Snout First Right Panel: the LISTS
+//  Lists (always show every pet, including ones taken off the dashboard):
+//    All pets · My pets · Lost · Out walking · Off dashboard · Friends and
+//    family (coming later, empty)
+//  Places and help: Home · Vets · Food (LOCKED)
+//  Each pet entry can be put back on / pinned to the top of the dashboard.
+//  The list definitions live in js/dashboard.js (sfDash.LISTS).
 // ═══════════════════════════════════════════════════════════════
 
 (function () {
@@ -11,11 +15,15 @@ const FOOD_KEY   = 'sf_food_custom';
 
 // ── Inject HTML ──
 function injectRightPanel() {
+  const lists = window.sfDash ? sfDash.LISTS : [];
+  const listChips = lists.map(l =>
+    `<div class="rp-tab${l.id === rpActiveTab ? ' active' : ''}${l.later ? ' later' : ''}" data-rptab="${l.id}">${l.icon} ${escHtml(l.label)} <b data-list-count="${l.id}"></b></div>`
+  ).join('');
   const html = `
   <style>
     .rp-root {
-      position: fixed; top: 50px; right: 0; bottom: 0;
-      width: 230px;
+      position: fixed; top: var(--bar-h, 50px); right: 0; bottom: 0;
+      width: 260px;
       background: rgba(26,18,10,0.94);
       border-left: 2px solid #cc8833;
       z-index: 950;
@@ -45,55 +53,55 @@ function injectRightPanel() {
     .rp-inner { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
 
     .rp-tabs {
-      display: flex; flex-shrink: 0;
+      flex-shrink: 0; padding: 4px 6px 6px;
       border-bottom: 1.5px solid rgba(204,136,51,0.25);
-      overflow-x: auto;
     }
-    .rp-tabs::-webkit-scrollbar { height: 0; }
+    .rp-group-label {
+      color: rgba(255,204,102,0.35); font-size: .6rem; letter-spacing: 2px;
+      margin: 3px 0 3px; font-family: 'VT323', monospace;
+    }
+    .rp-chips { display: flex; flex-wrap: wrap; gap: 4px; }
     .rp-tab {
-      flex-shrink: 0; padding: 5px 7px;
-      color: rgba(255,204,102,0.4); font-size: .7rem;
-      cursor: pointer; border-bottom: 2px solid transparent;
-      transition: all .12s; white-space: nowrap; position: relative;
-      font-family: 'VT323', monospace;
+      padding: 2px 7px; border-radius: 8px;
+      border: 1px solid rgba(204,136,51,0.3); background: rgba(0,0,0,0.25);
+      color: rgba(255,204,102,0.6); font-size: .74rem;
+      cursor: pointer; transition: all .12s; white-space: nowrap;
+      font-family: 'VT323', monospace; user-select: none;
     }
-    .rp-tab.active { color: #ffcc66; border-bottom-color: #cc8833; }
-    .rp-tab:hover:not(.active) { color: rgba(255,204,102,0.7); }
-    .rp-tab-opts {
-      position: absolute; top: 2px; right: 1px;
-      font-size: .5rem; color: rgba(204,136,51,0.3);
-      cursor: pointer; line-height: 1;
-    }
-    .rp-tab-opts:hover { color: #cc8833; }
+    .rp-tab b { font-weight: normal; color: #88cc44; margin-left: 2px; }
+    .rp-tab.active { background: #cc8833; border-color: #cc8833; color: #1a120a; }
+    .rp-tab.active b { color: #1a120a; }
+    .rp-tab:hover:not(.active) { color: #ffcc66; border-color: #cc8833; }
+    .rp-tab.later { border-style: dashed; }
 
     .rp-content { flex: 1; overflow-y: auto; padding: 6px; }
 
-    /* Friend / Family cards */
-    .rp-friend {
+    /* Pet list entries */
+    .rp-list-desc {
+      color: rgba(255,204,102,0.4); font-size: .68rem; margin: 0 2px 6px;
+      font-style: italic; line-height: 1.3;
+    }
+    .rp-pet {
       background: rgba(0,0,0,0.3);
       border: 1.5px solid rgba(204,136,51,0.22);
-      border-radius: 9px; padding: 6px 8px; margin-bottom: 4px;
-      cursor: grab; transition: all .12s;
-      display: flex; align-items: center; gap: 6px;
+      border-radius: 9px; padding: 6px 8px; margin-bottom: 5px;
+      cursor: pointer; transition: all .12s;
     }
-    .rp-friend:hover { border-color: #cc8833; background: rgba(204,136,51,0.07); }
-    .rp-friend.dragging { opacity: .4; cursor: grabbing; border-color: #ffcc66; }
-    .rp-friend.drag-over { border-color: #88cc44; background: rgba(136,204,68,0.07); }
-    .rp-fem { font-size: 1.2rem; flex-shrink: 0; }
-    .rp-finfo { flex: 1; min-width: 0; }
-    .rp-fname {
-      font-family: 'Bubblegum Sans', cursive;
-      color: #ffcc66; font-size: .8rem;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    .rp-pet:hover { border-color: #cc8833; background: rgba(204,136,51,0.07); }
+    .rp-pet.is-off { border-style: dashed; }
+    .rp-pet-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
+    .rp-badge {
+      font-family: 'VT323', monospace; font-size: .6rem; padding: 0 5px;
+      border-radius: 5px; flex-shrink: 0; border: 1px solid rgba(136,204,68,0.35); color: #88cc44;
     }
-    .rp-fsub { color: rgba(255,204,102,0.4); font-size: .65rem; }
-    .rp-fdot { width: 7px; height: 7px; border-radius: 50%; background: #88cc44; flex-shrink: 0; }
-    .rp-fdot.away { background: rgba(255,204,102,0.25); }
-    .drag-hint {
-      color: rgba(255,204,102,0.2); font-size: .63rem;
-      text-align: center; padding: 3px; font-style: italic;
-      margin-bottom: 4px; font-family: 'VT323', monospace;
-    }
+    .rp-badge.off { border-color: rgba(255,204,102,0.3); color: rgba(255,204,102,0.6); }
+    .rp-badge.pin { border-color: rgba(255,204,102,0.6); color: #ffcc66; }
+    .rp-badge.mine { border-color: rgba(204,136,51,0.4); color: #cc8833; margin-left: auto; }
+    .rp-pet-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+    .rp-pet-btns { display: flex; gap: 4px; margin-top: 5px; align-items: center; }
+    .rp-pin-btn.add { border-color: rgba(136,204,68,0.5); color: #88cc44; background: rgba(136,204,68,0.1); }
+    .rp-pin-btn.add:hover { background: rgba(136,204,68,0.2); }
+    .rp-pet.dragging { opacity: .45; }
 
     /* Home tab */
     .rp-home-gps {
@@ -194,17 +202,6 @@ function injectRightPanel() {
     }
     .rp-add-btn:hover { background: rgba(204,136,51,0.12); color: #cc8833; }
 
-    /* Family tree placeholder */
-    .rp-tree-node {
-      display: flex; align-items: center; gap: 6px;
-      padding: 5px 7px; margin-bottom: 3px;
-      border-left: 2px solid rgba(204,136,51,0.2);
-    }
-    .rp-tree-node.root { border-left-color: #cc8833; padding-left: 8px; }
-    .rp-tree-node.child { margin-left: 14px; border-left-color: rgba(204,136,51,0.15); font-size: .85em; }
-    .rp-tree-label { font-family: 'Bubblegum Sans', cursive; color: #ffcc66; font-size: .78rem; }
-    .rp-tree-sub { color: rgba(255,204,102,0.35); font-size: .65rem; }
-
     /* Real vet locator */
     .rp-vet-search { margin-bottom: 8px; }
     .rp-vet-status {
@@ -225,18 +222,42 @@ function injectRightPanel() {
       padding: 10px; text-align: center;
       color: rgba(255,204,102,0.4); font-size: .72rem; margin-top: 6px;
     }
+
+    /* Phones: the panel is a bottom sheet (see js/dashboard.js) */
+    @media (max-width: 700px) {
+      .rp-root {
+        top: auto; bottom: 0; left: 0; right: 0; width: 100%;
+        height: var(--sheet-h, 62vh); transition: none; z-index: 970;
+        border-left: none; border-top: 2px solid #cc8833;
+      }
+      .rp-root.rp-collapsed {
+        width: 50%; left: auto; height: var(--strip-h, 40px);
+        border-left: 1px solid rgba(204,136,51,0.4);
+      }
+      .rp-root.rp-collapsed .rp-inner { display: none; }
+      .rp-toggle { display: none; }
+      .rp-tab { font-size: .85rem; padding: 4px 9px; }
+      .rp-pin-btn { font-size: .8rem; padding: 3px 8px; }
+    }
   </style>
 
   <div class="rp-root" id="rpRoot">
-    <div class="rp-toggle" id="rpToggleBtn">▶</div>
+    <div class="rp-toggle" id="rpToggleBtn" title="Show or hide the lists">▶</div>
+    <div class="sf-phead">
+      <button class="sf-ph-btn sf-ph-left" type="button" data-sheet="left">📋 DASHBOARD<b data-count="dash"></b></button>
+      <button class="sf-ph-btn sf-ph-right" type="button" data-sheet="right">📚 LISTS<b data-count="all"></b></button>
+      <button class="sf-ph-close" type="button" data-sheet="close" title="Close">▼</button>
+    </div>
     <div class="rp-inner">
       <div class="rp-tabs" id="rpTabBar">
-        <div class="rp-tab active" data-rptab="mypets">&#128062; My Pets<span class="rp-tab-opts">⚙</span></div>
-        <div class="rp-tab" data-rptab="friends">Pack<span class="rp-tab-opts">⚙</span></div>
-        <div class="rp-tab" data-rptab="family">Family<span class="rp-tab-opts">⚙</span></div>
-        <div class="rp-tab" data-rptab="home">Home<span class="rp-tab-opts">⚙</span></div>
-        <div class="rp-tab" data-rptab="vets">Vets<span class="rp-tab-opts">⚙</span></div>
-        <div class="rp-tab" data-rptab="food">Food<span class="rp-tab-opts">⚙</span></div>
+        <div class="rp-group-label">LISTS</div>
+        <div class="rp-chips">${listChips}</div>
+        <div class="rp-group-label">PLACES AND HELP</div>
+        <div class="rp-chips">
+          <div class="rp-tab" data-rptab="home">📍 Home</div>
+          <div class="rp-tab" data-rptab="vets">🏥 Vets</div>
+          <div class="rp-tab" data-rptab="food">🥣 Food</div>
+        </div>
       </div>
       <div class="rp-content" id="rpContent"></div>
     </div>
@@ -246,19 +267,8 @@ function injectRightPanel() {
 }
 
 // ── Data ──
-const FRIENDS_DATA = [
-  { e:'🐕', n:'Rex', o:'Mia · dog', s:'online', species:'dog' },
-  { e:'🐩', n:'Biscuit', o:'Tom · dog', s:'away', species:'dog' },
-  { e:'🐈', n:'Luna', o:'Sara · cat', s:'online', species:'cat' },
-];
-
-const FAMILY_TREE = [
-  { e:'🐶', n:'Grandpaw', rel:'patriarch', level:'root' },
-  { e:'🐶', n:'Young', rel:'son', level:'child' },
-  { e:'🐶', n:'Booboo', rel:'son', level:'child' },
-  { e:'🐱', n:'Ferajna', rel:'adopted chaos', level:'child' },
-];
-
+// (The old Pack and Family tabs showed made-up example pets; they are replaced
+// by real-data lists. Friends and family is shown as "coming later", empty.)
 const VETS_DEFAULT = [
   { n:'City Vet Clinic', a:'12 Park Rd, London', url:'https://maps.google.com/?q=vet+near+me', tags:['24h','emergency'], pinned:true },
   { n:'Paws & Claws', a:'88 High St, London', url:'https://maps.google.com/?q=paws+claws+vet', tags:['cats','dogs','rabbits'], pinned:false },
@@ -301,16 +311,9 @@ const CHARITIES_PL = [
 ];
 
 // ── State ──
-let rpOpen = true;
-let rpActiveTab = 'mypets';
-
-// A pet with no registered_by only exists in this browser, so it's inherently "mine".
-// A pet registered through Firebase is only mine if I'm the one who registered it.
-function isMyPet(pet) {
-  if (!pet) return false;
-  if (pet.registered_by) return typeof getUid === 'function' && pet.registered_by === getUid();
-  return true;
-}
+let rpActiveTab = 'all';
+const RP_OLD_TABS = { mypets: 'mine', family: 'friends' };   // names used before the lists
+function rpIsList(tab) { return !!(window.sfDash && sfDash.listById(tab)); }
 let rpNearbyVets = [];
 let rpNearbySearchCenter = null;
 let rpNearbyLoading = false;
@@ -392,12 +395,15 @@ window.rpPinNearbyVet = function(i) {
 };
 
 function rpToggle() {
-  rpOpen = !rpOpen;
-  document.getElementById('rpRoot').classList.toggle('rp-collapsed', !rpOpen);
-  document.getElementById('rpToggleBtn').textContent = rpOpen ? '▶' : '◀';
+  const root = document.getElementById('rpRoot');
+  const open = root.classList.contains('rp-collapsed');
+  if (window.sfDash) { sfDash.setPanelOpen('right', open); return; }
+  root.classList.toggle('rp-collapsed', !open);
+  document.getElementById('rpToggleBtn').textContent = open ? '▶' : '◀';
 }
 
 function rpSwitchTab(tab) {
+  tab = RP_OLD_TABS[tab] || tab;
   rpActiveTab = tab;
   document.querySelectorAll('.rp-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.rptab === tab)
@@ -409,68 +415,86 @@ function rpRender() {
   const el = document.getElementById('rpContent');
   if (!el) return;
   switch (rpActiveTab) {
-    case 'mypets':  el.innerHTML = rpRenderMyPets();  break;
-    case 'friends': el.innerHTML = rpRenderFriends(); break;
-    case 'family':  el.innerHTML = rpRenderFamily();  break;
     case 'home':    el.innerHTML = rpRenderHome();    break;
     case 'vets':    el.innerHTML = rpRenderVets();    break;
     case 'food':    el.innerHTML = rpRenderFood();    break;
+    default:        el.innerHTML = rpRenderList(rpActiveTab);
   }
-  rpBindDrag();
+  rpUpdateCounts();
 }
 
-// ── My Pets (protected — view/wag/go only, no delete or lost-toggle here) ──
-function rpRenderMyPets() {
-  const pets = ((typeof S !== 'undefined' ? S.pets : []) || []).filter(isMyPet);
-  if (!pets.length) {
-    return '<div style="color:rgba(255,204,102,0.35);text-align:center;padding:16px;font-size:.8rem">No pets of yours yet.<br>Pin one on the map to see it here! 🐾</div>';
-  }
-  return '<div class="drag-hint">these are yours — manage them from the left panel</div>' +
-    pets.map(p => {
-      const idx = S.pets.indexOf(p);
-      const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
-      return `<div class="rp-link">
-        <div class="rp-lname">
-          <span>${em} ${escHtml(p.name)}</span>
-          <span class="rp-pin-btn" onclick="if(typeof panToPet==='function')panToPet(${idx})">🎯 Go</span>
-        </div>
-        <div class="rp-laddr">${escHtml(p.breed || p.species || '')}${p.mood ? ' · ' + ((typeof MOOD_EM !== 'undefined' ? MOOD_EM[p.mood] : '') || '') + ' ' + escHtml(p.mood) : ''}</div>
-        ${p.bio ? `<div class="rp-laddr" style="font-style:italic">"${escHtml(p.bio)}"</div>` : ''}
-      </div>`;
-    }).join('');
-}
-
-// ── Friends ──
-function rpRenderFriends() {
-  const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
-  // Mix Firebase friends with demo data
-  const cards = FRIENDS_DATA.map((f, i) =>
-    `<div class="rp-friend" draggable="true" data-fi="${i}">
-      <span class="rp-fem">${f.e}</span>
-      <div class="rp-finfo">
-        <div class="rp-fname">${f.n}</div>
-        <div class="rp-fsub">${f.o}</div>
-      </div>
-      <div class="rp-fdot ${f.s === 'away' ? 'away' : ''}"></div>
-    </div>`
-  ).join('');
-  return `<div class="drag-hint">grab a pet → drop to left panel</div>${cards}`;
-}
-
-// ── Family tree ──
-function rpRenderFamily() {
-  return FAMILY_TREE.map(n =>
-    `<div class="rp-tree-node ${n.level}">
-      <span>${n.e}</span>
-      <div>
-        <div class="rp-tree-label">${n.n}</div>
-        <div class="rp-tree-sub">${n.rel}</div>
-      </div>
-    </div>`
-  ).join('') +
-  `<div style="color:rgba(255,204,102,0.2);font-size:.62rem;text-align:center;margin-top:8px;font-family:'VT323',monospace">
-    Family tree builder coming soon 🐾
+// ── Lists: every pet, organised; none are ever hidden here ──
+function rpPetEntry(p) {
+  const D = window.sfDash;
+  const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
+  const off = D.isOff(p), pinned = D.isPinned(p);
+  const badge = off ? '<span class="rp-badge off">off dashboard</span>'
+    : pinned ? '<span class="rp-badge pin">📌 pinned</span>'
+    : '<span class="rp-badge">on dashboard</span>';
+  const action = off ? '<span class="rp-pin-btn add" data-act="show">+ back on dashboard</span>'
+    : pinned ? '<span class="rp-pin-btn" data-act="unpin">📌 unpin</span>'
+    : '<span class="rp-pin-btn" data-act="pin">📌 pin to top</span>';
+  const mood = p.mood ? ' · ' + ((typeof MOOD_EM !== 'undefined' ? MOOD_EM[p.mood] : '') || '') + ' ' + escHtml(p.mood) : '';
+  const tags = (Array.isArray(p.tags) ? p.tags : []).slice(0, 5)
+    .map(t => `<span class="rp-ltag">${escHtml(t)}</span>`).join('');
+  return `<div class="rp-pet${off ? ' is-off' : ''}" data-key="${escHtml(D.key(p))}" draggable="true" title="Show ${escHtml(p.name)} on the map">
+    <div class="rp-lname"><span class="rp-pet-name">${em} ${escHtml(p.name)}</span>${badge}</div>
+    <div class="rp-laddr">${escHtml(p.breed || p.species || '')} · ${p.lost ? '🔴 LOST' : escHtml(p.status || 'home')}${mood}</div>
+    ${tags ? `<div class="rp-pet-tags">${tags}</div>` : ''}
+    <div class="rp-pet-btns">
+      <span class="rp-pin-btn" data-act="go">🎯 Go</span>
+      ${action}
+      ${D.isMine(p) ? '<span class="rp-badge mine">yours</span>' : ''}
+    </div>
   </div>`;
+}
+
+function rpRenderList(id) {
+  const D = window.sfDash;
+  const l = D && D.listById(id);
+  if (!l) return '';
+  const desc = l.desc ? `<div class="rp-list-desc">${escHtml(l.desc)}</div>` : '';
+  if (l.later) return `<div class="sf-empty" id="rpListEmpty">${escHtml(l.empty)}</div>`;
+  const inList = D.listPets(id);
+  if (!inList.length) return desc + `<div class="sf-empty" id="rpListEmpty">${escHtml(l.empty)}</div>`;
+  const shown = inList.filter(D.matches);
+  if (!shown.length) return desc + `<div class="sf-empty" id="rpListEmpty">No pets in "${escHtml(l.label)}" match "${escHtml(D.query())}".</div>`;
+  return desc + shown.map(rpPetEntry).join('');
+}
+
+// Numbers on the list chips (matching / total while searching).
+function rpUpdateCounts() {
+  const D = window.sfDash;
+  if (!D) return;
+  const q = D.query();
+  D.LISTS.forEach(l => {
+    const el = document.querySelector(`[data-list-count="${l.id}"]`);
+    if (!el) return;
+    if (l.later) { el.textContent = 'later'; return; }
+    const pets = D.listPets(l.id);
+    el.textContent = q ? pets.filter(D.matches).length + '/' + pets.length : String(pets.length);
+  });
+}
+
+function rpOnContentClick(e) {
+  const card = e.target.closest('.rp-pet[data-key]');
+  if (!card || !window.sfDash || typeof S === 'undefined') return;
+  const pet = sfDash.byKey(card.getAttribute('data-key'));
+  if (!pet) return;
+  const actEl = e.target.closest('[data-act]');
+  const act = actEl ? actEl.dataset.act : 'go';
+  if (act === 'show') {
+    sfDash.putBack(pet);
+    if (typeof toast === 'function') toast(`🐾 ${pet.name} is back on your dashboard`);
+  } else if (act === 'pin') {
+    sfDash.pin(pet);
+    if (typeof toast === 'function') toast(`📌 ${pet.name} pinned to the top of your dashboard`);
+  } else if (act === 'unpin') {
+    sfDash.unpin(pet);
+  } else {
+    if (typeof panToPet === 'function') panToPet(S.pets.indexOf(pet));
+    if (sfDash.isPhone()) sfDash.setPanelOpen('right', false);
+  }
 }
 
 // ── Home ──
@@ -695,19 +719,21 @@ window.rpPinOnMap = function(type, idx, name) {
   }
 };
 
-// ── Drag from right panel ──
-function rpBindDrag() {
-  document.querySelectorAll('.rp-friend[draggable]').forEach((card, i) => {
-    card.addEventListener('dragstart', e => {
-      const f = FRIENDS_DATA[+card.dataset.fi] || {};
-      e.dataTransfer.setData('sfPet', JSON.stringify({
-        name: f.n, species: f.species || 'dog',
-        breed: f.o || '', e: f.e
-      }));
-      e.dataTransfer.setData('pet', JSON.stringify({ name: f.n, e: f.e, o: f.o, species: f.species }));
-      card.classList.add('dragging');
-    });
-    card.addEventListener('dragend', () => card.classList.remove('dragging'));
+// ── Drag a list entry onto the dashboard to put it back ──
+function rpBindListDrag() {
+  const el = document.getElementById('rpContent');
+  el.addEventListener('dragstart', e => {
+    const card = e.target.closest && e.target.closest('.rp-pet[data-key]');
+    if (!card) return;
+    e.dataTransfer.setData('text/sf-pet-key', card.getAttribute('data-key'));
+    e.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+    document.body.classList.add('sf-dragging');
+  });
+  el.addEventListener('dragend', e => {
+    const card = e.target.closest && e.target.closest('.rp-pet');
+    if (card) card.classList.remove('dragging');
+    document.body.classList.remove('sf-dragging');
   });
 }
 
@@ -741,7 +767,15 @@ function init() {
     if (!tab) return;
     rpSwitchTab(tab.dataset.rptab);
   });
+  document.getElementById('rpContent').addEventListener('click', rpOnContentClick);
+  rpBindListDrag();
   rpRender();
+  // Lists follow the pets, the search and the dashboard. Home, Vets and Food
+  // are left alone (they have their own forms and searches).
+  if (window.sfDash) sfDash.onChange(() => {
+    rpUpdateCounts();
+    if (rpIsList(rpActiveTab)) rpRender();
+  });
 }
 
 if (document.readyState === 'loading') {
