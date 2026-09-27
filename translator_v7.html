@@ -344,6 +344,7 @@ function toggleViewMenu(e) {
   e.stopPropagation();
   const menu = document.getElementById('viewMenu');
   if (menu.classList.contains('show')) { closeViewMenu(); return; }
+  closeAllOverlays();
   const rect = e.currentTarget.getBoundingClientRect();
   menu.style.top = (rect.bottom + 8) + 'px';
   menu.style.left = Math.min(Math.max(rect.left, 8), window.innerWidth - 248) + 'px';
@@ -360,9 +361,25 @@ function toggleSettingsSubmenu(e) {
   e.currentTarget.classList.toggle('open');
 }
 
+// ── One overlay at a time, always ──
+// Every full-screen panel below (Redirect, Grammar, Grammar Graphic, Word
+// Grid) shares the same z-index and covers the whole viewport. Without this,
+// opening a second one while a first is still open stacks them directly on
+// top of each other, and whichever close button you can actually reach only
+// closes the visible one — the other stays open, buried, underneath. Every
+// opener calls this first so exactly one of these can ever be visible.
+function closeAllOverlays() {
+  closeViewMenu();
+  closeRedirectMenu();
+  closeGrammar();
+  closeGrammarGraphic();
+  closeWordGrid();
+}
+
 // ── Redirect (big modal) — opens the destination in a new tab, in the current view mode ──
 function openRedirectMenu(e) {
   e.stopPropagation();
+  closeAllOverlays();
   document.getElementById('redirect-overlay').classList.add('show');
 }
 function closeRedirectMenu() {
@@ -1507,6 +1524,7 @@ document.getElementById('panel-close').addEventListener('click',()=>document.get
 // ========================================================================
 function openGrammar(name){
   const lang=LANGUAGES.find(l=>l.name===name);if(!lang)return;
+  closeAllOverlays();
   document.getElementById('grammar-modal-title').textContent=`${FLAGS[lang.code]||''} ${lang.name} Details`;
   document.getElementById('grammar-body').innerHTML=`
     <div style="padding:1rem"><h3 style="color:var(--cyan)">Full Alphabet</h3><div class="alphabet-display">${lang.alphabet||''}</div></div>
@@ -1527,6 +1545,7 @@ function closeGrammar(){document.getElementById('grammar-overlay').style.display
 function openGrammarGraphic(){
   const main=LANGUAGES.find(l=>l.code===baseLang);
   if(!main){alert('Pick a main language in the translate bar first.');return}
+  closeAllOverlays();
   const others=LANGUAGES.filter(l=>checkedLangs.has(l.code)&&l.code!==main.code)
     .sort((a,b)=>a.name.localeCompare(b.name));
   const mainOrder=wordOrderOf(main).split('');
@@ -1601,6 +1620,7 @@ function openWordGrid(){
   if(!wordCache) wordCache=loadWordCache();
   if(!ipaCache) ipaCache=loadIpaCache();
   if(!LANGUAGES.some(l=>l.code===baseLang)){alert('Pick a main language in the translate bar first.');return}
+  closeAllOverlays();
   if(!wgLangs) wgLangs=loadWgLangs()||[baseLang];
   document.getElementById('wordgrid-overlay').style.display='flex';
   renderWgControls();
