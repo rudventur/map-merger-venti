@@ -275,6 +275,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
       <button class="redirect-card" onclick="goTo('snout-first.html')">&#128062; Snout First</button>
       <button class="redirect-card" onclick="goTo('voice-of-god.html')">&#128172; Voice of God</button>
       <button class="redirect-card" onclick="goTo('https://rudventur.github.io/rudTrip20/')">&#127922; Feeling Lucky</button>
+      <div id="customRedirectCards"></div>
+      <button class="redirect-card" id="newRedirectBtn" onclick="addCustomRedirect()" style="border-style:dashed">&#10133; NEW <small>(your own useR sites, max 3)</small></button>
     </div>
   </div>
 </div>
@@ -392,6 +394,76 @@ function goTo(url) {
   const qs = mode && mode !== 'normal' ? '?view=' + encodeURIComponent(mode) : '';
   window.open(url + qs, '_blank', 'noopener');
 }
+
+// ── Custom REDIRECT sites — your own links, max 3, shared across
+// Map Merger / Translator / Snout First via the same localStorage key ──
+const CUSTOM_SITES_KEY = 'rvCustomSites';
+const CUSTOM_SITES_MAX = 3;
+
+function loadCustomSites() {
+  try { return JSON.parse(localStorage.getItem(CUSTOM_SITES_KEY) || '[]'); }
+  catch (e) { return []; }
+}
+function saveCustomSites(sites) {
+  try { localStorage.setItem(CUSTOM_SITES_KEY, JSON.stringify(sites)); } catch (e) {}
+}
+function renderCustomRedirects() {
+  const sites = loadCustomSites();
+  const box = document.getElementById('customRedirectCards');
+  if (box) {
+    box.innerHTML = '';
+    sites.forEach((s, i) => {
+      const card = document.createElement('div');
+      card.className = 'redirect-card';
+      card.style.cssText = 'display:flex;align-items:center;gap:8px;padding:12px 14px';
+
+      const label = document.createElement('span');
+      label.style.cssText = 'flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
+      label.textContent = '\u{1F310} ' + s.label;
+      label.onclick = () => goTo(s.url);
+
+      const del = document.createElement('span');
+      del.style.cssText = 'cursor:pointer;opacity:.6;padding:0 4px';
+      del.title = 'Remove';
+      del.textContent = '✕';
+      del.onclick = (e) => { e.stopPropagation(); removeCustomRedirect(i); };
+
+      card.appendChild(label);
+      card.appendChild(del);
+      box.appendChild(card);
+    });
+  }
+  const btn = document.getElementById('newRedirectBtn');
+  if (btn) {
+    const full = sites.length >= CUSTOM_SITES_MAX;
+    btn.innerHTML = full
+      ? '&#128274; useR limit reached <small>(' + CUSTOM_SITES_MAX + '/' + CUSTOM_SITES_MAX + ' sites)</small>'
+      : '&#10133; NEW <small>(your own useR sites, ' + sites.length + '/' + CUSTOM_SITES_MAX + ')</small>';
+  }
+}
+function addCustomRedirect() {
+  const sites = loadCustomSites();
+  if (sites.length >= CUSTOM_SITES_MAX) {
+    alert('\u{1F512} Max ' + CUSTOM_SITES_MAX + ' useR sites reached');
+    return;
+  }
+  const label = prompt('Name your site:');
+  if (!label) return;
+  let url = prompt('Paste the link:');
+  if (!url) return;
+  url = url.trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  sites.push({ label: label.trim(), url });
+  saveCustomSites(sites);
+  renderCustomRedirects();
+}
+function removeCustomRedirect(i) {
+  const sites = loadCustomSites();
+  sites.splice(i, 1);
+  saveCustomSites(sites);
+  renderCustomRedirects();
+}
+renderCustomRedirects();
 
 document.addEventListener('click', e => {
   if (!e.target.closest('.view-menu') && !e.target.closest('#header h1')) closeViewMenu();
