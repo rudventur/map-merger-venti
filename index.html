@@ -25,6 +25,12 @@ canvas#world{position:fixed;inset:0;z-index:1}
 .hbtn.y{border-color:#ffe600;color:#ffe600}.hbtn.y:hover{background:#ffe600;color:#000}
 .hbtn.r{border-color:#ff2244;color:#ff2244}.hbtn.r:hover{background:#ff2244;color:#fff}
 
+/* NOTE button — right-click cycles display intensity: full > medium > small > off */
+#commentBtn.notes-lvl-full{border-color:#ffe600;color:#ffe600;box-shadow:0 0 6px rgba(255,230,0,0.5)}
+#commentBtn.notes-lvl-medium{border-color:#c9b300;color:#c9b300;box-shadow:none}
+#commentBtn.notes-lvl-small{border-color:#8a7a00;color:#8a7a00;box-shadow:none}
+#commentBtn.notes-lvl-off{border-color:#3a3520;color:#55503a;box-shadow:none}
+
 /* ── REDIRECT (big modal) ── */
 .redirect-wrap{position:relative;display:inline-block;flex-shrink:0}
 .redirect-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:2000;align-items:center;justify-content:center;padding:1rem}
@@ -274,6 +280,7 @@ canvas#world{position:fixed;inset:0;z-index:1}
       <span class="redirect-card cur">&#128506;&#65039; Map Merger <small>(here)</small></span>
       <button class="redirect-card" onclick="goTo('snout-first.html')">&#128062; Snout First</button>
       <button class="redirect-card" onclick="goTo('translator_v7.html')">&#127760; Translator</button>
+      <button class="redirect-card" onclick="goTo('https://rudventur.github.io/rudTrip20/')">&#127922; Feeling Lucky</button>
     </div>
   </div>
 </div>

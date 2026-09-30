@@ -153,7 +153,10 @@ function setZoomLevel(z) {
 })();
 
 // Scroll wheel — smooth, trackpad-friendly
+// Only zoom when the cursor is actually over the map canvas, not over
+// HUD buttons/panels/modals that happen to sit on top of it.
 document.addEventListener('wheel', e => {
+  if (e.target.id !== 'world') return;
   // Normalize: trackpads send many small deltas, mice send large discrete ones.
   // deltaMode 1 = lines (~40px each), 0 = pixels
   const px = e.deltaMode === 1 ? e.deltaY * 40 : e.deltaY;
@@ -453,31 +456,60 @@ function drawRedStrings() {
 }
 
 // ── COMMENTS ──
+// Note box close (×) hit zones, rebuilt every frame in screen space
+let _noteCloseZones = [];
+
 function drawComments() {
+  _noteCloseZones = [];
+  if (G.notesMode === 'off') return;
+
   const z = getZoom().z;
   if (z < 5) return;
 
-  G.comments.forEach(c => {
+  const radius = NOTES_MODES[G.notesMode].radius; // -1 handled above, 0 = never expand
+
+  G.comments.forEach((c, i) => {
     const s = worldToScreen(c.lat, c.lng);
     if (s.x < -40 || s.x > cv.width + 40 || s.y < -40 || s.y > cv.height + 40) return;
 
     ctx.fillStyle = '#ffe600'; ctx.shadowColor = '#ffe600'; ctx.shadowBlur = 12;
     ctx.beginPath(); ctx.arc(s.x, s.y, 6, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
 
+    if (c.folded || radius <= 0) return; // small mode, or manually folded: dot only
+
     const dx = s.x - cv.width / 2, dy = s.y - cv.height / 2;
-    if (Math.sqrt(dx * dx + dy * dy) < 120) {
+    if (Math.sqrt(dx * dx + dy * dy) < radius) {
+      const bx = s.x + 12, by = s.y - 40, bw = 240, bh = 60;
       ctx.fillStyle = 'rgba(0,0,0,0.85)';
-      ctx.fillRect(s.x + 12, s.y - 40, 240, 60);
+      ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = '#ffe600'; ctx.lineWidth = 2;
-      ctx.strokeRect(s.x + 12, s.y - 40, 240, 60);
+      ctx.strokeRect(bx, by, bw, bh);
       ctx.fillStyle = '#ffe600'; ctx.font = "bold 11px 'VT323',monospace"; ctx.textAlign = 'left';
-      ctx.fillText(c.from, s.x + 20, s.y - 22);
+      ctx.fillText(c.from, bx + 8, by + 18);
       ctx.fillStyle = '#ffdd44'; ctx.font = "10px 'VT323',monospace";
-      ctx.fillText(c.text.length > 60 ? c.text.substring(0, 60) + '...' : c.text, s.x + 20, s.y - 5);
+      ctx.fillText(c.text.length > 60 ? c.text.substring(0, 60) + '...' : c.text, bx + 8, by + 35);
       ctx.fillStyle = 'rgba(255,230,0,0.6)'; ctx.font = "9px 'VT323',monospace";
-      ctx.fillText(c.timestamp, s.x + 20, s.y + 12);
+      ctx.fillText(c.timestamp, bx + 8, by + 52);
+
+      // Close button — folds this note back to a dot until clicked again
+      const cx2 = bx + bw - 12, cy2 = by + 10;
+      ctx.strokeStyle = '#ffe600'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cx2 - 4, cy2 - 4); ctx.lineTo(cx2 + 4, cy2 + 4);
+      ctx.moveTo(cx2 + 4, cy2 - 4); ctx.lineTo(cx2 - 4, cy2 + 4);
+      ctx.stroke();
+      _noteCloseZones.push({ index: i, x: cx2, y: cy2, r: 10 });
     }
   });
+}
+
+function findNoteCloseZoneAt(sx, sy) {
+  for (let i = _noteCloseZones.length - 1; i >= 0; i--) {
+    const z = _noteCloseZones[i];
+    const dx = sx - z.x, dy = sy - z.y;
+    if (dx * dx + dy * dy < z.r * z.r) return z.index;
+  }
+  return -1;
 }
 
 // ── BUS STOPS ──
@@ -687,18 +719,25 @@ function findCommentAt(sx, sy) {
   return -1;
 }
 
-// Hook into canvas for dragging notes
+// Hook into canvas for dragging notes, folding/unfolding note boxes
 (function() {
   const canvas = document.getElementById('world');
   let dragActive = false;
+  let downX = 0, downY = 0;
+  let downIdx = -1;
 
   canvas.addEventListener('pointerdown', function(e) {
-    // Only drag notes when NOT in pin mode, comment mode, or string drawing
+    // Only interact with notes when NOT in pin mode, comment mode, or string drawing
     if (G.pinMode || G.commentMode) return;
     if (typeof ufoDrawingString !== 'undefined' && ufoDrawingString) return;
 
+    // Closing an expanded note box takes priority over dragging
+    if (findNoteCloseZoneAt(e.clientX, e.clientY) >= 0) return;
+
     const idx = findCommentAt(e.clientX, e.clientY);
     if (idx >= 0) {
+      downIdx = idx;
+      downX = e.clientX; downY = e.clientY;
       draggingComment = idx;
       dragActive = true;
       canvas.style.cursor = 'grabbing';
@@ -714,13 +753,34 @@ function findCommentAt(sx, sy) {
     G.comments[draggingComment].lng = w.lng;
   });
 
-  canvas.addEventListener('pointerup', function() {
+  canvas.addEventListener('pointerup', function(e) {
     if (dragActive && draggingComment !== null) {
-      showToast('\u{1F4CC} Note moved!', '#ffe600');
-      if (dashboardOpen) updateDashboard();
+      const moved = Math.abs(e.clientX - downX) > 5 || Math.abs(e.clientY - downY) > 5;
+      if (moved) {
+        showToast('\u{1F4CC} Note moved!', '#ffe600');
+        if (dashboardOpen) updateDashboard();
+      } else if (G.comments[downIdx]?.folded) {
+        // A tap (not a drag) on a folded dot unfolds it again
+        G.comments[downIdx].folded = false;
+        showToast('\u{1F4CC} Note unfolded', '#ffe600');
+      }
       draggingComment = null;
       dragActive = false;
+      downIdx = -1;
       document.getElementById('world').style.cursor = '';
+    }
+  });
+
+  // Close (×) button on an expanded note box: fold it into a dot, permanently
+  // until tapped again (see pointerup above). Registered before game.js's own
+  // click handler (script load order) and stops it from also firing on this click.
+  canvas.addEventListener('click', function(e) {
+    const idx = findNoteCloseZoneAt(e.clientX, e.clientY);
+    if (idx >= 0) {
+      G.comments[idx].folded = true;
+      showToast('\u{1F4CD} Note folded', '#ffe600');
+      e.preventDefault();
+      e.stopImmediatePropagation();
     }
   });
 })();

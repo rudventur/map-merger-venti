@@ -17,7 +17,82 @@ const G = {
     { lat:52.52, lng:13.40, text:"Collab on large-scale prints?", from:"CosmicNomad7", timestamp:"2026-03-14" },
     { lat:48.86, lng:2.35, text:"Darkroom available this weekend", from:"ElectricSeeker12", timestamp:"2026-03-10" },
   ],
+  notesMode: localStorage.getItem('rvNotesMode') || 'full', // full | medium | small | off
 };
+
+// ── NOTES DISPLAY MODES ──
+// full   — auto-expand into the big box within 120px of screen center (default)
+// medium — auto-expand only within 60px of screen center
+// small  — always just the yellow dot, never expands into a box
+// off    — notes are not drawn at all
+const NOTES_MODES = {
+  full:   { label: '\u{1F7E1} Full Notes',   radius: 120, cls: 'notes-lvl-full' },
+  medium: { label: '\u{1F7E0} Medium Notes', radius: 60,  cls: 'notes-lvl-medium' },
+  small:  { label: '⚪ Small Notes',     radius: 0,   cls: 'notes-lvl-small' },
+  off:    { label: '⚫ Notes Off',       radius: -1,  cls: 'notes-lvl-off' },
+};
+const NOTES_MODE_ORDER = ['full', 'medium', 'small', 'off'];
+
+function applyNotesModeStyle() {
+  const b = document.getElementById('commentBtn');
+  if (!b) return;
+  NOTES_MODE_ORDER.forEach(m => b.classList.remove(NOTES_MODES[m].cls));
+  b.classList.add(NOTES_MODES[G.notesMode].cls);
+}
+
+function setNotesMode(mode) {
+  if (!NOTES_MODES[mode]) return;
+  G.notesMode = mode;
+  try { localStorage.setItem('rvNotesMode', mode); } catch (e) {}
+  applyNotesModeStyle();
+  showToast(NOTES_MODES[mode].label, '#ffe600');
+  closeNotesMenu();
+}
+
+// ── Right-click on NOTE button → small menu to pick display mode ──
+let _notesMenuEl = null;
+function closeNotesMenu() {
+  if (_notesMenuEl) { _notesMenuEl.remove(); _notesMenuEl = null; }
+}
+function openNotesMenu(clientX, clientY) {
+  closeNotesMenu();
+  const menu = document.createElement('div');
+  menu.id = 'notesModeMenu';
+  menu.style.cssText = 'position:fixed;z-index:5000;background:#0a0a0a;border:1.5px solid #ffe600;' +
+    'border-radius:6px;padding:4px;font-family:\'VT323\',monospace;box-shadow:0 0 14px rgba(255,230,0,0.35)';
+  let left = clientX, top = clientY;
+  if (left + 160 > window.innerWidth) left = window.innerWidth - 165;
+  if (top + 140 > window.innerHeight) top = window.innerHeight - 145;
+  menu.style.left = left + 'px'; menu.style.top = top + 'px';
+
+  NOTES_MODE_ORDER.forEach(m => {
+    const opt = document.createElement('div');
+    opt.textContent = NOTES_MODES[m].label;
+    opt.style.cssText = 'padding:6px 10px;cursor:pointer;color:#ffe600;font-size:.95rem;white-space:nowrap;border-radius:3px' +
+      (m === G.notesMode ? ';background:rgba(255,230,0,0.2)' : '');
+    opt.onmouseenter = () => opt.style.background = 'rgba(255,230,0,0.3)';
+    opt.onmouseleave = () => opt.style.background = (m === G.notesMode ? 'rgba(255,230,0,0.2)' : '');
+    opt.onclick = () => setNotesMode(m);
+    menu.appendChild(opt);
+  });
+
+  document.body.appendChild(menu);
+  _notesMenuEl = menu;
+
+  setTimeout(() => {
+    document.addEventListener('pointerdown', function onOutside(e) {
+      if (_notesMenuEl && !_notesMenuEl.contains(e.target)) {
+        closeNotesMenu();
+        document.removeEventListener('pointerdown', onOutside);
+      }
+    });
+  }, 0);
+}
+document.getElementById('commentBtn')?.addEventListener('contextmenu', e => {
+  e.preventDefault();
+  openNotesMenu(e.clientX, e.clientY);
+});
+applyNotesModeStyle();
 
 const cv = document.getElementById('world');
 const ctx = cv.getContext('2d');
