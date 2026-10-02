@@ -162,6 +162,11 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 .clown-badge.show{display:block}
 
 /* ── D-PAD ── */
+.map-credit{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:960;background:rgba(26,18,10,0.8);color:rgba(255,204,102,0.75);font-family:'VT323',monospace;font-size:.75rem;padding:1px 8px;border-radius:8px 8px 0 0;white-space:nowrap}
+.map-credit a{color:#ffcc66}
+.net-note{color:#ffcc66;cursor:help;margin-right:6px;padding-right:6px;border-right:1px solid rgba(255,204,102,0.3)}
+@media (max-width:600px){.map-credit{bottom:32px;border-radius:8px;white-space:normal;width:max-content;max-width:96vw;text-align:center;font-size:.7rem}}
+.empty-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:850;background:rgba(26,18,10,0.92);border:2px dashed rgba(204,136,51,0.6);border-radius:14px;padding:12px 16px;color:#ffcc66;font-family:'VT323',monospace;font-size:1rem;text-align:center;pointer-events:none;display:none;max-width:80vw}
 .dpad{position:fixed;bottom:50px;right:10px;z-index:800;display:grid;grid-template-columns:32px 32px 32px;grid-template-rows:32px 32px 32px;gap:2px}
 .db{background:rgba(26,18,10,0.88);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .1s}
 .db:active,.db.pressed{background:#cc8833;color:#1a120a}
@@ -567,11 +572,11 @@ function sfuRenderSpots() {
   }
   list.innerHTML = spots.map(s => `
     <div class="sfu-spot-item">
-      <span onclick="sfuGoToSpot(${s.id})" style="cursor:pointer;flex:1">
-        <span class="sfu-spot-name">${s.name.replace(/</g,'&lt;')}</span>
-        <span class="sfu-spot-coords">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)}</span>
+      <span onclick="sfuGoToSpot(${Number(s.id)})" style="cursor:pointer;flex:1">
+        <span class="sfu-spot-name">${escHtml(s.name)}</span>
+        <span class="sfu-spot-coords">${Number(s.lat).toFixed(4)}, ${Number(s.lon).toFixed(4)}</span>
       </span>
-      <button class="sfu-spot-del" onclick="sfuDeleteSpot(${s.id})">&#128465;&#65039;</button>
+      <button class="sfu-spot-del" onclick="sfuDeleteSpot(${Number(s.id)})">&#128465;&#65039;</button>
     </div>
   `).join('');
 }
@@ -590,7 +595,7 @@ function sfuDeleteSpot(id) {
 
 function sfuClearData() {
   if (!confirm('Reset all local Snout First data on this device? This clears pets pinned only in this browser, your notes, saved spots, and settings. Pets already saved to the network are not affected.')) return;
-  ['snoutfirst_pets','snoutfirst_sniffs','snoutfirst_pets_v2','sf_notes','sf_home','sf_lost_pets','sf_vets_custom','sf_food_custom','sf_walk_spots','sf_owner_signature','rv_username','rv_local_uid'].forEach(k => localStorage.removeItem(k));
+  ['snoutfirst_pets','snoutfirst_sniffs','snoutfirst_pets_v2','sf_notes','sf_home','sf_lost_pets','sf_vets_custom','sf_food_custom','sf_walk_spots','sf_owner_signature','rv_username','rv_local_uid','sf_walks','sf_pet_photos'].forEach(k => localStorage.removeItem(k));
   if (typeof toast === 'function') toast('\u{1F5D1}\u{FE0F} Local data cleared! Reloading...');
   setTimeout(() => location.reload(), 900);
 }
@@ -603,6 +608,13 @@ function sfuClearData() {
   <div class="spill">&#128205; Spots: <b id="spotCount">0</b></div>
   <div class="spill">&#129313; Clowns: <b id="clownCount">0</b></div>
 </div>
+
+<!-- SHARING NOTE + MAP CREDITS (credit required by the OpenStreetMap tile rules).
+     Sits above the side panels so it is never hidden. -->
+<div class="map-credit"><span class="net-note" id="netNote" style="display:none"></span>Map &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> &middot; search: Nominatim &middot; vets: Overpass</div>
+
+<!-- HONEST EMPTY STATE (no invented pets) -->
+<div class="empty-hint" id="emptyHint">No pets on the map yet.<br>Tap &#128062; PIN PET, then tap the map to add yours.</div>
 
 <!-- ZOOM -->
 <div class="zoom-axis">
@@ -637,7 +649,7 @@ function sfuClearData() {
   <div class="modal">
     <h2>&#128062; Drop a Pet Pin</h2>
     <label>Pet Name</label>
-    <input id="pinName" placeholder="Sir Barkington III">
+    <input id="pinName" maxlength="40" placeholder="Sir Barkington III">
     <label>Species</label>
     <select id="pinSpecies">
       <option value="dog">&#128054; Dog</option>
@@ -650,11 +662,11 @@ function sfuClearData() {
       <option value="other">&#128062; Other</option>
     </select>
     <label>Breed (optional)</label>
-    <input id="pinBreed" placeholder="Golden Chaos Machine">
+    <input id="pinBreed" maxlength="40" placeholder="Golden Chaos Machine">
     <label>Bio (as the pet!)</label>
-    <textarea id="pinBio" rows="2" placeholder="I bark at the mailman because he's suspicious. No further questions."></textarea>
+    <textarea id="pinBio" rows="2" maxlength="200" placeholder="I bark at the mailman because he's suspicious. No further questions."></textarea>
     <label>Personality Tags</label>
-    <input id="pinTags" placeholder="Zoomie King, Treat Goblin, Lap Monster">
+    <input id="pinTags" maxlength="220" placeholder="Zoomie King, Treat Goblin, Lap Monster">
     <label>Current Mood</label>
     <select id="pinMood">
       <option value="playful">&#127934; Playful</option>
@@ -703,6 +715,7 @@ function sfuClearData() {
 <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
 <!-- Snout First modules -->
+<script src="js/safe-text.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/distance.js"></script>
 <script src="js/pet-registration.js"></script>
@@ -783,9 +796,10 @@ function screenToWorld(sx, sy) {
 }
 
 // ── Tile loading (same OSM tiles as ArtSpace) ──
+// Single host as the OpenStreetMap tile rules ask (the a/b/c subdomains are
+// being withdrawn); credit is shown in .map-credit.
 function tileUrl(x, y, z) {
-  const sub = ['a','b','c'][(x + y) % 3];
-  return `https://${sub}.tile.openstreetmap.org/${z}/${x}/${y}.png`;
+  return `https://tile.openstreetmap.org/${z}/${x}/${y}.png`;
 }
 
 function loadTile(url) {
@@ -920,6 +934,10 @@ function render() {
 
   // Update HUD
   document.getElementById('petCount').textContent = S.pets.length;
+  if (render._lastCount !== S.pets.length) {
+    render._lastCount = S.pets.length;
+    document.getElementById('emptyHint').style.display = S.pets.length ? 'none' : 'block';
+  }
   document.getElementById('sniffCount').textContent = S.sniffs.length;
   document.getElementById('zoomLev').textContent = Math.round(S.zoom);
 
@@ -1073,9 +1091,14 @@ function openUserbox(petIdx, screenX, screenY) {
   document.getElementById('ubSpecies').textContent = (pet.breed ? pet.breed + ' \u2022 ' : '') + pet.species;
   document.getElementById('ubBio').textContent = pet.bio || 'No bio yet...';
   document.getElementById('ubBio').style.display = pet.bio ? 'block' : 'none';
-  document.getElementById('ubTags').innerHTML = pet.tags.map(t =>
-    '<span class="ub-tag">' + t + '</span>'
-  ).join('');
+  const tagsEl = document.getElementById('ubTags');
+  tagsEl.textContent = '';
+  (pet.tags || []).forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'ub-tag';
+    span.textContent = t;  // text node: never parsed as markup
+    tagsEl.appendChild(span);
+  });
   document.getElementById('ubMood').textContent = (MOOD_EM[pet.mood] || '') + ' ' + (pet.mood || '');
   const trackerEl = document.getElementById('ubTracker');
   if (pet.trackerSource === 'tractive') {
@@ -1140,14 +1163,14 @@ function buildUbMoreHtml(pet) {
   if (!pet) return '';
   const lines = [];
   lines.push('📅 Pinned: ' + new Date(pet.timestamp).toLocaleString());
-  if (pet.owner_name) lines.push('🧑 Owner: ' + pet.owner_name);
-  if (pet.status) lines.push('🏠 Status: ' + pet.status);
+  if (pet.owner_name) lines.push('🧑 Owner: ' + escHtml(pet.owner_name));
+  if (pet.status) lines.push('🏠 Status: ' + escHtml(pet.status));
   if (pet.stats) {
-    if (pet.stats.lifetime_distance_km) lines.push('🚶 Lifetime walks: ' + pet.stats.lifetime_distance_km.toFixed ? pet.stats.lifetime_distance_km.toFixed(1) + 'km' : pet.stats.lifetime_distance_km + 'km');
-    if (pet.stats.total_walks) lines.push('🎾 Total walks: ' + pet.stats.total_walks);
-    if (pet.stats.total_feedings) lines.push('🍖 Total feedings: ' + pet.stats.total_feedings);
+    if (pet.stats.lifetime_distance_km) lines.push('🚶 Lifetime walks: ' + (Number(pet.stats.lifetime_distance_km) || 0).toFixed(1) + 'km');
+    if (pet.stats.total_walks) lines.push('🎾 Total walks: ' + (Number(pet.stats.total_walks) || 0));
+    if (pet.stats.total_feedings) lines.push('🍖 Total feedings: ' + (Number(pet.stats.total_feedings) || 0));
   }
-  lines.push('📍 ' + pet.lat.toFixed(5) + ', ' + (pet.lon ?? pet.lng).toFixed(5));
+  lines.push('📍 ' + Number(pet.lat).toFixed(5) + ', ' + Number(pet.lon ?? pet.lng).toFixed(5));
   return lines.map(l => '<div>' + l + '</div>').join('');
 }
 document.getElementById('petUserbox').addEventListener('pointerdown', e => {
@@ -1197,13 +1220,10 @@ function deletePetFromUserbox() {
   if (activeUserboxPetIndex < 0) return;
   const pet = S.pets[activeUserboxPetIndex];
   if (!confirm('Remove ' + pet.name + ' from the map?')) return;
-  // Remove sniffs for this pet
-  S.sniffs = S.sniffs.filter(s => s.petIndex !== activeUserboxPetIndex);
-  // Fix sniff petIndex references
-  S.sniffs.forEach(s => { if (s.petIndex > activeUserboxPetIndex) s.petIndex--; });
-  S.pets.splice(activeUserboxPetIndex, 1);
-  savePets();
+  const idx = activeUserboxPetIndex;
   closeUserbox();
+  removePetAt(idx);
+  savePets();
   toast(pet.name + ' removed \u{1F43E}');
 }
 
@@ -1286,14 +1306,14 @@ function renderTrail() {
     return '<div class="sniff">' +
       '<div class="sniff-head">' +
         '<span>' + (SPECIES_EM[pet.species] || '\u{1F43E}') + '</span>' +
-        '<span class="sniff-name">' + pet.name + '</span>' +
+        '<span class="sniff-name">' + escHtml(pet.name) + '</span>' +
         '<span class="sniff-time">' + ago + '</span>' +
       '</div>' +
-      '<div class="sniff-caption">' + s.caption + '</div>' +
+      '<div class="sniff-caption">' + escHtml(s.caption) + '</div>' +
       '<div class="sniff-mood">' + (MOOD_EM[s.mood] || '') + '</div>' +
       '<div class="wag-row">' +
         '<button class="wag-btn" onclick="wagSniff(' + origIdx + ')">\u{1F43E}</button>' +
-        '<span class="wag-count">' + s.wags + ' tail wag' + (s.wags !== 1 ? 's' : '') + '</span>' +
+        '<span class="wag-count">' + (Number(s.wags) || 0) + ' tail wag' + (s.wags !== 1 ? 's' : '') + '</span>' +
       '</div>' +
     '</div>' +
     '<div class="bone-divider">\u2739 \u2739 \u2739</div>';
@@ -1326,10 +1346,10 @@ function renderPack() {
   }
   el.innerHTML = S.pets.map((pet, i) =>
     '<div class="pet-card" onclick="panToPet(' + i + ')">' +
-      '<div class="name">' + (SPECIES_EM[pet.species] || '\u{1F43E}') + ' ' + pet.name + '</div>' +
-      '<div class="species">' + (pet.breed || pet.species) + '</div>' +
-      (pet.bio ? '<div class="bio">"' + pet.bio + '"</div>' : '') +
-      '<div class="tags">' + pet.tags.map(t => '<span class="tag">' + t + '</span>').join('') + '</div>' +
+      '<div class="name">' + (SPECIES_EM[pet.species] || '\u{1F43E}') + ' ' + escHtml(pet.name) + '</div>' +
+      '<div class="species">' + escHtml(pet.breed || pet.species) + '</div>' +
+      (pet.bio ? '<div class="bio">"' + escHtml(pet.bio) + '"</div>' : '') +
+      '<div class="tags">' + (pet.tags || []).map(t => '<span class="tag">' + escHtml(t) + '</span>').join('') + '</div>' +
       '<div class="mood">' + (MOOD_EM[pet.mood] || '') + '</div>' +
     '</div>'
   ).join('<div class="bone-divider">\u2739 \u2739 \u2739</div>');
@@ -1414,55 +1434,72 @@ function timeAgo(ts) {
   return Math.floor(hrs / 24) + 'd ago';
 }
 
-// ── Demo pets ──
-function seedDemoPets() {
-  if (S.pets.length) return;
-  const demos = [
-    { name:'Sir Barkington', species:'dog', breed:'Golden Retriever', bio:'I bark at the mailman because he\'s suspicious. No further questions.', tags:['Zoomie King','Treat Goblin'], mood:'chaos', lat:51.512, lon:-0.09 },
-    { name:'Duchess Whiskers', species:'cat', breed:'British Shorthair', bio:'I own this flat. The human just pays rent.', tags:['Lap Monster','Night Zoomie'], mood:'majestic', lat:51.507, lon:-0.076 },
-    { name:'Captain Floof', species:'dog', breed:'Samoyed', bio:'A cloud with legs and opinions.', tags:['Cloud Boy','Dramatic'], mood:'playful', lat:48.856, lon:2.352 },
-    { name:'Professor Nibbles', species:'rabbit', breed:'Holland Lop', bio:'I have chewed every cable in this house. No regrets.', tags:['Cable Destroyer','Binky Expert'], mood:'chaos', lat:52.52, lon:13.405 },
-    { name:'DJ Feathers', species:'bird', breed:'Cockatiel', bio:'My mixtape drops at 6 AM every morning. Whether you like it or not.', tags:['Early Riser','Seed Critic'], mood:'playful', lat:40.416, lon:-3.703 },
-    { name:'Lord Puddles', species:'fish', breed:'Betta', bio:'I flare at my own reflection because that fish had it coming.', tags:['Bubble Builder','Drama Fish'], mood:'majestic', lat:55.953, lon:-3.188 },
-  ];
-  demos.forEach(d => {
-    d.timestamp = Date.now() - Math.random() * 86400000;
-    S.pets.push(d);
-    S.sniffs.push({
-      petIndex: S.pets.length - 1,
-      caption: d.bio,
-      mood: d.mood,
-      timestamp: d.timestamp,
-      wags: Math.floor(Math.random() * 20),
-      wagged: false,
-    });
-  });
-  savePets();
+// ── No invented pets ──
+// Snout First used to seed six made-up pets (Sir Barkington & co.) with random
+// wag counts whenever the map was empty. House rule: real live data only.
+// This removes those exact made-up entries from browsers that saved them.
+function removeOldDemoPets() {
+  const OLD_DEMOS = {
+    'Sir Barkington': [51.512, -0.09], 'Duchess Whiskers': [51.507, -0.076],
+    'Captain Floof': [48.856, 2.352], 'Professor Nibbles': [52.52, 13.405],
+    'DJ Feathers': [40.416, -3.703], 'Lord Puddles': [55.953, -3.188]
+  };
+  let removed = 0;
+  for (let i = S.pets.length - 1; i >= 0; i--) {
+    const p = S.pets[i], d = OLD_DEMOS[p.name];
+    if (d && !p._fbId && p.lat === d[0] && p.lon === d[1]) { removePetAt(i); removed++; }
+  }
+  if (removed) savePets();
+}
+
+// Remove one pet (and its sniffs) from the map state, keeping sniff indexes right.
+function removePetAt(idx) {
+  S.sniffs = S.sniffs.filter(s => s.petIndex !== idx);
+  S.sniffs.forEach(s => { if (s.petIndex > idx) s.petIndex--; });
+  S.pets.splice(idx, 1);
+  if (activeUserboxPetIndex === idx) closeUserbox();
+  else if (activeUserboxPetIndex > idx) activeUserboxPetIndex--;
 }
 
 // ═══════════════════════════════════════════════════════════════
 //  FIREBASE INTEGRATION
+//  Sharing switches on only when js/firebase-config.js is filled in AND
+//  anonymous sign-in works. Otherwise everything stays on this device and
+//  a small note says so (see #netNote).
 // ═══════════════════════════════════════════════════════════════
 let firebaseReady = false;
 let activeWalkTracker = null;
 let activeWalkPetId = null;
-const DEFAULT_CHANNEL = 'snoutfirst_global';
+
+function setNetNote() {
+  const el = document.getElementById('netNote');
+  if (!el) return;
+  const notes = {
+    '':       ['\u{1F310} Shared map on', 'Pets you pin are shared with other Snout First visitors.'],
+    connecting: ['\u{23F3} Connecting\u2026', 'Signing in to the shared map. Until then everything stays in this browser.'],
+    config:   ['\u{1F4F1} This device only', 'Sharing is not set up yet, so pets, walks and spots stay in this browser.'],
+    signin:   ['\u{1F4F1} This device only', 'Could not sign in to the shared map, so everything stays in this browser for now.'],
+    sdk:      ['\u{1F4F1} This device only', 'The sharing library did not load, so everything stays in this browser for now.']
+  };
+  const n = notes[firebaseOffReason] || notes.config;
+  el.textContent = n[0];
+  el.title = n[1];
+  el.onclick = () => toast(n[1]);  // phones have no hover, so tap shows why
+  el.style.display = 'inline';
+}
 
 async function initFirebaseIntegration() {
-  if (!initFirebase()) {
-    console.warn('Firebase not available — running in local mode');
-    return;
-  }
+  if (!initFirebase()) { setNetNote(); return; }
+  firebaseOffReason = 'connecting';
+  setNetNote();
   const uid = await ensureAuth();
-  if (!uid) {
-    console.warn('Auth failed — running in local mode');
-    return;
-  }
+  if (!uid) { setNetNote(); return; }
   firebaseReady = true;
+  setNetNote();
 
   // Prompt for username if not set
   if (!localStorage.getItem('rv_username')) {
-    const name = prompt('What\'s your name? (for pet community)', 'Anonymous Walker');
+    const name = prompt('What\'s your name? (shown to the pet community, max 30 characters)', 'Anonymous Walker');
     if (name) setUserName(name);
   }
 
@@ -1472,79 +1509,89 @@ async function initFirebaseIntegration() {
     toast(notif.message);
   });
 
-  // Load Firebase pets and merge with local
-  await syncPetsFromFirebase();
-
-  // Watch for wandering pets
-  watchForDisconnects(DEFAULT_CHANNEL, (petId, data) => {
-    const wp = new WanderingPet(petId, DEFAULT_CHANNEL, data.lat, data.lng, data);
-    wp.start();
-  });
-
-  // Listen for real-time pet updates
-  db.ref('snoutfirst/pets').on('child_changed', () => {
-    syncPetsFromFirebase();
-  });
+  // Live pet list: one download at start, then only the pets that change.
+  listenForPets();
 
   toast('🐾 Connected to Snout First network!');
 }
 
-async function syncPetsFromFirebase() {
-  if (!firebaseReady) return;
-  try {
-    const fbPets = await getAllPets();
-    // Merge Firebase pets into local state
-    fbPets.forEach(fbPet => {
-      const exists = S.pets.findIndex(p => p._fbId === fbPet.id);
-      const localPet = {
-        _fbId: fbPet.id,
-        name: fbPet.name,
-        species: fbPet.species || 'dog',
-        breed: fbPet.breed || '',
-        bio: fbPet.bio || '',
-        tags: fbPet.personality_tags || [],
-        mood: fbPet.mood || 'happy',
-        lat: fbPet.home_lat,
-        lon: fbPet.home_lng,
-        timestamp: fbPet.created_at,
-        status: fbPet.status || 'home',
-        current_walker: fbPet.current_walker,
-        registered_by: fbPet.registered_by,
-        owner_name: fbPet.owner_name,
-        photo_base64: fbPet.photo_base64 || '',
-        stats: fbPet.stats || {}
-      };
-      if (exists >= 0) {
-        S.pets[exists] = localPet;
-      } else {
-        S.pets.push(localPet);
-        // Add sniff entry
-        S.sniffs.push({
-          petIndex: S.pets.length - 1,
-          caption: fbPet.bio || fbPet.name + ' joined the pack!',
-          mood: fbPet.mood || 'happy',
-          timestamp: fbPet.created_at,
-          wags: 0,
-          wagged: false
-        });
-      }
+// Shared pet record → the shape the map uses.
+function toLocalPet(id, fbPet) {
+  const tags = fbPet.personality_tags;
+  return {
+    _fbId: id,
+    name: String(fbPet.name || ''),
+    species: fbPet.species || 'dog',
+    breed: fbPet.breed || '',
+    bio: fbPet.bio || '',
+    tags: Array.isArray(tags) ? tags : (tags && typeof tags === 'object' ? Object.values(tags) : []),
+    mood: fbPet.mood || 'happy',
+    lat: Number(fbPet.home_lat),
+    lon: Number(fbPet.home_lng),
+    timestamp: fbPet.created_at,
+    status: fbPet.status || 'home',
+    current_walker: fbPet.current_walker,
+    registered_by: fbPet.owner_uid || fbPet.registered_by,
+    owner_name: fbPet.owner_name,
+    stats: fbPet.stats || {}
+  };
+}
+
+// Add or update ONE pet (child_added / child_changed).
+function upsertFirebasePet(id, fbPet) {
+  const idx = S.pets.findIndex(p => p._fbId === id);
+  if (!fbPet || fbPet.active === false) { if (idx >= 0) removePetAt(idx); return; }
+  const localPet = toLocalPet(id, fbPet);
+  if (!isFinite(localPet.lat) || !isFinite(localPet.lon)) return;
+  if (idx >= 0) {
+    localPet.lost = S.pets[idx].lost;  // keep this device's lost flag
+    S.pets[idx] = localPet;
+  } else {
+    S.pets.push(localPet);
+    S.sniffs.push({
+      petIndex: S.pets.length - 1,
+      caption: localPet.bio || localPet.name + ' joined the pack!',
+      mood: localPet.mood,
+      timestamp: localPet.timestamp,
+      owner_uid: localPet.registered_by || '',
+      wags: 0,
+      wagged: false
     });
-  } catch (e) {
-    console.warn('Firebase sync error:', e);
   }
+  if (S.packOpen) renderPack();
+  if (S.trailOpen) renderTrail();
+}
+
+function listenForPets() {
+  // Drop shared pets remembered from last visit; the live list re-adds the
+  // ones that still exist (so pets deleted elsewhere don't linger here).
+  for (let i = S.pets.length - 1; i >= 0; i--) if (S.pets[i]._fbId) removePetAt(i);
+  const ref = db.ref('snoutfirst/pets');
+  const onErr = e => console.warn('Pet list not readable:', e.code || e.message);
+  ref.on('child_added', snap => upsertFirebasePet(snap.key, snap.val()), onErr);
+  ref.on('child_changed', snap => upsertFirebasePet(snap.key, snap.val()), onErr);
+  ref.on('child_removed', snap => {
+    const idx = S.pets.findIndex(p => p._fbId === snap.key);
+    if (idx >= 0) removePetAt(idx);
+  }, onErr);
+}
+
+function findPetByFbId(petId) {
+  return S.pets.find(p => p._fbId === petId) || null;
 }
 
 // ── Handler functions (called by PETuserBox) ──
 async function handleTakeOut(petId) {
   if (!firebaseReady) { toast('Not connected to network 🐾'); return; }
-  const walkId = await takeOutPet(petId, DEFAULT_CHANNEL);
+  const pet = findPetByFbId(petId);
+  if (pet && pet.registered_by !== getUid()) { toast('Only ' + pet.name + '\'s owner can take them out 🐾'); return; }
+  const walkId = await takeOutPet(petId).catch(e => { console.warn(e); return null; });
   if (walkId) {
     activeWalkPetId = petId;
-    activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
+    activeWalkTracker = new WalkTracker(petId, walkId);
     activeWalkTracker.start();
-    toast('🚶 Let\'s go for a walk! 🐾');
+    toast('🚶 Let\'s go for a walk! Your route stays on this device 🐾');
     closeUserbox();
-    await syncPetsFromFirebase();
   } else {
     toast('This pet is not available right now 🐾');
   }
@@ -1552,32 +1599,27 @@ async function handleTakeOut(petId) {
 
 async function handleReturnHome(petId) {
   if (!firebaseReady) return;
-  await returnPetHome(petId, DEFAULT_CHANNEL, activeWalkTracker);
-  const dist = activeWalkTracker ? activeWalkTracker.getDistanceKm() : 0;
+  const walk = await returnPetHome(petId, activeWalkTracker).catch(e => { console.warn(e); return null; });
+  const dist = walk ? walk.distance_km : 0;
   activeWalkTracker = null;
   activeWalkPetId = null;
-  toast(`🏠 Pet returned home! ${dist}km walked 🐾`);
   closeUserbox();
-  await syncPetsFromFirebase();
-}
-
-async function handlePickUp(petId) {
-  if (!firebaseReady) return;
-  const walkId = await pickUpWanderingPet(petId, DEFAULT_CHANNEL);
-  if (walkId) {
-    activeWalkPetId = petId;
-    activeWalkTracker = new WalkTracker(petId, walkId, DEFAULT_CHANNEL);
-    activeWalkTracker.start();
-    toast('🎾 Picked up wandering pet! 🐾');
-    closeUserbox();
+  toast(`🏠 Pet returned home! ${dist}km walked 🐾`);
+  // Walks stay on this device unless you say yes here.
+  if (walk && walk.distance_km > 0 &&
+      confirm('Share this walk with the Snout First map?\n\nOthers would see the distance, time and a rough route (rounded to about 100 m). Choose Cancel to keep it on this device only.')) {
+    const pet = findPetByFbId(petId);
+    const ok = await shareWalk(walk, pet ? pet.name : '');
+    toast(ok ? '🌐 Walk shared 🐾' : 'Could not share the walk — it is still saved on this device 🐾');
   }
 }
 
-function handleFeedPet(petId, petName) {
-  const section = document.getElementById('pet-feed-section-' + petId);
+function handleFeedPet(petId) {
+  const pet = findPetByFbId(petId);
+  const section = document.getElementById('pet-feed-section-' + safeId(petId));
   if (section) {
     if (section.innerHTML) { section.innerHTML = ''; return; }
-    renderFeedingForm(petId, petName, section);
+    renderFeedingForm(petId, pet ? pet.name : '', section);
   }
 }
 
@@ -1592,7 +1634,7 @@ savePetPin = async function() {
   if (!name) { toast('Every pet needs a name! 🐾'); return; }
 
   const petData = {
-    name,
+    name: name.slice(0, 40),
     species: document.getElementById('pinSpecies').value,
     breed: document.getElementById('pinBreed').value.trim(),
     bio: document.getElementById('pinBio').value.trim(),
@@ -1603,18 +1645,25 @@ savePetPin = async function() {
     contact: ''
   };
 
-  // Check for photo input
+  // Photo: kept on this device only (never sent to the shared database)
+  let photo = '';
   const photoInput = document.getElementById('pinPhoto');
   if (photoInput && photoInput.files && photoInput.files[0]) {
     try {
-      petData.photo_base64 = await photoToBase64(photoInput.files[0]);
+      photo = await photoToBase64(photoInput.files[0]);
     } catch (e) { console.warn('Photo encode failed:', e); }
   }
 
   if (firebaseReady) {
-    const petId = await registerPet(petData);
-    toast(`${getSpeciesEmoji(petData.species)} ${name} registered on Snout First!`);
-    await syncPetsFromFirebase();
+    try {
+      const petId = await registerPet(petData);
+      if (photo) savePetPhotoLocally(petId, photo);
+      toast(`${getSpeciesEmoji(petData.species)} ${name} registered on Snout First!`);
+    } catch (e) {
+      console.warn('Pet not saved to the shared map:', e);
+      toast('Could not save ' + name + ' to the shared map — please try again 🐾');
+      return;
+    }
   } else {
     // Local fallback (original behavior)
     const pet = {
@@ -1626,7 +1675,8 @@ savePetPin = async function() {
       mood: petData.mood,
       lat: petData.lat,
       lon: petData.lng,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      owner_uid: getUid()
     };
     S.pets.push(pet);
     S.sniffs.push({
@@ -1634,11 +1684,12 @@ savePetPin = async function() {
       caption: pet.bio || pet.name + ' just joined the pack!',
       mood: pet.mood,
       timestamp: pet.timestamp,
+      owner_uid: getUid(),
       wags: 0,
       wagged: false
     });
     savePets();
-    toast(`${getSpeciesEmoji(pet.species)} ${name} pinned to the map!`);
+    toast(`${getSpeciesEmoji(pet.species)} ${name} pinned to this device's map!`);
   }
 
   closePinModal();
@@ -1654,6 +1705,9 @@ savePetPin = async function() {
 
 // ── Override openUserbox to use PETuserBox for Firebase pets ──
 const _originalOpenUserbox = openUserbox;
+// The shared-pet view replaces the userbox contents, so keep the original
+// layout to put back before showing a device-only pet.
+const _localUserboxHtml = document.getElementById('petUserbox').innerHTML;
 openUserbox = function(petIdx, screenX, screenY) {
   const pet = S.pets[petIdx];
   if (!pet) return;
@@ -1682,12 +1736,12 @@ openUserbox = function(petIdx, screenX, screenY) {
       current_walker: pet.current_walker,
       registered_by: pet.registered_by,
       owner_name: pet.owner_name,
-      photo_base64: pet.photo_base64,
       stats: pet.stats || {},
       created_at: pet.timestamp
     }, document.getElementById('ub-fb-content'));
   } else {
     // Original local userbox
+    if (!document.getElementById('ubTags')) ub.innerHTML = _localUserboxHtml;
     _originalOpenUserbox(petIdx, screenX, screenY);
     return;
   }
@@ -1766,7 +1820,7 @@ drawPets = function() {
 
 // ── Init ──
 loadPets();
-seedDemoPets();
+removeOldDemoPets();   // no invented pets — an empty map shows an honest hint instead
 addPhotoToModal();
 render();
 

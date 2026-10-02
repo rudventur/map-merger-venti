@@ -316,14 +316,11 @@ function injectLeftPanel() {
 
   <div class="lp-tv-overlay" id="tractiveModalOverlay">
     <div class="lp-tv-modal">
-      <h4>🔗 Connect Tractive</h4>
-      <p class="lp-tv-note">Goes straight from your browser to our relay to Tractive's own login — only your pets' current locations come back. Your email and password are never stored or logged anywhere.</p>
-      <input type="email" id="tractiveEmail" placeholder="Tractive account email" autocomplete="off">
-      <input type="password" id="tractivePassword" placeholder="Tractive password" autocomplete="off">
+      <h4>🔗 Tractive — coming later</h4>
+      <p class="lp-tv-note">Connecting a Tractive tracker isn't available yet, so Snout First doesn't ask for your Tractive email or password. Tractive has no official public way for other apps to read tracker positions, and we don't want to hold anyone's password on a server. Until then, use the Tractive app itself.</p>
       <div class="lp-tv-status" id="tractiveStatus"></div>
       <div class="lp-tv-btns">
-        <button class="lp-tile-btn" onclick="closeTractiveModal()">Cancel</button>
-        <button class="lp-tile-btn found" onclick="submitTractiveSync()">Sync now</button>
+        <button class="lp-tile-btn" onclick="closeTractiveModal()">OK</button>
       </div>
     </div>
   </div>
@@ -564,10 +561,10 @@ function lpRenderPets() {
         <button class="lp-pt-opts">⚙</button>
         <div class="lp-pt-name">
           <span class="lp-pt-dot ${dotClass}"></span>
-          ${em} ${p.name}
+          ${em} ${escHtml(p.name)}
           ${p.lost ? '<span style="color:#ff3333;font-size:.65rem;margin-left:4px">LOST</span>' : ''}
         </div>
-        <div class="lp-pt-breed">${p.breed || p.species || ''} · ${p.lost ? '🔴 LOST' : (p.status || 'home')}</div>
+        <div class="lp-pt-breed">${escHtml(p.breed || p.species || '')} · ${p.lost ? '🔴 LOST' : escHtml(p.status || 'home')}</div>
         <div class="lp-tile-btns">
           <span class="lp-tile-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Go</span>
           ${p.lost
@@ -589,7 +586,9 @@ const TRACKER_ECOSYSTEM = [
   { label: '🛰️ Findster', url: 'https://findsterpet.com', cls: 'cellular' },
 ];
 
-const TRACTIVE_RELAY_URL = 'https://europe-west1-map-merger-venti.cloudfunctions.net/tractiveSync';
+// The Tractive relay (functions/index.js) is not deployed and would need the
+// user's Tractive password, so the connect form is switched off for now.
+// See FIREBASE-SETUP.md, "Why Tractive is switched off".
 
 function lpRenderTrackerEcosystem() {
   return `<div class="lp-tracker-section">
@@ -597,7 +596,7 @@ function lpRenderTrackerEcosystem() {
     <div class="lp-tracker-grid">
       ${TRACKER_ECOSYSTEM.map(t => `<a class="lp-tracker-badge ${t.cls}" href="${t.url}" target="_blank" rel="noopener">${t.label}</a>`).join('')}
     </div>
-    <button class="lp-tracker-badge cellular" style="border-style:solid;margin-top:4px;cursor:pointer" onclick="openTractiveModal()">📡 Connect Tractive account →</button>
+    <button class="lp-tracker-badge cellular" style="border-style:dashed;margin-top:4px;cursor:pointer;opacity:.6" onclick="openTractiveModal()">📡 Connect Tractive — coming later</button>
     <div class="lp-tracker-hint">Got an AirTag/SmartTag/Fi/Findster already? Use "+ link device" below.</div>
   </div>`;
 }
@@ -609,41 +608,11 @@ window.openTractiveModal = function() {
 };
 window.closeTractiveModal = function() {
   document.getElementById('tractiveModalOverlay').classList.remove('show');
-  document.getElementById('tractivePassword').value = '';
 };
-window.submitTractiveSync = async function() {
-  const email = document.getElementById('tractiveEmail').value.trim();
-  const password = document.getElementById('tractivePassword').value;
+// Switched off: no Tractive password is collected or sent anywhere.
+window.submitTractiveSync = function() {
   const status = document.getElementById('tractiveStatus');
-  if (!email || !password) {
-    status.textContent = 'Enter both email and password.';
-    status.className = 'lp-tv-status err';
-    return;
-  }
-  status.textContent = '🐾 Syncing with Tractive...';
-  status.className = 'lp-tv-status';
-  try {
-    const res = await fetch(TRACTIVE_RELAY_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Sync failed');
-    document.getElementById('tractivePassword').value = '';
-    if (!data.pets || !data.pets.length) {
-      status.textContent = 'Logged in, but no pet locations came back.';
-      status.className = 'lp-tv-status err';
-      return;
-    }
-    mergeTractivePets(data.pets);
-    status.textContent = `✅ Synced ${data.pets.length} pet(s)!`;
-    status.className = 'lp-tv-status ok';
-    setTimeout(closeTractiveModal, 1200);
-  } catch (e) {
-    status.textContent = e.message || 'Sync failed — try again.';
-    status.className = 'lp-tv-status err';
-  }
+  if (status) status.textContent = 'Tractive connection is coming later.';
 };
 
 function mergeTractivePets(tractivePets) {
@@ -680,7 +649,7 @@ function lpRenderGPS() {
     const lat = p.lat ? p.lat.toFixed(4) : '—';
     const lon = p.lon ? p.lon.toFixed(4) : '—';
     return `<div class="lp-gps-card">
-      <div class="lp-gps-name">${em} ${p.name} <span class="lp-coords">&middot; ${lat}&deg;N ${lon}&deg;W</span></div>
+      <div class="lp-gps-name">${em} ${escHtml(p.name)} <span class="lp-coords">&middot; ${lat}&deg;N ${lon}&deg;W</span></div>
       <div class="lp-gps-row">
         <span class="lp-gps-btn" onclick="lpToggleGPS(${i})">${hasGPS ? '📍 GPS on' : '📍 GPS off'}</span>
         <span class="lp-gps-btn device ${hasDevice ? 'linked' : ''}" onclick="lpLinkDevice(${i})">${hasDevice ? '⚡ tracking' : '+ link device'}</span>
@@ -717,7 +686,7 @@ window.lpLinkDevice = function(i) {
 function lpRenderNotebook(el) {
   const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
   const petOptions = pets.map((p, i) =>
-    `<option value="${i}">${(typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾'} ${p.name}</option>`
+    `<option value="${i}">${(typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾'} ${escHtml(p.name)}</option>`
   ).join('');
 
   const noteCards = lpNotes.slice().reverse().map((n, ri) => {
@@ -727,7 +696,7 @@ function lpRenderNotebook(el) {
     const goBtn = n.petIdx >= 0 ? `<span class="lp-tile-btn" style="margin-left:5px" onclick="if(typeof panToPet==='function')panToPet(${n.petIdx})">🎯</span>` : '';
     return `<div class="lp-note">
       <div class="lp-note-head">
-        <span class="lp-note-label">🐾 ${pet}${goBtn}</span>
+        <span class="lp-note-label">🐾 ${escHtml(pet)}${goBtn}</span>
         <button class="lp-note-del" onclick="lpDeleteNote(${i})">✕</button>
       </div>
       <div class="lp-note-txt">${lpEscape(n.text)}</div>
@@ -777,15 +746,15 @@ function lpRenderLost() {
     const isLost = p.lost || false;
     if (isLost) {
       return `<button class="lp-lost-pet-btn active-lost" onclick="lpMarkFound(${i})">
-        ${em} ${p.name} <span style="margin-left:auto;font-size:.75rem">🔴 LOST</span>
+        ${em} ${escHtml(p.name)} <span style="margin-left:auto;font-size:.75rem">🔴 LOST</span>
       </button>
       <div class="lp-tile-btns" style="margin:-2px 0 6px">
         <span class="lp-tile-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Last seen</span>
       </div>
-      <button class="lp-found-btn" onclick="lpMarkFound(${i})">✅ ${p.name} IS FOUND!</button>`;
+      <button class="lp-found-btn" onclick="lpMarkFound(${i})">✅ ${escHtml(p.name)} IS FOUND!</button>`;
     }
     return `<button class="lp-lost-pet-btn" onclick="lpMarkLost(${i})">
-      ${em} ${p.name} <span style="margin-left:auto;font-size:.75rem;color:rgba(255,80,80,0.4)">mark lost →</span>
+      ${em} ${escHtml(p.name)} <span style="margin-left:auto;font-size:.75rem;color:rgba(255,80,80,0.4)">mark lost →</span>
     </button>`;
   }).join('');
 
@@ -806,7 +775,8 @@ window.lpMarkLost = function(i) {
   if (typeof S === 'undefined') return;
   const pet = S.pets[i];
   if (!pet) return;
-  if (!confirm(`Mark ${pet.name} as LOST? This will alert the whole Snout First network.`)) return;
+  const willShare = typeof isSharing === 'function' && isSharing() && (!pet.registered_by || pet.registered_by === getUid());
+  if (!confirm(`Mark ${pet.name} as LOST? ` + (willShare ? 'This will alert the whole Snout First network.' : 'Sharing is not on, so this is saved on this device only.'))) return;
 
   pet.lost = true;
   pet.lostAt = Date.now();
@@ -815,7 +785,8 @@ window.lpMarkLost = function(i) {
 
   if (typeof savePets === 'function') savePets();
   if (typeof activateLostMode === 'function') activateLostMode(pet);
-  if (typeof toast === 'function') toast(`🔴 ${pet.name} marked as LOST. Network alerted.`);
+  const alerted = typeof isSharing === 'function' && isSharing() && (!pet.registered_by || pet.registered_by === getUid());
+  if (typeof toast === 'function') toast(`🔴 ${pet.name} marked as LOST. ` + (alerted ? 'Network alerted.' : 'Saved on this device only.'));
 
   lpRender();
 
@@ -832,6 +803,7 @@ window.lpMarkFound = function(i) {
   if (!pet) return;
   pet.lost = false;
   pet.foundAt = Date.now();
+  if (typeof clearLostFromFirebase === 'function') clearLostFromFirebase(pet);
   if (typeof savePets === 'function') savePets();
   if (typeof deactivateLostMode === 'function') deactivateLostMode();
   if (typeof toast === 'function') toast(`🎉 ${pet.name} is HOME SAFE! 🐾`);

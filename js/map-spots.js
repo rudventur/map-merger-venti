@@ -341,6 +341,7 @@ function saveNewSpot() {
     reactions: {},   // { emoji: count }
     comments: [],     // [{text, timestamp}]
     linkedPetIndex: null, // future: pet linking
+    owner_uid: typeof getUid === 'function' ? getUid() : '', // who made it (spots stay on this device for now)
   };
   S.spots.push(spot);
   saveSpots();
@@ -413,7 +414,7 @@ function addSpotComment(id) {
   const input = document.getElementById('spotCommentInput');
   const text = (input.value || '').trim();
   if (!text) return;
-  spot.comments.push({ text, timestamp: Date.now() });
+  spot.comments.push({ text, timestamp: Date.now(), owner_uid: typeof getUid === 'function' ? getUid() : '' });
   saveSpots();
   input.value = '';
   openSpotDetail(spot, parseInt(document.getElementById('spotDetail').style.left), parseInt(document.getElementById('spotDetail').style.top));
