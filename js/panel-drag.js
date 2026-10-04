@@ -203,9 +203,10 @@ function dropPetOnPanel(x, y, petIdx) {
   if (lp) {
     const rect = lp.getBoundingClientRect();
     if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      // Already in S.pets — just refresh left panel and notify
+      // Dropped on the dashboard: make sure it is on it (puts it back if it was taken off)
+      if (window.sfDash) sfDash.putBack(pet);
       if (typeof lpRefresh === 'function') lpRefresh();
-      if (typeof toast === 'function') toast(`🐾 ${pet.name} is in your litter panel!`);
+      if (typeof toast === 'function') toast(`🐾 ${pet.name} is on your dashboard`);
       dropped = true;
     }
   }
@@ -213,7 +214,8 @@ function dropPetOnPanel(x, y, petIdx) {
   if (!dropped && rp) {
     const rect = rp.getBoundingClientRect();
     if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-      if (typeof toast === 'function') toast(`🐾 ${pet.name} added to friends panel!`);
+      // Every pet is always in the lists already
+      if (typeof toast === 'function') toast(`🐾 ${pet.name} is in the lists`);
       dropped = true;
     }
   }

@@ -206,7 +206,8 @@ setInterval(spotsCleanupExpired, 60000);
   // moves with the panel (collapsed vs expanded) instead of sitting on top of it.
   function positionSpotFab() {
     const lp = document.getElementById('lpRoot');
-    fab.style.left = lp ? (lp.getBoundingClientRect().right + 8) + 'px' : '10px';
+    const phone = window.matchMedia('(max-width: 700px)').matches;  // panels are bottom sheets there
+    fab.style.left = (lp && !phone) ? (lp.getBoundingClientRect().right + 8) + 'px' : '10px';
   }
   positionSpotFab();
   // panel-left.js's own init() is itself deferred to DOMContentLoaded (its script

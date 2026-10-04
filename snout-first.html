@@ -11,7 +11,8 @@ body{background:#1a120a;font-family:'VT323',monospace;overflow:hidden;width:100v
 canvas#snoutMap{position:fixed;inset:0;z-index:1}
 
 /* ── HUD ── */
-.hud{position:fixed;top:0;left:0;right:0;height:50px;background:rgba(26,18,10,0.95);border-bottom:3px solid #cc8833;display:flex;align-items:center;gap:8px;padding:0 10px;z-index:1000;box-shadow:0 0 20px rgba(204,136,51,0.2)}
+:root{--bar-h:50px;--sheet-h:62vh;--strip-h:40px}
+.hud{position:fixed;top:0;left:0;right:0;height:var(--bar-h);background:rgba(26,18,10,0.95);border-bottom:3px solid #cc8833;display:flex;align-items:center;gap:8px;padding:0 10px;z-index:1000;box-shadow:0 0 20px rgba(204,136,51,0.2)}
 .htitle{font-family:'Bubblegum Sans',cursive;font-size:1.1rem;color:#ffcc66;text-shadow:0 0 8px rgba(255,204,102,0.4);white-space:nowrap;cursor:pointer}
 .htitle:hover{text-shadow:0 0 14px rgba(255,204,102,0.7)}
 .hsep{width:2px;height:26px;background:rgba(204,136,51,0.25);flex-shrink:0}
@@ -20,13 +21,21 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 .hbtn.active{background:#cc8833;color:#1a120a;box-shadow:0 0 10px rgba(204,136,51,0.4)}
 .hbtn.paw{border-color:#88cc44;color:#88cc44}.hbtn.paw:hover,.hbtn.paw.active{background:#88cc44;color:#1a120a}
 .hbtn.red{border-color:#cc4444;color:#ff6666}.hbtn.red:hover{background:#cc4444;color:#fff}
-.csearch{display:flex;gap:4px;flex:1;max-width:180px}
-.cinput{flex:1;background:rgba(0,0,0,0.4);color:#ffcc66;border:2px solid #cc8833;padding:4px 8px;border-radius:12px;font-family:'VT323',monospace;font-size:.95rem;outline:none;min-width:60px}
-.cinput:focus{border-color:#ffcc66}
-.cinput::placeholder{color:rgba(255,204,102,0.3);font-style:italic}
+/* dashboard bar: title · sharing note · "sniff sniff" search · tools */
+.hbtns{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.csearch{display:flex;align-items:center;gap:4px;flex:1 1 auto;min-width:180px;max-width:440px;background:rgba(0,0,0,0.4);border:2px solid #cc8833;border-radius:12px;padding:1px 3px 1px 8px}
+.csearch:focus-within{border-color:#ffcc66;box-shadow:0 0 10px rgba(255,204,102,0.25)}
+.csearch-icon{font-size:.95rem;opacity:.8}
+.cinput{flex:1;background:none;color:#ffcc66;border:none;padding:3px 2px;font-family:'VT323',monospace;font-size:1.05rem;outline:none;min-width:60px}
+.cinput::placeholder{color:rgba(255,204,102,0.4);font-style:italic}
+.csearch-count{display:none;color:#88cc44;font-size:.85rem;white-space:nowrap}
+.csearch-clear{visibility:hidden;background:none;border:1px solid rgba(204,136,51,0.5);color:#cc8833;border-radius:8px;cursor:pointer;font-size:.75rem;padding:0 5px;line-height:1.3}
+.csearch-clear:hover{background:#cc8833;color:#1a120a}
+.csearch .hbtn{padding:2px 7px;font-size:.85rem;border-width:1px}
+.hud .net-note{border:1px solid rgba(255,204,102,0.35);border-radius:10px;padding:1px 8px;margin:0;font-size:.85rem;white-space:nowrap;flex-shrink:0;background:rgba(0,0,0,0.25)}
 
 /* ── STATS ── */
-.stats{position:fixed;top:56px;left:10px;z-index:900;display:flex;flex-direction:column;gap:3px}
+.stats{position:fixed;top:calc(var(--bar-h) + 6px);left:calc(var(--lp-edge, 0px) + 10px);z-index:900;display:flex;flex-direction:column;gap:3px}
 .spill{background:rgba(26,18,10,0.9);border:1px solid rgba(204,136,51,0.2);border-radius:8px;padding:4px 8px;font-family:'VT323',monospace;font-size:.85rem;color:rgba(255,204,102,0.6);white-space:nowrap}
 .spill b{color:#88cc44}
 
@@ -76,7 +85,7 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 .pet-card .mood{font-size:1rem;margin-top:4px}
 
 /* ── SIDE PANEL (pack/trail) ── */
-.side-panel{position:fixed;top:54px;left:0;bottom:0;width:280px;background:rgba(26,18,10,0.97);border-right:3px solid #cc8833;z-index:950;display:none;overflow-y:auto;padding:10px}
+.side-panel{position:fixed;top:var(--bar-h);left:0;bottom:0;width:280px;max-width:100vw;background:rgba(26,18,10,0.97);border-right:3px solid #cc8833;z-index:980;display:none;overflow-y:auto;padding:10px}
 .side-panel.show{display:block}
 .side-panel h3{font-family:'Bubblegum Sans',cursive;color:#ffcc66;font-size:1rem;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
 .side-panel .close-btn{background:none;border:1px solid #cc8833;color:#cc8833;padding:2px 6px;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:.2rem;border-radius:4px}
@@ -94,7 +103,7 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 .sniff .wag-count{color:#88cc44;font-size:.85rem}
 
 /* ── ZOOM ── */
-.zoom-axis{position:fixed;top:56px;right:8px;z-index:900;display:flex;flex-direction:column;align-items:center;background:rgba(26,18,10,0.95);border:2px solid rgba(204,136,51,0.3);border-radius:12px;padding:4px 3px;width:38px}
+.zoom-axis{position:fixed;top:calc(var(--bar-h) + 62px);right:calc(var(--rp-edge, 0px) + 12px);z-index:900;display:flex;flex-direction:column;align-items:center;background:rgba(26,18,10,0.95);border:2px solid rgba(204,136,51,0.3);border-radius:12px;padding:4px 3px;width:38px}
 .zoom-axis .zbtn{width:28px;height:24px;background:rgba(0,0,0,0.4);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all .12s;margin:1px 0}
 .zoom-axis .zbtn:hover{background:#cc8833;color:#1a120a}
 .zoom-axis .zlev{font-family:'Press Start 2P',monospace;font-size:.16rem;color:#ffcc66;margin:3px 0}
@@ -123,7 +132,7 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 .view-submenu button{font-size:.88rem;color:rgba(255,204,102,0.8)}
 
 /* ── ACCOUNT HUB (ported from windows13's useRbox v2) ── */
-#sfuHub{position:fixed;top:60px;right:10px;z-index:1600;font-family:'VT323',monospace}
+#sfuHub{position:fixed;top:calc(var(--bar-h) + 10px);right:10px;z-index:1600;font-family:'VT323',monospace}
 #sfuCircle{width:44px;height:44px;border-radius:50%;background:rgba(26,18,10,0.95);border:3px solid #cc8833;display:flex;align-items:center;justify-content:center;font-size:1.4rem;cursor:pointer;box-shadow:0 0 16px rgba(204,136,51,0.35);transition:all .2s}
 #sfuCircle:hover{transform:scale(1.08) rotate(-4deg);box-shadow:0 0 26px rgba(204,136,51,0.55)}
 #sfuPanel{position:absolute;top:52px;right:0;width:280px;max-height:80vh;overflow-y:auto;background:rgba(26,18,10,0.98);border:3px solid #cc8833;border-radius:14px;padding:14px;box-shadow:0 4px 28px rgba(0,0,0,0.5)}
@@ -164,8 +173,40 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 /* ── D-PAD ── */
 .map-credit{position:fixed;bottom:0;left:50%;transform:translateX(-50%);z-index:960;background:rgba(26,18,10,0.8);color:rgba(255,204,102,0.75);font-family:'VT323',monospace;font-size:.75rem;padding:1px 8px;border-radius:8px 8px 0 0;white-space:nowrap}
 .map-credit a{color:#ffcc66}
-.net-note{color:#ffcc66;cursor:help;margin-right:6px;padding-right:6px;border-right:1px solid rgba(255,204,102,0.3)}
-@media (max-width:600px){.map-credit{bottom:32px;border-radius:8px;white-space:normal;width:max-content;max-width:96vw;text-align:center;font-size:.7rem}}
+.net-note{color:#ffcc66;cursor:help}
+
+/* ── PANEL HEADERS (dashboard on the left, lists on the right) ── */
+.sf-phead{display:flex;align-items:center;gap:4px;padding:4px 8px;border-bottom:1.5px solid rgba(204,136,51,0.35);flex-shrink:0;background:rgba(204,136,51,0.06)}
+.sf-ph-btn{background:none;border:none;color:#ffcc66;font-family:'Press Start 2P',monospace;font-size:.5rem;letter-spacing:1px;cursor:default;padding:3px 0;white-space:nowrap;text-align:left}
+.sf-ph-btn b{font-family:'VT323',monospace;font-size:.85rem;color:#88cc44;font-weight:normal;margin-left:4px;letter-spacing:0}
+.sf-ph-close{display:none;margin-left:auto;background:none;border:1px solid #cc8833;color:#cc8833;border-radius:6px;cursor:pointer;font-size:.8rem;padding:0 8px}
+.lp-root .sf-ph-right,.rp-root .sf-ph-left{display:none}
+.lp-root.lp-collapsed .sf-phead,.rp-root.rp-collapsed .sf-phead{display:none}
+.sf-empty{color:rgba(255,204,102,0.5);text-align:center;padding:14px 8px;font-size:.85rem;line-height:1.35;border:1.5px dashed rgba(204,136,51,0.3);border-radius:9px;margin:6px 0}
+
+@media (max-width:700px){
+  :root{--bar-h:92px}
+  .hud{flex-wrap:wrap;align-content:center;row-gap:5px;padding:4px 8px}
+  .hud .hsep{display:none}
+  .htitle{font-size:1rem}
+  .hud .net-note{font-size:.78rem;padding:1px 6px}
+  .hbtns{order:2;flex:1 1 0;min-width:0;overflow-x:auto;scrollbar-width:none}
+  .hbtns::-webkit-scrollbar{height:0}
+  .csearch{order:3;flex:1 1 100%;max-width:none}
+  .map-credit{bottom:calc(var(--strip-h) + 4px);border-radius:8px;white-space:normal;width:max-content;max-width:96vw;text-align:center;font-size:.7rem}
+  body.sf-sheet-left .map-credit,body.sf-sheet-right .map-credit{bottom:calc(var(--sheet-h) + 4px)}
+  body.sf-sheet-left .dpad,body.sf-sheet-right .dpad,body.sf-sheet-left .spot-fab,body.sf-sheet-right .spot-fab{display:none}
+  .dpad{bottom:calc(var(--strip-h) + 34px)}
+  .spot-fab{bottom:calc(var(--strip-h) + 34px) !important}
+  /* sheet tabs: closed = two half-width strips at the bottom; open = one sheet */
+  .lp-root.lp-collapsed .sf-phead,.rp-root.rp-collapsed .sf-phead{display:flex;height:100%;justify-content:center}
+  .sf-phead{padding:0 8px;min-height:var(--strip-h)}
+  .sf-ph-btn{cursor:pointer;font-size:.55rem;padding:8px 6px;border-radius:8px}
+  body.sf-sheet-left .lp-root .sf-ph-right,body.sf-sheet-right .rp-root .sf-ph-left{display:inline-block;opacity:.55}
+  body.sf-sheet-left .sf-ph-left,body.sf-sheet-right .sf-ph-right{background:rgba(204,136,51,0.2)}
+  body.sf-sheet-left .sf-ph-close,body.sf-sheet-right .sf-ph-close{display:inline-block}
+  body.sf-sheet-left .rp-root,body.sf-sheet-right .lp-root{display:none}
+}
 .empty-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:850;background:rgba(26,18,10,0.92);border:2px dashed rgba(204,136,51,0.6);border-radius:14px;padding:12px 16px;color:#ffcc66;font-family:'VT323',monospace;font-size:1rem;text-align:center;pointer-events:none;display:none;max-width:80vw}
 .dpad{position:fixed;bottom:50px;right:10px;z-index:800;display:grid;grid-template-columns:32px 32px 32px;grid-template-rows:32px 32px 32px;gap:2px}
 .db{background:rgba(26,18,10,0.88);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .1s}
@@ -183,21 +224,28 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 <body>
 
 <!-- HUD -->
-<div class="hud">
+<!-- DASHBOARD BAR: title, sharing note, "sniff sniff" pet search (filters both panels), tools -->
+<div class="hud" id="sfBar">
   <div class="htitle" onclick="toggleViewMenu(event)" title="View options" style="cursor:pointer">&#128062; Snout First</div>
+  <span class="net-note" id="netNote" style="display:none"></span>
   <div class="hsep"></div>
-  <div class="csearch">
-    <input class="cinput" id="searchInput" type="text" placeholder="Sniff sniff...">
-    <button class="hbtn" onclick="searchPlace()">GO</button>
+  <div class="csearch" role="search">
+    <span class="csearch-icon" aria-hidden="true">&#128067;</span>
+    <input class="cinput" id="searchInput" type="text" placeholder="sniff sniff" autocomplete="off" spellcheck="false" aria-label="Search pets by name, breed or tag. Press Enter to go to the first match, or to look up a place.">
+    <span class="csearch-count" id="sfSearchCount" aria-live="polite"></span>
+    <button class="csearch-clear" id="sfSearchClear" type="button" title="Clear the search">&#10005;</button>
+    <button class="hbtn" type="button" onclick="searchPlace()" title="Look up this text as a place and move the map there">&#128506; place</button>
   </div>
   <div class="hsep"></div>
-  <button class="hbtn paw" onclick="togglePinPet()">&#128062; PIN PET</button>
-  <button class="hbtn spot" onclick="toggleSpotDropMode()">&#128205; SPOT</button>
-  <button class="hbtn" onclick="toggleTrail()">&#128017; TRAIL</button>
-  <button class="hbtn" onclick="togglePack()">&#128058; PACK</button>
-  <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown">&#129313; SHOW ME</button>
-  <div class="redirect-wrap">
-    <button class="hbtn" onclick="openRedirectMenu(event)">&#128257; Redirect</button>
+  <div class="hbtns">
+    <button class="hbtn paw" onclick="togglePinPet()">&#128062; PIN PET</button>
+    <button class="hbtn spot" onclick="toggleSpotDropMode()">&#128205; SPOT</button>
+    <button class="hbtn" onclick="toggleTrail()">&#128017; TRAIL</button>
+    <button class="hbtn" onclick="togglePack()">&#128058; PACK</button>
+    <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown">&#129313; SHOW ME</button>
+    <div class="redirect-wrap">
+      <button class="hbtn" onclick="openRedirectMenu(event)">&#128257; Redirect</button>
+    </div>
   </div>
 </div>
 
@@ -403,6 +451,7 @@ function sfuRepositionHub() {
   const hub = document.getElementById('sfuHub');
   const rp = document.getElementById('rpRoot');
   if (!hub) return;
+  if (window.matchMedia('(max-width: 700px)').matches) { hub.style.right = '10px'; return; }
   if (rp) {
     const rect = rp.getBoundingClientRect();
     hub.style.right = (window.innerWidth - rect.left + 8) + 'px';
@@ -521,7 +570,7 @@ function sfuDeleteSpot(id) {
 
 function sfuClearData() {
   if (!confirm('Reset all local Snout First data on this device? This clears pets pinned only in this browser, your notes, saved spots, and settings. Pets already saved to the network are not affected.')) return;
-  ['snoutfirst_pets','snoutfirst_sniffs','snoutfirst_pets_v2','sf_notes','sf_home','sf_lost_pets','sf_vets_custom','sf_food_custom','sf_walk_spots','sf_owner_signature','rv_username','rv_local_uid','sf_walks','sf_pet_photos'].forEach(k => localStorage.removeItem(k));
+  ['snoutfirst_pets','snoutfirst_sniffs','snoutfirst_pets_v2','sf_notes','sf_home','sf_lost_pets','sf_vets_custom','sf_food_custom','sf_walk_spots','sf_owner_signature','rv_username','rv_local_uid','sf_walks','sf_pet_photos','sf_dashboard'].forEach(k => localStorage.removeItem(k));
   if (typeof toast === 'function') toast('\u{1F5D1}\u{FE0F} Local data cleared! Reloading...');
   setTimeout(() => location.reload(), 900);
 }
@@ -535,9 +584,9 @@ function sfuClearData() {
   <div class="spill">&#129313; Clowns: <b id="clownCount">0</b></div>
 </div>
 
-<!-- SHARING NOTE + MAP CREDITS (credit required by the OpenStreetMap tile rules).
-     Sits above the side panels so it is never hidden. -->
-<div class="map-credit"><span class="net-note" id="netNote" style="display:none"></span>Map &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> &middot; search: Nominatim &middot; vets: Overpass</div>
+<!-- MAP CREDITS (credit required by the OpenStreetMap tile rules). The sharing
+     note ("This device only" / "Shared map on") now sits in the dashboard bar. -->
+<div class="map-credit">Map &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a> &middot; search: Nominatim &middot; vets: Overpass</div>
 
 <!-- HONEST EMPTY STATE (no invented pets) -->
 <div class="empty-hint" id="emptyHint">No pets on the map yet.<br>Tap &#128062; PIN PET, then tap the map to add yours.</div>
@@ -642,6 +691,7 @@ function sfuClearData() {
 
 <!-- Snout First modules -->
 <script src="js/safe-text.js"></script>
+<script src="js/dashboard.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/distance.js"></script>
 <script src="js/pet-registration.js"></script>
@@ -1294,9 +1344,13 @@ function panToRandom() {
   if (S.pets.length) panToPet(Math.floor(Math.random() * S.pets.length));
 }
 
-// ── Search ──
+// ── Search ("sniff sniff") ──
+// Typing filters the pets in both panels (js/dashboard.js). Enter goes to the
+// first matching pet; if no pet matches, the text is looked up as a place.
 document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') searchPlace();
+  if (e.key !== 'Enter') return;
+  if (window.sfDash && sfDash.focusFirstMatch()) return;
+  searchPlace();
 });
 
 async function searchPlace() {
@@ -1760,6 +1814,7 @@ setTimeout(initFirebaseIntegration, 500);
 <script src="js/lost-social.js"></script>
 <script src="js/panel-left.js"></script>
 <script src="js/panel-right.js"></script>
+<script src="js/vets.js"></script>
 <script src="js/panel-drag.js"></script>
 <script src="js/doglost-embed.js"></script>
 <script src="js/map-spots.js"></script>

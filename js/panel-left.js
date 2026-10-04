@@ -1,7 +1,9 @@
 // ═══════════════════════════════════════════════════════════════
-//  panel-left.js — Snout First Left Panel
-//  Tabs: My Pets · GPS · Notebook · 🔴 LOST
-//  Additive only — reads S.pets from main, writes nothing upstream
+//  panel-left.js — Snout First Left Panel: the DASHBOARD
+//  Tabs: Pets (dashboard cards) · GPS · Notebook · 🔴 LOST
+//  Each dashboard card has "✕ off dashboard". That only hides the card on
+//  this device (js/dashboard.js); the pet stays on the map and in the lists
+//  on the right, where it can be put back.
 // ═══════════════════════════════════════════════════════════════
 
 (function () {
@@ -11,8 +13,8 @@ function injectLeftPanel() {
   const html = `
   <style>
     .lp-root {
-      position: fixed; top: 50px; left: 0; bottom: 0;
-      width: 220px;
+      position: fixed; top: var(--bar-h, 50px); left: 0; bottom: 0;
+      width: 250px;
       background: rgba(26,18,10,0.94);
       border-right: 2px solid #cc8833;
       z-index: 950;
@@ -99,12 +101,23 @@ function injectLeftPanel() {
     .lp-pt-dot.lost { background: #ff3333; animation: lp-pulse 1s infinite; }
     @keyframes lp-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
     .lp-pt-breed { color: rgba(255,204,102,0.4); font-size: .68rem; margin-top: 2px; }
-    .lp-pt-opts {
-      position: absolute; top: 4px; right: 5px;
-      background: none; border: none;
-      color: rgba(204,136,51,0.35); cursor: pointer; font-size: .8rem;
+    .lp-pet-tile.pinned { border-color: rgba(255,204,102,0.55); }
+    .lp-pt-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+    .lp-pt-tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+    .lp-pt-tag {
+      background: rgba(136,204,68,0.1); border: 1px solid rgba(136,204,68,0.28);
+      color: #88cc44; padding: 0 5px; border-radius: 6px; font-size: .62rem;
+      max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
     }
-    .lp-pt-opts:hover { color: #cc8833; }
+    .lp-off {
+      margin-left: auto; font-size: .62rem; padding: 2px 6px; border-radius: 5px;
+      cursor: pointer; font-family: 'VT323', monospace;
+      border: 1px solid rgba(255,204,102,0.3); background: rgba(0,0,0,0.3);
+      color: rgba(255,204,102,0.7);
+    }
+    .lp-off:hover { border-color: #ff6666; color: #ff8888; background: rgba(255,60,60,0.1); }
+    .lp-dash-sum { color: rgba(255,204,102,0.5); font-size: .72rem; margin: 0 2px 4px; }
+    .lp-link { color: #88cc44; cursor: pointer; text-decoration: underline; }
 
     /* GPS tab — tracker ecosystem links */
     .lp-tracker-section { margin-bottom: 8px; }
@@ -248,7 +261,7 @@ function injectLeftPanel() {
     }
 
     /* Per-tile quick action buttons */
-    .lp-tile-btns { display: flex; gap: 4px; margin-top: 4px; }
+    .lp-tile-btns { display: flex; gap: 4px; margin-top: 4px; align-items: center; }
     .lp-tile-btn {
       font-size: .62rem; padding: 2px 6px; border-radius: 5px;
       cursor: pointer; font-family: 'VT323', monospace;
@@ -275,11 +288,16 @@ function injectLeftPanel() {
     /* Drop zone */
     .lp-drop-zone {
       border: 2px dashed rgba(136,204,68,0.0);
-      border-radius: 9px; padding: 10px;
+      border-radius: 9px; padding: 0; height: 0; overflow: hidden;
       text-align: center;
       color: rgba(136,204,68,0); font-size: .72rem;
-      transition: all .2s; margin: 4px 0;
+      transition: all .2s; margin: 0;
       font-family: 'VT323', monospace;
+    }
+    /* only takes space while a pet from the lists is being dragged */
+    .sf-dragging .lp-drop-zone {
+      height: auto; padding: 12px; margin: 4px 0;
+      border-color: rgba(136,204,68,0.35); color: rgba(136,204,68,0.8);
     }
     .lp-drop-zone.active {
       border-color: rgba(136,204,68,0.5);
@@ -312,6 +330,23 @@ function injectLeftPanel() {
     .lp-tv-status.ok { color: #88cc44; }
     .lp-tv-btns { display: flex; gap: 6px; margin-top: 6px; }
     .lp-tv-btns button { flex: 1; }
+
+    /* Phones: the panel is a bottom sheet (see js/dashboard.js) */
+    @media (max-width: 700px) {
+      .lp-root {
+        top: auto; bottom: 0; left: 0; right: 0; width: 100%;
+        height: var(--sheet-h, 62vh); transition: none; z-index: 970;
+        border-right: none; border-top: 2px solid #cc8833;
+      }
+      .lp-root.lp-collapsed {
+        width: 50%; right: auto; height: var(--strip-h, 40px);
+        border-right: 1px solid rgba(204,136,51,0.4);
+      }
+      .lp-root.lp-collapsed .lp-inner { display: none; }
+      .lp-toggle { display: none; }
+      .lp-tab { font-size: .85rem; padding: 7px 10px; }
+      .lp-tile-btn, .lp-off { font-size: .8rem; padding: 4px 8px; }
+    }
   </style>
 
   <div class="lp-tv-overlay" id="tractiveModalOverlay">
@@ -326,7 +361,12 @@ function injectLeftPanel() {
   </div>
 
   <div class="lp-root" id="lpRoot">
-    <div class="lp-toggle" id="lpToggleBtn">◀</div>
+    <div class="lp-toggle" id="lpToggleBtn" title="Show or hide the dashboard">◀</div>
+    <div class="sf-phead">
+      <button class="sf-ph-btn sf-ph-left" type="button" data-sheet="left">📋 DASHBOARD<b data-count="dash"></b></button>
+      <button class="sf-ph-btn sf-ph-right" type="button" data-sheet="right">📚 LISTS<b data-count="all"></b></button>
+      <button class="sf-ph-close" type="button" data-sheet="close" title="Close">▼</button>
+    </div>
     <div class="lp-inner">
       <div class="lp-tabs" id="lpTabBar">
         <div class="lp-tab active" data-lptab="pets">🐾 Pets</div>
@@ -343,7 +383,6 @@ function injectLeftPanel() {
 }
 
 // ── State ──
-let lpOpen = true;
 let lpActiveTab = 'pets';
 let lpNotes = JSON.parse(localStorage.getItem('sf_notes') || '[]');
 
@@ -484,12 +523,13 @@ function lpMountTabMinimap() {
   const emoji = p => (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
 
   if (lpActiveTab === 'pets') {
-    const markers = pets.filter(p => typeof p.lat === 'number').map(p => ({
+    const shown = lpDashboardShown();
+    const markers = shown.filter(p => typeof p.lat === 'number').map(p => ({
       lat: p.lat, lon: p.lon ?? p.lng,
       color: p.lost ? '#ff3333' : (p.status === 'walking' ? '#ffcc66' : '#88cc44'),
       emoji: emoji(p), pulse: !!p.lost
     }));
-    lpMountMinimap(lpBoundsCenter(pets), markers, 'No pets on the map yet 🐾');
+    lpMountMinimap(lpBoundsCenter(shown), markers, pets.length ? 'No pets on the dashboard to show' : 'No pets on the map yet 🐾');
   } else if (lpActiveTab === 'gps') {
     const markers = pets.filter(p => typeof p.lat === 'number').map(p => ({
       lat: p.lat, lon: p.lon ?? p.lng,
@@ -516,11 +556,11 @@ function lpMountTabMinimap() {
 
 // ── Toggle ──
 function lpToggle() {
-  lpOpen = !lpOpen;
   const root = document.getElementById('lpRoot');
-  const btn = document.getElementById('lpToggleBtn');
-  root.classList.toggle('lp-collapsed', !lpOpen);
-  btn.textContent = lpOpen ? '◀' : '▶';
+  const open = root.classList.contains('lp-collapsed');
+  if (window.sfDash) { sfDash.setPanelOpen('left', open); return; }
+  root.classList.toggle('lp-collapsed', !open);
+  document.getElementById('lpToggleBtn').textContent = open ? '◀' : '▶';
 }
 
 // ── Tab switch ──
@@ -544,35 +584,93 @@ function lpRender() {
   lpBindContent();
 }
 
-// ── Pets tab ──
+// ── Pets tab: the DASHBOARD ──
+// Pets not taken off the dashboard, pinned ones first, narrowed by the search.
+function lpDashboardShown() {
+  const D = window.sfDash;
+  const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
+  if (!D) return pets;
+  return D.dashboardPets().filter(D.matches);
+}
+
+function lpDashCard(p) {
+  const D = window.sfDash;
+  const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
+  const dotClass = p.lost ? 'lost' : (p.status === 'walking' ? 'walk' : '');
+  const pinned = D ? D.isPinned(p) : false;
+  const tags = (Array.isArray(p.tags) ? p.tags : []).slice(0, 5)
+    .map(t => `<span class="lp-pt-tag">${escHtml(t)}</span>`).join('');
+  return `<div class="lp-pet-tile${pinned ? ' pinned' : ''}" data-key="${escHtml(D ? D.key(p) : '')}" title="Show ${escHtml(p.name)} on the map">
+    <div class="lp-pt-name">
+      <span class="lp-pt-dot ${dotClass}"></span>
+      <span class="lp-pt-label">${em} ${escHtml(p.name)}</span>
+      ${pinned ? '<span title="Pinned to the top of the dashboard">📌</span>' : ''}
+      ${p.lost ? '<span style="color:#ff3333;font-size:.65rem;margin-left:4px">LOST</span>' : ''}
+    </div>
+    <div class="lp-pt-breed">${escHtml(p.breed || p.species || '')} · ${p.lost ? '🔴 LOST' : escHtml(p.status || 'home')}</div>
+    ${tags ? `<div class="lp-pt-tags">${tags}</div>` : ''}
+    <div class="lp-tile-btns">
+      <span class="lp-tile-btn" data-act="go">🎯 Go</span>
+      ${p.lost
+        ? '<span class="lp-tile-btn found" data-act="found">✅ Found</span>'
+        : '<span class="lp-tile-btn lost" data-act="lost">🔴 Lost</span>'}
+      <button class="lp-off" type="button" data-act="off" title="Take off the dashboard on this device. The pet stays on the map and in Lists.">✕ off dashboard</button>
+    </div>
+  </div>`;
+}
+
 function lpRenderPets() {
+  const D = window.sfDash;
   const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
   const minimap = '<div class="lp-minimap-wrap"><canvas id="lpMinimap"></canvas><div class="lp-minimap-empty"></div></div>';
   if (!pets.length) {
-    return minimap +
-      '<div style="color:rgba(255,204,102,0.3);text-align:center;padding:16px;font-style:italic;font-size:.8rem">No pets yet...<br>Drop a pin or register one!</div>' +
-      '<div class="lp-drop-zone" id="lpDropZone">drop from map or friends panel</div>';
+    return minimap + '<div class="sf-empty" id="lpDashEmpty">No pets yet.<br>Tap 🐾 PIN PET (or "+ register a pet" below), then tap the map to add yours.</div>';
   }
-  return minimap + '<div class="lp-drop-zone" id="lpDropZone">drop from map or friends panel</div>' +
-    pets.map((p, i) => {
-      const em = (typeof SPECIES_EM !== 'undefined' ? SPECIES_EM[p.species] : '') || '🐾';
-      const dotClass = p.lost ? 'lost' : (p.status === 'walking' ? 'walk' : '');
-      return `<div class="lp-pet-tile" data-pidx="${i}" id="lpTile${i}">
-        <button class="lp-pt-opts">⚙</button>
-        <div class="lp-pt-name">
-          <span class="lp-pt-dot ${dotClass}"></span>
-          ${em} ${escHtml(p.name)}
-          ${p.lost ? '<span style="color:#ff3333;font-size:.65rem;margin-left:4px">LOST</span>' : ''}
-        </div>
-        <div class="lp-pt-breed">${escHtml(p.breed || p.species || '')} · ${p.lost ? '🔴 LOST' : escHtml(p.status || 'home')}</div>
-        <div class="lp-tile-btns">
-          <span class="lp-tile-btn" onclick="if(typeof panToPet==='function')panToPet(${i})">🎯 Go</span>
-          ${p.lost
-            ? `<span class="lp-tile-btn found" onclick="lpMarkFound(${i})">✅ Found</span>`
-            : `<span class="lp-tile-btn lost" onclick="lpMarkLost(${i})">🔴 Lost</span>`}
-        </div>
-      </div>`;
-    }).join('');
+  const onDash = D ? D.dashboardPets() : pets;
+  const off = pets.length - onDash.length;
+  const shown = lpDashboardShown();
+  const q = D ? D.query() : '';
+  const summary = `<div class="lp-dash-sum">${onDash.length} on your dashboard` +
+    (off ? ` · <span class="lp-link" data-act="see-off">${off} taken off, see Lists</span>` : '') + '</div>';
+  const dropZone = '<div class="lp-drop-zone" id="lpDropZone">drop a pet here to put it back on the dashboard</div>';
+  let body;
+  if (!onDash.length) {
+    body = '<div class="sf-empty" id="lpDashEmpty">Your dashboard is empty.<br>Every pet is still on the map and in Lists. Use "+ back on dashboard" there to put one back.</div>';
+  } else if (!shown.length) {
+    body = `<div class="sf-empty" id="lpDashEmpty">Nothing on your dashboard matches "${escHtml(q)}".</div>`;
+  } else {
+    body = shown.map(lpDashCard).join('');
+  }
+  return minimap + summary + dropZone + body;
+}
+
+// Clicks on dashboard cards (bound once; cards are re-drawn often).
+function lpOnContentClick(e) {
+  if (lpActiveTab !== 'pets' || typeof S === 'undefined' || !window.sfDash) return;
+  if (e.target.closest('[data-act="see-off"]')) {
+    sfDash.setPanelOpen('right', true);
+    if (typeof rpSwitchTab === 'function') rpSwitchTab('off');
+    return;
+  }
+  const tile = e.target.closest('.lp-pet-tile[data-key]');
+  if (!tile) return;
+  const pet = sfDash.byKey(tile.getAttribute('data-key'));
+  if (!pet) return;
+  const i = S.pets.indexOf(pet);
+  const actEl = e.target.closest('[data-act]');
+  const act = actEl ? actEl.dataset.act : 'go';
+  if (act === 'off') {
+    sfDash.takeOff(pet);
+    if (typeof toast === 'function') toast(`${pet.name} taken off your dashboard. Still on the map and in Lists 🐾`);
+  } else if (act === 'lost') {
+    lpMarkLost(i);
+  } else if (act === 'found') {
+    lpMarkFound(i);
+  } else {
+    if (typeof panToPet === 'function') panToPet(i);
+    // On a phone the sheet would cover the pet, so step out of the way.
+    if (sfDash.isPhone()) sfDash.setPanelOpen('left', false);
+  }
 }
 
 // ── GPS tab ──
@@ -812,7 +910,8 @@ window.lpMarkFound = function(i) {
 
 // ── Bind content interactions ──
 function lpBindContent() {
-  // Drop zone for dragged pets
+  // Drop zone: a pet dragged from the lists on the right goes back on the dashboard.
+  // Only pets that already exist can be dropped; nothing new is created here.
   const dz = document.getElementById('lpDropZone');
   if (dz) {
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('active'); });
@@ -820,38 +919,12 @@ function lpBindContent() {
     dz.addEventListener('drop', e => {
       e.preventDefault();
       dz.classList.remove('active');
-      try {
-        const data = JSON.parse(e.dataTransfer.getData('sfPet') || e.dataTransfer.getData('pet') || '{}');
-        if (data.name && typeof S !== 'undefined') {
-          const exists = S.pets.findIndex(p => p.name === data.name);
-          if (exists < 0) {
-            S.pets.push({
-              name: data.name, species: data.species || 'other',
-              breed: data.breed || data.o || '',
-              bio: data.bio || '', tags: data.tags || [],
-              mood: data.mood || 'playful',
-              lat: data.lat || S.lat, lon: data.lon || S.lon,
-              timestamp: Date.now()
-            });
-            if (typeof savePets === 'function') savePets();
-            if (typeof toast === 'function') toast(`🐾 ${data.name} added to My Pets!`);
-          } else {
-            if (typeof toast === 'function') toast(`${data.name} is already in your pack!`);
-          }
-          lpRender();
-        }
-      } catch(e) { console.warn('LP drop parse error', e); }
+      const pet = window.sfDash ? sfDash.byKey(e.dataTransfer.getData('text/sf-pet-key')) : null;
+      if (!pet) return;
+      sfDash.putBack(pet);
+      if (typeof toast === 'function') toast(`🐾 ${pet.name} is back on your dashboard`);
     });
   }
-
-  // Pet tile click → pan to pet
-  document.querySelectorAll('.lp-pet-tile[data-pidx]').forEach(tile => {
-    tile.addEventListener('click', e => {
-      if (e.target.closest('.lp-pt-opts') || e.target.closest('.lp-tile-btn')) return;
-      const i = parseInt(tile.dataset.pidx);
-      if (typeof panToPet === 'function') panToPet(i);
-    });
-  });
 
   // Social buttons after render
   if (lpActiveTab === 'lost') {
@@ -902,25 +975,16 @@ function init() {
     lpSwitchTab(tab.dataset.lptab);
   });
 
+  document.getElementById('lpContent').addEventListener('click', lpOnContentClick);
+
   bindAddBtn();
   lpRender();
 
-  // Re-render when pets change (poll — lightweight)
-  setInterval(() => {
-    if (document.getElementById('lpRoot') && lpActiveTab === 'pets') {
-      lpRenderPetsQuick();
-    }
-  }, 3000);
-}
-
-function lpRenderPetsQuick() {
-  // Lightweight re-render just the pet count badge without full redraw
-  const el = document.getElementById('lpContent');
-  if (!el || lpActiveTab !== 'pets') return;
-  // Only re-render if count changed
-  const pets = (typeof S !== 'undefined' ? S.pets : []) || [];
-  const current = el.querySelectorAll('.lp-pet-tile').length;
-  if (current !== pets.length) lpRender();
+  // Redraw when pets, the search or the dashboard change. The notebook tab is
+  // left alone so a note being typed is never wiped.
+  if (window.sfDash) sfDash.onChange(() => {
+    if (lpActiveTab !== 'notebook') lpRender();
+  });
 }
 
 // ── Public API ──

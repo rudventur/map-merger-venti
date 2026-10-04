@@ -49,7 +49,7 @@ const LOST_CSS = `
     50%      { box-shadow: 0 0 38px rgba(255,20,20,0.55); }
   }
   .sf-lost-banner {
-    position: fixed; top: 50px; left: 0; right: 0;
+    position: fixed; top: var(--bar-h, 50px); left: 0; right: 0;
     background: rgba(40,0,0,0.92);
     border-bottom: 2px solid #ff2222;
     color: #ff4444; font-family: 'Bubblegum Sans', cursive;
