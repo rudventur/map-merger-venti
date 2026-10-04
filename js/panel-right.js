@@ -3,7 +3,8 @@
 //  Lists (always show every pet, including ones taken off the dashboard):
 //    All pets · My pets · Lost · Out walking · Off dashboard · Friends and
 //    family (coming later, empty)
-//  Places and help: Home · Vets · Food (LOCKED)
+//  Places and help: Home · Vets (real vets from OpenStreetMap, see
+//    js/vets.js) · Food (LOCKED)
 //  Each pet entry can be put back on / pinned to the top of the dashboard.
 //  The list definitions live in js/dashboard.js (sfDash.LISTS).
 // ═══════════════════════════════════════════════════════════════
@@ -209,7 +210,42 @@ function injectRightPanel() {
       text-align: center; padding: 4px 2px; font-family: 'VT323', monospace;
       line-height: 1.4;
     }
-    .rp-vet-status.err { color: rgba(255,120,120,0.7); }
+    .rp-vet-status.err { color: rgba(255,120,120,0.85); }
+
+    /* Real vets from OpenStreetMap (js/vets.js) */
+    .sf-vet-bar { display: flex; gap: 4px; margin-bottom: 4px; }
+    .sf-vet-bar .rp-add-btn { flex: 1; margin: 0; }
+    .sf-vet-status { font-size: .74rem; }
+    .sf-vet-status.loading { color: #ffcc66; }
+    .sf-vet-status.empty { color: #ffcc66; }
+    .sf-vet-hint, .sf-vet-note { font-size: .64rem; }
+    .sf-vet-retry { color: #ffcc66; border-style: solid; }
+    .sf-vet-retry:disabled { opacity: .5; cursor: default; }
+    .sf-vet { cursor: default; }
+    .sf-vet.sel { border-color: #ffcc66; box-shadow: 0 0 0 1px rgba(255,204,102,0.35) inset; }
+    .sf-vet-head { display: flex; gap: 5px; align-items: flex-start; }
+    .sf-vet-icon { flex-shrink: 0; }
+    .sf-vet-name {
+      font-family: 'Bubblegum Sans', cursive; color: #ffcc66; font-size: .82rem;
+      overflow-wrap: anywhere; min-width: 0;
+    }
+    .sf-vet-addr { overflow-wrap: anywhere; font-size: .68rem; color: rgba(255,204,102,0.6); }
+    .sf-vet-hours, .sf-vet-phone, .sf-vet-web {
+      color: rgba(255,204,102,0.75); font-size: .7rem; margin-top: 3px;
+      font-family: 'VT323', monospace; overflow-wrap: anywhere; line-height: 1.25;
+    }
+    .sf-vet-hours div + div { padding-left: 1.4em; }
+    .sf-vet .missing { color: rgba(255,204,102,0.38); font-style: italic; }
+    .sf-vet a { color: #88cc44; }
+    .sf-vet a:hover { color: #bbee77; }
+    .sf-vet .rp-ltag.sf-vet-open { color: #88cc44; }
+    .sf-vet .rp-ltag.sf-vet-open.em { color: #ff6666; }
+    .sf-vet-osm { text-decoration: none; }
+    .sf-vet-credit {
+      color: rgba(255,204,102,0.4); font-size: .6rem; margin: 6px 2px 2px;
+      font-family: 'VT323', monospace; line-height: 1.35;
+    }
+    .sf-vet-credit a { color: rgba(255,204,102,0.7); }
 
     /* Doglost embed */
     .rp-doglost-frame {
@@ -238,6 +274,13 @@ function injectRightPanel() {
       .rp-toggle { display: none; }
       .rp-tab { font-size: .85rem; padding: 4px 9px; }
       .rp-pin-btn { font-size: .8rem; padding: 3px 8px; }
+      .sf-vet-bar .rp-add-btn, .sf-vet-retry { font-size: .85rem; padding: 8px 4px; }
+      .sf-vet .rp-pin-btn { font-size: .9rem; padding: 5px 12px; }
+      .sf-vet-name { font-size: .95rem; }
+      .sf-vet-hours, .sf-vet-phone, .sf-vet-web { font-size: .85rem; }
+      .sf-vet-addr { font-size: .8rem; }
+      .sf-vet-phone a { display: inline-block; padding: 3px 0; }
+      .sf-vet-credit { font-size: .72rem; }
     }
   </style>
 
@@ -269,16 +312,15 @@ function injectRightPanel() {
 // ── Data ──
 // (The old Pack and Family tabs showed made-up example pets; they are replaced
 // by real-data lists. Friends and family is shown as "coming later", empty.)
-const VETS_DEFAULT = [
-  { n:'City Vet Clinic', a:'12 Park Rd, London', url:'https://maps.google.com/?q=vet+near+me', tags:['24h','emergency'], pinned:true },
-  { n:'Paws & Claws', a:'88 High St, London', url:'https://maps.google.com/?q=paws+claws+vet', tags:['cats','dogs','rabbits'], pinned:false },
-];
+// (The Vets tab used to start with two made-up clinics, "City Vet Clinic" and
+// "Paws & Claws". They are gone: the vets now come live from OpenStreetMap,
+// see js/vets.js.)
 
 // Real emergency contacts — shown first, always visible, not dependent on location
 const EMERGENCY_UK = [
-  { label:'🚨 Vets Now (24h Emergency)', url:'https://www.vets-now.com/find-a-clinic/' },
+  { label:'🚨 Vets Now (24 hour emergency vets)', url:'https://www.vets-now.com/find-an-emergency-vet/' },
   { label:'☠️ Animal PoisonLine', url:'https://www.animalpoisonline.co.uk' },
-  { label:'🐾 RSPCA 24h Cruelty Line', url:'https://www.rspca.org.uk/whatwedo/contactus' },
+  { label:'🐾 RSPCA (24 hour cruelty line)', url:'https://www.rspca.org.uk/utilities/contactus' },
 ];
 
 // FOOD TAB — LOCKED AS HOLY GRAIL
@@ -314,86 +356,6 @@ const CHARITIES_PL = [
 let rpActiveTab = 'all';
 const RP_OLD_TABS = { mypets: 'mine', family: 'friends' };   // names used before the lists
 function rpIsList(tab) { return !!(window.sfDash && sfDash.listById(tab)); }
-let rpNearbyVets = [];
-let rpNearbySearchCenter = null;
-let rpNearbyLoading = false;
-let rpNearbyError = '';
-
-// ── Real vet locator (OpenStreetMap Overpass API — free, no key) ──
-function rpGetGeoPosition() {
-  const geoCall = new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new Error('no geolocation')); return; }
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      err => reject(err),
-      { timeout: 8000 }
-    );
-  });
-  // Some browsers never call back at all if a permission prompt sits unanswered
-  // (backgrounded tab, locked-down config) — geolocation's own `timeout` option
-  // doesn't cover that wait, so a hard client-side ceiling keeps the button from
-  // getting stuck on "Sniffing out nearby vets..." forever.
-  const hardCeiling = new Promise((_, reject) => setTimeout(() => reject(new Error('geo timeout')), 10000));
-  return Promise.race([geoCall, hardCeiling]);
-}
-
-async function rpFetchNearbyVets(lat, lon, radius) {
-  radius = radius || 8000; // metres
-  const query = `[out:json][timeout:15];(node["amenity"="veterinary"](around:${radius},${lat},${lon});way["amenity"="veterinary"](around:${radius},${lat},${lon}););out center;`;
-  const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: query });
-  if (!res.ok) throw new Error('bad response: ' + res.status);
-  const data = await res.json();
-  const results = (data.elements || []).map(el => {
-    const elat = el.lat ?? (el.center && el.center.lat);
-    const elon = el.lon ?? (el.center && el.center.lon);
-    if (elat == null || elon == null) return null;
-    const dist = (typeof haversine === 'function') ? haversine({ lat, lng: lon }, { lat: elat, lng: elon }) : null;
-    return {
-      name: (el.tags && el.tags.name) || 'Unnamed vet clinic',
-      lat: elat, lon: elon,
-      phone: (el.tags && (el.tags.phone || el.tags['contact:phone'])) || '',
-      dist
-    };
-  }).filter(Boolean);
-  results.sort((a, b) => (a.dist ?? 1e9) - (b.dist ?? 1e9));
-  return results.slice(0, 10);
-}
-
-window.rpSearchNearbyVets = async function(useGeo) {
-  rpNearbyLoading = true;
-  rpNearbyError = '';
-  rpRender();
-  try {
-    let lat, lon, label;
-    if (useGeo) {
-      const pos = await rpGetGeoPosition();
-      lat = pos.lat; lon = pos.lon; label = 'your location';
-    } else {
-      lat = (typeof S !== 'undefined') ? S.lat : 51.505;
-      lon = (typeof S !== 'undefined') ? S.lon : -0.09;
-      label = 'the map centre';
-    }
-    rpNearbySearchCenter = { lat, lon, label };
-    rpNearbyVets = await rpFetchNearbyVets(lat, lon);
-    if (!rpNearbyVets.length) {
-      rpNearbyError = `No vets found in OpenStreetMap near ${label} — try panning somewhere more built-up 🐾`;
-    }
-  } catch (e) {
-    rpNearbyVets = [];
-    rpNearbyError = useGeo
-      ? "Couldn't get your location — check location permissions 🐾"
-      : "Couldn't sniff out nearby vets — check your connection 🐾";
-  }
-  rpNearbyLoading = false;
-  rpRender();
-};
-
-window.rpPinNearbyVet = function(i) {
-  const v = rpNearbyVets[i];
-  if (!v) return;
-  if (typeof addServicePin === 'function') addServicePin('vet', v.name, v.lat, v.lon);
-};
-
 function rpToggle() {
   const root = document.getElementById('rpRoot');
   const open = root.classList.contains('rp-collapsed');
@@ -405,6 +367,7 @@ function rpToggle() {
 function rpSwitchTab(tab) {
   tab = RP_OLD_TABS[tab] || tab;
   rpActiveTab = tab;
+  if (window.sfVets) sfVets.setActive(tab === 'vets');
   document.querySelectorAll('.rp-tab').forEach(t =>
     t.classList.toggle('active', t.dataset.rptab === tab)
   );
@@ -416,7 +379,11 @@ function rpRender() {
   if (!el) return;
   switch (rpActiveTab) {
     case 'home':    el.innerHTML = rpRenderHome();    break;
-    case 'vets':    el.innerHTML = rpRenderVets();    break;
+    case 'vets':
+      el.innerHTML = rpRenderVets();
+      if (window.sfVets) sfVets.mount(document.getElementById('rpVetsLive'));
+      else document.getElementById('rpVetsLive').textContent = 'The vet search did not load. Reload the page to try again.';
+      break;
     case 'food':    el.innerHTML = rpRenderFood();    break;
     default:        el.innerHTML = rpRenderList(rpActiveTab);
   }
@@ -567,66 +534,45 @@ function rpStopAutoGPS() {
 if (rpIsAutoGpsOn()) rpStartAutoGPS();
 
 // ── Vets ──
+// Real vets near the map come from OpenStreetMap (js/vets.js fills #rpVetsLive
+// using text only). Vets the user typed in themselves stay on this device.
 function rpRenderVets() {
-  const custom = JSON.parse(localStorage.getItem(VETS_KEY) || '[]');
-  const all = [...VETS_DEFAULT, ...custom];
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(VETS_KEY) || '[]'); } catch (e) { custom = []; }
+  if (!Array.isArray(custom)) custom = [];
 
   const emergencySection = `
     <div class="rp-charity-section" style="margin-top:0;border:1px solid rgba(255,60,60,0.35);border-radius:8px;padding:6px 6px 4px;background:rgba(255,30,30,0.06)">
       <div class="rp-charity-label" style="color:#ff8888">🚨 EMERGENCY — CALL FIRST</div>
       <div class="rp-charity-grid">
-        ${EMERGENCY_UK.map(c => `<a class="rp-charity-btn" style="border-color:rgba(255,80,80,0.4);color:#ff9999" href="${c.url}" target="_blank" rel="noopener">${c.label}</a>`).join('')}
+        ${EMERGENCY_UK.map(c => `<a class="rp-charity-btn" style="border-color:rgba(255,80,80,0.4);color:#ff9999" href="${safeUrl(c.url)}" target="_blank" rel="noopener">${escHtml(c.label)}</a>`).join('')}
       </div>
     </div>`;
-  const cards = all.map((v, i) =>
-    `<div class="rp-link">
-      <div class="rp-lname">
-        <a href="${safeUrl(v.url)}" target="_blank" rel="noopener">🏥 ${escHtml(v.n)}</a>
-        <span class="rp-pin-btn" onclick="rpPinOnMap('vet',${i},${escJsArg(v.n)})">
-          ${v.pinned ? '📍' : '+ map'}
-        </span>
-      </div>
-      <div class="rp-laddr">${escHtml(v.a)}</div>
-      <div class="rp-ltags">
-        ${v.tags.map(t => `<span class="rp-ltag ${t==='emergency'||t==='24h'?'em':''}">${escHtml(t)}</span>`).join('')}
-      </div>
-    </div>`
-  ).join('');
 
-  const nearbyCards = rpNearbyVets.map((v, i) =>
-    `<div class="rp-link">
-      <div class="rp-lname">
-        <a href="https://www.google.com/maps?q=${Number(v.lat)},${Number(v.lon)}" target="_blank" rel="noopener">🏥 ${escHtml(v.name)}</a>
-        <span class="rp-pin-btn" onclick="rpPinNearbyVet(${i})">+ map</span>
-      </div>
-      <div class="rp-laddr">${v.dist != null ? v.dist.toFixed(1) + ' km away' : 'distance unknown'}${v.phone ? ' · 📞 ' + escHtml(v.phone) : ''}</div>
-    </div>`
-  ).join('');
-
-  const searchSection = `
+  const liveSection = `
     <div class="rp-vet-search">
-      <div class="rp-charity-label">🔎 FIND VETS NEARBY (live)</div>
-      <div style="display:flex;gap:4px;margin-bottom:4px">
-        <button class="rp-add-btn" style="flex:1;margin:0" onclick="rpSearchNearbyVets(false)">🗺️ Near map centre</button>
-        <button class="rp-add-btn" style="flex:1;margin:0" onclick="rpSearchNearbyVets(true)">📍 Near me</button>
-      </div>
-      ${rpNearbyLoading ? '<div class="rp-vet-status">🐾 Sniffing out nearby vets...</div>' : ''}
-      ${!rpNearbyLoading && rpNearbyError ? `<div class="rp-vet-status err">${rpNearbyError}</div>` : ''}
-      ${!rpNearbyLoading && !rpNearbyError && rpNearbySearchCenter && rpNearbyVets.length
-        ? `<div class="rp-vet-status">Found ${rpNearbyVets.length} near ${rpNearbySearchCenter.label} · via OpenStreetMap</div>`
-        : ''}
-      ${nearbyCards}
-    </div>
-  `;
+      <div class="rp-charity-label">🏥 VETS NEAR THE MAP (live from OpenStreetMap)</div>
+      <div id="rpVetsLive"></div>
+    </div>`;
+
+  // Only what the user typed in on this device; no map pin (there is no real position).
+  const cards = custom.filter(v => v && v.n).map(v => {
+    const href = safeUrl(v.url);
+    const name = `🏥 ${escHtml(v.n)}`;
+    return `<div class="rp-link">
+      <div class="rp-lname">${href !== '#' ? `<a href="${href}" target="_blank" rel="noopener">${name}</a>` : `<span>${name}</span>`}</div>
+      ${v.a ? `<div class="rp-laddr">${escHtml(v.a)}</div>` : ''}
+    </div>`;
+  }).join('');
 
   const ukCharities = CHARITIES_UK.map(c =>
-    `<a class="rp-charity-btn" href="${c.url}" target="_blank" rel="noopener">${c.label}</a>`
+    `<a class="rp-charity-btn" href="${safeUrl(c.url)}" target="_blank" rel="noopener">${escHtml(c.label)}</a>`
   ).join('');
   const plCharities = CHARITIES_PL.map(c =>
-    `<a class="rp-charity-btn pl" href="${c.url}" target="_blank" rel="noopener">${c.label}</a>`
+    `<a class="rp-charity-btn pl" href="${safeUrl(c.url)}" target="_blank" rel="noopener">${escHtml(c.label)}</a>`
   ).join('');
 
-  // DogLost embed attempt
+  // DogLost embed attempt (js/doglost-embed.js replaces the placeholder)
   const doglostSection = `
     <div style="margin-top:8px;border-top:1px solid rgba(204,136,51,0.15);padding-top:6px">
       <div class="rp-charity-label">🐾 DOGLOST MAP</div>
@@ -634,23 +580,23 @@ function rpRenderVets() {
         Open DogLost Map ↗
       </a>
       <div class="rp-doglost-fallback" id="rpDoglostEmbed">
-        🗺️ DogLost map tiles will load here<br>
-        <span style="font-size:.6rem;opacity:.5">(embed blocked by CORS — opening in new tab is the fallback)</span>
+        Checking whether the DogLost map can be shown here…<br>
+        <span style="font-size:.6rem;opacity:.5">(if not, the link above opens it in a new tab)</span>
       </div>
     </div>`;
 
-  return emergencySection + searchSection +
+  return emergencySection + liveSection +
     `<div class="rp-charity-section" style="margin-top:2px">
-      <div class="rp-charity-label">⭐ TRUSTED / SAVED</div>
+      <div class="rp-charity-label">⭐ SAVED BY YOU (THIS DEVICE ONLY)</div>
       ${cards}
       <button class="rp-add-btn" onclick="rpAddVet()">+ add vet / clinic</button>
     </div>` +
     `<div class="rp-charity-section">
-      <div class="rp-charity-label">🇬🇧 UK ORGANISATIONS</div>
+      <div class="rp-charity-label">🇬🇧 BRITISH ORGANISATIONS</div>
       <div class="rp-charity-grid">${ukCharities}</div>
     </div>
     <div class="rp-charity-section">
-      <div class="rp-charity-label">🇵🇱 POLISH ORGS</div>
+      <div class="rp-charity-label">🇵🇱 POLISH ORGANISATIONS</div>
       <div class="rp-charity-grid">${plCharities}</div>
     </div>
     ${doglostSection}`;
@@ -660,8 +606,10 @@ window.rpAddVet = function() {
   const n = prompt('Vet / clinic name:');
   if (!n) return;
   const a = prompt('Address or website:') || '';
-  const u = prompt('URL (https://...):') || '#';
-  const custom = JSON.parse(localStorage.getItem(VETS_KEY) || '[]');
+  const u = prompt('Website (https://...), or leave empty:') || '';
+  let custom = [];
+  try { custom = JSON.parse(localStorage.getItem(VETS_KEY) || '[]'); } catch (e) { custom = []; }
+  if (!Array.isArray(custom)) custom = [];
   custom.push({ n, a, url: u, tags: ['custom'], pinned: false });
   localStorage.setItem(VETS_KEY, JSON.stringify(custom));
   rpRender();
