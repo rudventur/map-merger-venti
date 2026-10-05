@@ -226,7 +226,7 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 <!-- HUD -->
 <!-- DASHBOARD BAR: title, sharing note, "sniff sniff" pet search (filters both panels), tools -->
 <div class="hud" id="sfBar">
-  <div class="htitle" onclick="toggleViewMenu(event)" title="View options" style="cursor:pointer">&#128062; Snout First</div>
+  <div class="htitle" onclick="toggleViewMenu(event)" title="Full screen options" style="cursor:pointer">&#128062; Snout First</div>
   <span class="net-note" id="netNote" style="display:none"></span>
   <div class="hsep"></div>
   <div class="csearch" role="search">
@@ -251,8 +251,10 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1}
 
 <!-- VIEW MODE MENU (logo click) -->
 <div class="view-menu" id="viewMenu">
+  <div class="menu-sep" style="border:none;color:#cc8833;font-size:.8rem;padding:4px 8px">FULL SCREEN</div>
   <button onclick="setView('horizontal')">Full Screen Horizontal</button>
   <button onclick="setView('panoramic')">Full Screen Panoramic</button>
+  <button onclick="setView('vertical')">Full Screen Vertical</button>
   <button onclick="setView('normal')">Normal / Default Browser</button>
   <div class="menu-sep"></div>
   <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)">Settings One</button>
