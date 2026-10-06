@@ -40,14 +40,16 @@ function injectRightPanel() {
     }
 
     .rp-toggle {
-      position: absolute; top: 50%; left: -13px;
+      position: absolute; top: 50%; left: -22px;
       transform: translateY(-50%);
-      width: 13px; height: 44px;
-      background: #cc8833; border-radius: 7px 0 0 7px;
+      width: 22px; height: 64px;
+      background: #cc8833; border-radius: 8px 0 0 8px;
       cursor: pointer; display: flex; align-items: center;
       justify-content: center; z-index: 955;
-      font-size: .65rem; color: #1a120a; user-select: none;
+      font-size: .9rem; color: #1a120a; user-select: none;
     }
+    .rp-hide { margin-left: auto; background: none; border: 1px solid #cc8833; color: #ffcc66; border-radius: 6px; cursor: pointer; font-family: 'VT323', monospace; font-size: .9rem; padding: 0 8px; }
+    .rp-hide:hover { background: #cc8833; color: #1a120a; }
     .rp-root.lost-mode .rp-toggle { background: #ff2222; }
     .rp-root.rp-collapsed .rp-inner { opacity: 0; pointer-events: none; }
 
@@ -271,7 +273,7 @@ function injectRightPanel() {
         border-left: 1px solid rgba(204,136,51,0.4);
       }
       .rp-root.rp-collapsed .rp-inner { display: none; }
-      .rp-toggle { display: none; }
+      .rp-toggle { display: flex; top: auto; bottom: 8px; left: 8px; width: 36px; height: 28px; border-radius: 8px; }
       .rp-tab { font-size: .85rem; padding: 4px 9px; }
       .rp-pin-btn { font-size: .8rem; padding: 3px 8px; }
       .sf-vet-bar .rp-add-btn, .sf-vet-retry { font-size: .85rem; padding: 8px 4px; }
@@ -285,10 +287,11 @@ function injectRightPanel() {
   </style>
 
   <div class="rp-root" id="rpRoot">
-    <div class="rp-toggle" id="rpToggleBtn" title="Show or hide the lists">▶</div>
+    <div class="rp-toggle" id="rpToggleBtn" title="Hide or show the right panel" onclick="rpToggle()">▶</div>
     <div class="sf-phead">
       <button class="sf-ph-btn sf-ph-left" type="button" data-sheet="left">📋 DASHBOARD<b data-count="dash"></b></button>
       <button class="sf-ph-btn sf-ph-right" type="button" data-sheet="right">📚 LISTS<b data-count="all"></b></button>
+      <button class="rp-hide" type="button" onclick="rpToggle()" title="Hide the right panel">hide</button>
       <button class="sf-ph-close" type="button" data-sheet="close" title="Close">▼</button>
     </div>
     <div class="rp-inner">

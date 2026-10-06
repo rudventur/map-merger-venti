@@ -30,14 +30,16 @@ function injectLeftPanel() {
     }
 
     .lp-toggle {
-      position: absolute; top: 50%; right: -13px;
+      position: absolute; top: 50%; right: -22px;
       transform: translateY(-50%);
-      width: 13px; height: 44px;
-      background: #cc8833; border-radius: 0 7px 7px 0;
+      width: 22px; height: 64px;
+      background: #cc8833; border-radius: 0 8px 8px 0;
       cursor: pointer; display: flex; align-items: center;
       justify-content: center; z-index: 955;
-      font-size: .65rem; color: #1a120a; user-select: none;
+      font-size: .9rem; color: #1a120a; user-select: none;
     }
+    .lp-hide { margin-left: auto; background: none; border: 1px solid #cc8833; color: #ffcc66; border-radius: 6px; cursor: pointer; font-family: 'VT323', monospace; font-size: .9rem; padding: 0 8px; }
+    .lp-hide:hover { background: #cc8833; color: #1a120a; }
     .lp-root.lost-mode .lp-toggle { background: #ff2222; }
 
     .lp-inner {
@@ -343,7 +345,7 @@ function injectLeftPanel() {
         border-right: 1px solid rgba(204,136,51,0.4);
       }
       .lp-root.lp-collapsed .lp-inner { display: none; }
-      .lp-toggle { display: none; }
+      .lp-toggle { display: flex; top: auto; bottom: 8px; right: 8px; width: 36px; height: 28px; border-radius: 8px; }
       .lp-tab { font-size: .85rem; padding: 7px 10px; }
       .lp-tile-btn, .lp-off { font-size: .8rem; padding: 4px 8px; }
     }
@@ -361,9 +363,10 @@ function injectLeftPanel() {
   </div>
 
   <div class="lp-root" id="lpRoot">
-    <div class="lp-toggle" id="lpToggleBtn" title="Show or hide the dashboard">◀</div>
+    <div class="lp-toggle" id="lpToggleBtn" title="Hide or show the left dashboard" onclick="lpToggle()">◀</div>
     <div class="sf-phead">
       <button class="sf-ph-btn sf-ph-left" type="button" data-sheet="left">📋 DASHBOARD<b data-count="dash"></b></button>
+      <button class="lp-hide" type="button" onclick="lpToggle()" title="Hide the left dashboard">hide</button>
       <button class="sf-ph-btn sf-ph-right" type="button" data-sheet="right">📚 LISTS<b data-count="all"></b></button>
       <button class="sf-ph-close" type="button" data-sheet="close" title="Close">▼</button>
     </div>
