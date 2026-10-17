@@ -253,33 +253,33 @@ body.sf-hidden-bar .sf-ptab.sf-ptab-top{display:flex}
   </div>
   <div class="hsep"></div>
   <div class="hbtns">
-    <button class="hbtn paw" onclick="togglePinPet()">&#128062; PIN PET</button>
-    <button class="hbtn spot" onclick="toggleSpotDropMode()">&#128205; SPOT</button>
-    <button class="hbtn" type="button" data-panel-toggle="trail">&#128017; TRAIL</button>
-    <button class="hbtn" type="button" data-panel-toggle="pack">&#128058; PACK</button>
-    <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown">&#129313; SHOW ME</button>
+    <button class="hbtn paw" onclick="togglePinPet()" title="Toggle mode to pin a new pet on the map by clicking">&#128062; PIN PET</button>
+    <button class="hbtn spot" onclick="toggleSpotDropMode()" title="Toggle mode to drop a personal spot marker on the map">&#128205; SPOT</button>
+    <button class="hbtn" type="button" data-panel-toggle="trail" title="Open or close the Trail panel of nearby sniff trails">&#128017; TRAIL</button>
+    <button class="hbtn" type="button" data-panel-toggle="pack" title="Open or close the Pack panel of your pets and friends">&#128058; PACK</button>
+    <button class="hbtn clown" onclick="toggleClownMe()" id="btnClown" title="Toggle clown markers / show-me mode on the map">&#129313; SHOW ME</button>
     <div class="redirect-wrap">
-      <button class="hbtn" onclick="openRedirectMenu(event)">&#128257; Redirect</button>
+      <button class="hbtn" onclick="openRedirectMenu(event)" title="Open menu to redirect to other RudVentur sites">&#128257; Redirect</button>
     </div>
   </div>
-  <button class="sf-ptoggle" type="button" data-panel-toggle="bar"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
+  <button class="sf-ptoggle" type="button" data-panel-toggle="bar" title="Hide the top bar"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
 </div>
 <!-- shown while the top bar is hidden; brings it back -->
-<button class="sf-ptab sf-ptab-top" type="button" data-panel-toggle="bar"><span class="sf-pt-icon">&#9660;</span><span class="sf-pt-label" data-open="Snout First" data-closed="&#128062; Snout First">&#128062; Snout First</span></button>
+<button class="sf-ptab sf-ptab-top" type="button" data-panel-toggle="bar" title="Show the top bar again"><span class="sf-pt-icon">&#9660;</span><span class="sf-pt-label" data-open="Snout First" data-closed="&#128062; Snout First">&#128062; Snout First</span></button>
 
 <!-- VIEW MODE MENU (logo click) -->
 <div class="view-menu" id="viewMenu">
   <div class="menu-sep" style="border:none;color:#cc8833;font-size:.8rem;padding:4px 8px">FULL SCREEN</div>
-  <button onclick="setView('horizontal')">Full Screen Horizontal</button>
-  <button onclick="setView('panoramic')">Full Screen Panoramic</button>
-  <button onclick="setView('vertical')">Full Screen Vertical</button>
-  <button onclick="setView('normal')">Normal / Default Browser</button>
+  <button onclick="setView('horizontal')" title="Enter full screen and lock to landscape/horizontal">Full Screen Horizontal</button>
+  <button onclick="setView('panoramic')" title="Enter full screen without orientation lock">Full Screen Panoramic</button>
+  <button onclick="setView('vertical')" title="Enter full screen and lock to portrait/vertical">Full Screen Vertical</button>
+  <button onclick="setView('normal')" title="Exit full screen and return to normal browser view">Normal / Default Browser</button>
   <div class="menu-sep"></div>
-  <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)">Settings One</button>
+  <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)" title="Open settings submenu for more view options">Settings One</button>
   <div class="view-submenu" id="viewSubmenu">
-    <button onclick="setView('horizontal')">&#8618; Panoramic — Locked</button>
-    <button onclick="setView('panoramic')">&#8618; Panoramic — Default Rotation</button>
-    <button onclick="setView('vertical')">&#8618; Full Screen Vertical</button>
+    <button onclick="setView('horizontal')" title="Lock to landscape panoramic mode">&#8618; Panoramic — Locked</button>
+    <button onclick="setView('panoramic')" title="Default panoramic rotation">&#8618; Panoramic — Default Rotation</button>
+    <button onclick="setView('vertical')" title="Full screen vertical">&#8618; Full Screen Vertical</button>
   </div>
 </div>
 
@@ -289,11 +289,11 @@ body.sf-hidden-bar .sf-ptab.sf-ptab-top{display:flex}
     <h2>&#128257; Redirect</h2>
     <div class="redirect-grid">
       <span class="redirect-card cur">&#128062; Snout First <small>(here)</small></span>
-      <button class="redirect-card" onclick="goTo('index.html')">&#128506;&#65039; Map Merger</button>
-      <button class="redirect-card" onclick="goTo('translator_v7.html')">&#127760; Translator</button>
-      <button class="redirect-card" onclick="goTo('https://rudventur.github.io/rudTrip20/')">&#127922; rudTrip20</button>
+      <button class="redirect-card" onclick="goTo('index.html')" title="Go to the main Map Merger game page">&#128506;&#65039; Map Merger</button>
+      <button class="redirect-card" onclick="goTo('translator_v7.html')" title="Go to the Translator tool">&#127760; Translator</button>
+      <button class="redirect-card" onclick="goTo('https://rudventur.github.io/rudTrip20/')" title="Go to the rudTrip20 page">&#127922; rudTrip20</button>
       <div id="customRedirectCards"></div>
-      <button class="redirect-card" id="newRedirectBtn" onclick="addCustomRedirect()" style="border-style:dashed">&#10133; NEW <small>(your own useR sites, max 3)</small></button>
+      <button class="redirect-card" id="newRedirectBtn" onclick="addCustomRedirect()" style="border-style:dashed" title="Add a custom redirect URL (up to 3)">&#10133; NEW <small>(your own useR sites, max 3)</small></button>
     </div>
   </div>
 </div>
@@ -484,14 +484,14 @@ document.addEventListener('keydown', e => {
   <div id="sfuPanel" class="sfu-hidden">
     <div class="sf-phead">
       <span class="sf-ptitle">&#128062; useRbox</span>
-      <button class="sf-ptoggle" type="button" data-panel-toggle="account"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
+      <button class="sf-ptoggle" type="button" data-panel-toggle="account" title="Hide the useRbox account panel"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
     </div>
     <div id="sfuClock">--:--:--</div>
 
     <label>&#128100; Display Name</label>
     <div class="sfu-row">
       <input type="text" id="sfuUsername" placeholder="Anonymous Walker">
-      <button class="hbtn paw" onclick="sfuSaveName()">&#128190;</button>
+      <button class="hbtn paw" onclick="sfuSaveName()" title="Save the display name">&#128190;</button>
     </div>
 
     <label>&#128221; Your Motto</label>
@@ -506,7 +506,7 @@ document.addEventListener('keydown', e => {
       </div>
       <div class="sfu-row" style="margin-top:5px">
         <input type="text" id="sfuSpotName" placeholder="Spot name...">
-        <button class="hbtn paw" onclick="sfuSaveSpot()">&#128190; Save</button>
+        <button class="hbtn paw" onclick="sfuSaveSpot()" title="Save the current spot name">&#128190; Save</button>
       </div>
       <div id="sfuSpotList"></div>
     </div>
@@ -526,7 +526,7 @@ document.addEventListener('keydown', e => {
       </div>
     </div>
 
-    <button class="hbtn red" style="width:100%;margin-top:10px" onclick="sfuClearData()">&#128465;&#65039; Reset local data</button>
+    <button class="hbtn red" style="width:100%;margin-top:10px" onclick="sfuClearData()" title="Clear all local Snout First data (pets, spots, etc.)">&#128465;&#65039; Reset local data</button>
   </div>
 </div>
 
@@ -675,7 +675,7 @@ function sfuClearData() {
 <div class="stats" id="sfStats">
   <div class="sf-phead">
     <span class="sf-ptitle">&#128202; STATS</span>
-    <button class="sf-ptoggle" type="button" data-panel-toggle="stats"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
+    <button class="sf-ptoggle" type="button" data-panel-toggle="stats" title="Hide the stats panel"><span class="sf-pt-icon">&#9650;</span><span class="sf-pt-label">hide</span></button>
   </div>
   <div class="sf-pbody">
     <div class="spill">&#128062; Pets: <b id="petCount">0</b></div>
@@ -712,7 +712,7 @@ function sfuClearData() {
 <div class="side-panel" id="trailPanel">
   <div class="sf-phead">
     <span class="sf-ptitle">&#128017; THE TRAIL</span>
-    <button class="sf-ptoggle" type="button" data-panel-toggle="trail"><span class="sf-pt-icon">&#9664;</span><span class="sf-pt-label">hide</span></button>
+    <button class="sf-ptoggle" type="button" data-panel-toggle="trail" title="Hide the Trail panel"><span class="sf-pt-icon">&#9664;</span><span class="sf-pt-label">hide</span></button>
   </div>
   <div id="trailContent"></div>
 </div>
@@ -721,7 +721,7 @@ function sfuClearData() {
 <div class="side-panel" id="packPanel">
   <div class="sf-phead">
     <span class="sf-ptitle">&#128058; THE PACK</span>
-    <button class="sf-ptoggle" type="button" data-panel-toggle="pack"><span class="sf-pt-icon">&#9664;</span><span class="sf-pt-label">hide</span></button>
+    <button class="sf-ptoggle" type="button" data-panel-toggle="pack" title="Hide the Pack panel"><span class="sf-pt-icon">&#9664;</span><span class="sf-pt-label">hide</span></button>
   </div>
   <div id="packContent"></div>
 </div>
@@ -758,8 +758,8 @@ function sfuClearData() {
       <option value="chaos">&#129313; Chaos Mode</option>
     </select>
     <div class="btn-row">
-      <button class="hbtn" onclick="closePinModal()">Cancel</button>
-      <button class="hbtn paw" onclick="savePetPin()">&#128062; Pin It!</button>
+      <button class="hbtn" onclick="closePinModal()" title="Cancel pinning a new pet">Cancel</button>
+      <button class="hbtn paw" onclick="savePetPin()" title="Confirm and pin the new pet at this location">&#128062; Pin It!</button>
     </div>
   </div>
 </div>
@@ -767,7 +767,7 @@ function sfuClearData() {
 <!-- PET USERBOX (floating popup) -->
 <div class="pet-userbox" id="petUserbox">
   <div class="ub-hold-bar" id="ubHoldBar"></div>
-  <button class="ub-close" onclick="closeUserbox()">&times;</button>
+  <button class="ub-close" onclick="closeUserbox()" title="Close this pet details box">&times;</button>
   <div class="ub-emoji" id="ubEmoji"></div>
   <div class="ub-name" id="ubName"></div>
   <div class="ub-species" id="ubSpecies"></div>
@@ -1812,7 +1812,7 @@ openUserbox = function(petIdx, screenX, screenY) {
     const content = ub.querySelector('.ub-actions') ? ub : ub;
     // Build a container and render
     ub.innerHTML = `
-      <button class="ub-close" onclick="closeUserbox()">&times;</button>
+      <button class="ub-close" onclick="closeUserbox()" title="Close this box">&times;</button>
       <div id="ub-fb-content"></div>
     `;
     renderPetUserboxFull({
@@ -1949,6 +1949,66 @@ if (window.sfPanels) {
     read: () => !document.getElementById('sfuPanel').classList.contains('sfu-hidden'),
     apply: open => { if (sfPanels.isOpen('account') !== open) sfuToggle(); } });
 }
+</script>
+
+<!-- Right-click explanations for every button -->
+<style>
+#btnExplain {
+  position: fixed;
+  z-index: 9999;
+  background: rgba(26,18,10,0.97);
+  border: 2px solid #cc8833;
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: #ffcc66;
+  font-family: 'VT323', monospace;
+  font-size: 1.05rem;
+  max-width: 280px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+  pointer-events: none;
+  display: none;
+}
+#btnExplain strong { color: #88cc44; display: block; margin-bottom: 4px; }
+</style>
+<div id="btnExplain"></div>
+<script>
+(function() {
+  const tip = document.getElementById('btnExplain');
+  let hideTimer;
+
+  function getExplanation(el) {
+    // Prefer explicit title or data-explanation
+    if (el.title) return el.title;
+    if (el.dataset.explanation) return el.dataset.explanation;
+    // Fallbacks based on common patterns
+    const text = (el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (el.classList.contains('sf-ptoggle') || el.classList.contains('sf-ptab')) return 'Hide or show this panel';
+    if (text.includes('hide') || text.includes('show')) return 'Toggle visibility of this panel';
+    if (el.onclick || el.getAttribute('onclick')) return 'Performs the action for: ' + (text || 'this button');
+    return text ? ('Button: ' + text) : 'Interactive control';
+  }
+
+  document.addEventListener('contextmenu', function(e) {
+    const btn = e.target.closest('button, [role="button"]');
+    if (!btn) return;
+    // Let the map canvas pin right-click still work if it was on a pin
+    if (e.target === document.getElementById('snoutMap') || e.target.tagName === 'CANVAS') return;
+    e.preventDefault();
+    const expl = getExplanation(btn);
+    const label = (btn.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30) || 'Button';
+    tip.innerHTML = '<strong>' + label + '</strong>' + expl;
+    tip.style.display = 'block';
+    const x = Math.min(e.clientX + 8, window.innerWidth - 300);
+    const y = Math.min(e.clientY + 8, window.innerHeight - 80);
+    tip.style.left = x + 'px';
+    tip.style.top = y + 'px';
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => { tip.style.display = 'none'; }, 4000);
+  });
+
+  document.addEventListener('click', () => { tip.style.display = 'none'; });
+  document.addEventListener('scroll', () => { tip.style.display = 'none'; }, true);
+})();
 </script>
 </body>
 </html>
