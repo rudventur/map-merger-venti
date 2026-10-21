@@ -4,7 +4,7 @@
 // and nothing throws a script error, at 1440 and 390 pixels wide.
 // Serves the repository itself; the map library, fonts and translation services load from the web.
 //   npm i -D puppeteer            (or: npm i -D puppeteer-core and set CHROME_PATH)
-//   node tests/translator.test.mjs            (SHOTS=prefix also saves screenshots)
+//   node tests/translator.test.mjs            (SHOTS=prefix also saves screenshots, including the keyboard shown and hidden)
 import http from 'http';
 import fs from 'fs';
 import path from 'path';
@@ -35,8 +35,21 @@ for (const w of [1440,390]) {
   ok(await p.$eval('#wk-layout',e=>e.value)==='polish', w+' layout follows ?lang=pl');
   await p.focus('#translate-input');
   for (const ch of ['c','z','e','s','c']) { await p.evaluate(c=>{[...document.querySelectorAll('#wk-panel .key')].find(k=>k.lastChild.textContent===c).click()},ch); }
-  ok(await p.$eval('#translate-input',e=>e.value)==='czesc', w+' keyboard types into the translator text box');
+  ok(await p.$eval('#translate-input',e=>e.value).then(v=>v.endsWith('czesc')), w+' keyboard types into the translator text box');
   if (out) await p.screenshot({path:`${out}-translate-${w}.png`});
+  // the keyboard fills the full width: the first and last keys touch the panel's sides (no side gaps)
+  const fit = await p.evaluate(() => { const pr = document.getElementById('wk-panel').getBoundingClientRect();
+    return [...document.querySelectorAll('#wk-panel .kb-row')].map(r => { const k = r.querySelectorAll('.key'); const a = k[0].getBoundingClientRect(), b = k[k.length-1].getBoundingClientRect(); return [a.left - pr.left, pr.right - b.right]; }); });
+  ok(fit.every(([l, r]) => l < 14 && r < 14), w+' keys stretch to the full width '+JSON.stringify(fit));
+  if (out) await p.screenshot({path:`${out}-shown-${w}.png`});
+  await p.click('#wk-close'); await sleep(300);
+  ok(await p.evaluate(() => !document.getElementById('wk-panel').classList.contains('open') && getComputedStyle(document.getElementById('wk-tab')).display !== 'none' && localStorage.getItem('rvkb-state') === 'hidden'), w+' hide leaves only the keyboard tab and is remembered');
+  await p.goto(base+'translator_v7.html?lang=pl',{waitUntil:'load',timeout:60000}); await sleep(5000);
+  ok(await p.evaluate(() => !document.getElementById('wk-panel').classList.contains('open') && getComputedStyle(document.getElementById('wk-tab')).display !== 'none'), w+' still hidden after a reload, tab visible');
+  if (out) await p.screenshot({path:`${out}-hidden-${w}.png`});
+  await p.click('#wk-tab'); await sleep(300);
+  ok(await p.evaluate(() => document.getElementById('wk-panel').classList.contains('open') && localStorage.getItem('rvkb-state') === 'shown'), w+' the tab shows the keyboard again');
+  await p.focus('#translate-input');
   await p.click('.tr-tab[data-tab=chat]'); await sleep(4000);
   const f = p.frames().find(x=>x.url().includes('global-chat.html'));
   ok(!!f, w+' chat tab loads Global Chat');

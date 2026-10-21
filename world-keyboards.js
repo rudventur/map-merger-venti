@@ -152,7 +152,7 @@ const state = {
   shift: false, caps: false, script: "hira", alt: false, dead: ""
 };
 let target = null;   // the last focused text box (input or textarea), in this page or the chat frame
-let panel, keysEl, selectEl, targetEl, accentEl;
+let panel, tab, keysEl, selectEl, targetEl, accentEl;
 
 function toKata(ch) {
   return Array.from(ch).map(c => {
@@ -265,20 +265,24 @@ const CSS = `
 #wk-panel .wk-target{opacity:.8}
 #wk-panel .wk-close{margin-left:auto}
 #wk-panel .wk-keys{display:flex;flex-direction:column;gap:5px}
-#wk-panel .kb-row{display:flex;gap:4px;justify-content:center}
+#wk-panel .kb-row{display:flex;gap:4px;width:100%}
 #wk-panel .key{background:#141414;border:2px solid #00ff41;border-radius:6px;color:#00ff41;font:600 .9rem "Courier New",monospace;cursor:pointer;
-  user-select:none;display:flex;align-items:center;justify-content:center;min-width:38px;height:40px;padding:3px 5px;position:relative;box-shadow:0 2px 0 #062}
+  user-select:none;display:flex;align-items:center;justify-content:center;flex:1 1 0;min-width:0;height:44px;padding:3px 5px;position:relative;box-shadow:0 2px 0 #062}
 #wk-panel .key small{position:absolute;top:2px;left:4px;font-size:.58rem;color:#ffe600}
 #wk-panel .key:active{transform:translateY(1px);background:#00ff41;color:#000}
 #wk-panel .key.special{border-color:#ffe600;color:#ffe600}
 #wk-panel .key.modifier{border-color:#0af;color:#0af;font-size:.74rem}
 #wk-panel .key.latched{background:rgba(0,255,65,.28)}
-#wk-panel .key.w15{min-width:56px}#wk-panel .key.w17{min-width:64px}#wk-panel .key.w20{min-width:76px}#wk-panel .key.w23{min-width:92px}
-#wk-panel .key.space{min-width:240px}
+/* keys share the full width; wider keys take a bigger share */
+#wk-panel .key.w15{flex-grow:1.5}#wk-panel .key.w17{flex-grow:1.7}#wk-panel .key.w20{flex-grow:2}#wk-panel .key.w23{flex-grow:2.3}
+#wk-panel .key.space{flex-grow:6}
+#wk-tab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:2501;background:rgba(0,15,5,.97);color:#00ff41;
+  border:2px solid #00ff41;border-bottom:0;border-radius:8px 8px 0 0;padding:3px 14px;font:bold .8rem "Courier New",monospace;cursor:pointer}
+#wk-tab:hover{background:#00ff41;color:#000}
 #wk-panel .wk-accent{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:.75rem;align-items:center}
 #wk-panel .wk-chip{background:#000;color:#00ff41;border:1px solid #00ff41;border-radius:4px;padding:3px 7px;cursor:pointer;font:inherit}
-@media (max-width:760px){#wk-panel .key{min-width:0;flex:1 1 0;height:38px;font-size:.78rem;padding:2px}
-  #wk-panel .key.space{flex:4 1 0}#wk-panel .kb-row{gap:3px}#wk-panel{padding:6px 4px 8px}}
+@media (max-width:760px){#wk-panel .key{height:38px;font-size:.78rem;padding:2px}
+  #wk-panel .kb-row{gap:3px}#wk-panel{padding:6px 3px 8px}}
 `;
 function build() {
   if (panel) return;
@@ -288,9 +292,14 @@ function build() {
     '<select id="wk-layout" title="Keyboard layout (follows your language until you pick one)"></select>' +
     '<button type="button" class="wk-btn" id="wk-follow" title="Use the keyboard of your language">Your language</button>' +
     '<span class="wk-target" id="wk-target"></span>' +
-    '<button type="button" class="wk-btn wk-close" id="wk-close" title="Hide the keyboard">✕</button></div>' +
+    '<button type="button" class="wk-btn wk-close" id="wk-close" title="Hide the keyboard (the ⌨️ tab at the bottom brings it back)">▼ Hide</button></div>' +
     '<div class="wk-keys" id="wk-keys"></div><div class="wk-accent" id="wk-accent"></div>';
   document.body.appendChild(panel);
+  // the tab stays visible while the keyboard is hidden
+  tab = document.createElement("button"); tab.type = "button"; tab.id = "wk-tab";
+  tab.textContent = "⌨️ ▲ Keyboard"; tab.title = "Show the keyboard";
+  tab.addEventListener("click", open);
+  document.body.appendChild(tab);
   // keep the text box focused while keys are pressed
   panel.addEventListener("mousedown", e => { if (e.target.tagName !== "SELECT") e.preventDefault(); });
   keysEl = panel.querySelector("#wk-keys"); selectEl = panel.querySelector("#wk-layout");
@@ -347,13 +356,21 @@ function watch(doc) {
     doc.addEventListener("focusin", e => { if (isText(e.target)) { target = e.target; render(); } }, true);
   } catch (e) {}
 }
-function open() { build(); ensureTarget(); render(); panel.classList.add("open"); document.body.classList.add("wk-open"); fire(); }
-function close() { if (panel) panel.classList.remove("open"); document.body.classList.remove("wk-open"); fire(); }
+// shown or hidden is remembered on the device
+function remember(v) { try { localStorage.setItem("rvkb-state", v); } catch (e) {} }
+function open() { build(); ensureTarget(); render(); panel.classList.add("open"); tab.style.display = "none"; document.body.classList.add("wk-open"); remember("shown"); fire(); }
+function close() { build(); panel.classList.remove("open"); tab.style.display = ""; document.body.classList.remove("wk-open"); remember("hidden"); fire(); }
 function toggle() { panel && panel.classList.contains("open") ? close() : open(); }
 function isOpen() { return !!(panel && panel.classList.contains("open")); }
 function fire() { document.dispatchEvent(new CustomEvent("worldkeyboards", { detail: { open: isOpen() } })); }
 function setLang(code) { if (!state.manual) { state.layout = layoutForLang(code); render(); } }
 
 watch(document);
+// start as last time: shown, or hidden with only the tab (the page may still ask to open it)
+(function start() {
+  if (!document.body) { document.addEventListener("DOMContentLoaded", start); return; }
+  let st = null; try { st = localStorage.getItem("rvkb-state"); } catch (e) {}
+  if (st === "shown") open(); else { build(); render(); }
+})();
 window.WorldKeyboards = { open, close, toggle, isOpen, watch, setLang, layouts: LAYOUTS, layoutForLang };
 })();
