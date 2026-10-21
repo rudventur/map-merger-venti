@@ -195,6 +195,13 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .wg-col-btn:hover{color:var(--cyan)}
 
 /* FOOTER */
+#tr-tabs{display:flex;gap:4px}
+.tr-tab{background:transparent;border:1px solid var(--border);color:var(--dim);font-family:'Fira Code',monospace;font-size:12px;padding:4px 10px;border-radius:5px;cursor:pointer}
+.tr-tab:hover{color:var(--green);border-color:var(--green)}
+.tr-tab.active{color:#000;background:var(--green);border-color:var(--green)}
+#chat-pane{position:fixed;left:0;right:0;top:55px;bottom:0;z-index:850;background:#000;display:none}
+#chat-pane.open{display:block}
+#chat-pane iframe{width:100%;height:100%;border:0;display:block}
 #footer{position:fixed;bottom:0;left:0;right:0;z-index:800;background:linear-gradient(0deg,rgba(10,10,10,.95),rgba(10,10,10,.6));border-top:1px solid var(--border);padding:5px 1rem;font-size:10px;color:var(--dim);display:flex;justify-content:space-between}
 
 /* RIGHT SIDE CONTROLS (zoom + clear) */
@@ -229,6 +236,11 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <div id="header">
   <h1 onclick="toggleViewMenu(event)" style="cursor:pointer" title="View options">🗺️ CREATOR MAP v7</h1>
+  <nav id="tr-tabs" aria-label="Translator sections">
+    <button type="button" class="tr-tab active" data-tab="translate" onclick="showTab('translate')">🌐 Translate</button>
+    <button type="button" class="tr-tab" data-tab="chat" onclick="showTab('chat')">💬 Chat</button>
+    <button type="button" class="tr-tab" id="tr-kb-btn" onclick="WorldKeyboards.toggle()" title="On-screen keyboards for many languages; types into the focused text box">⌨️ Keyboard</button>
+  </nav>
   <div class="size-control">
     <label>ALL SIZE</label>
     <input type="range" id="sizeSlider" min="12" max="48" value="28" style="width:80px" oninput="updateGlobalSize(this.value)">
@@ -2174,6 +2186,64 @@ function loadFromTxt(){
   input.click();
 }
 
+</script>
+<!-- 💬 CHAT tab: Global Chat (moved here from the global-chat-v5 repository) -->
+<div id="chat-pane" aria-label="Chat"></div>
+<script src="world-keyboards.js"></script>
+<script>
+/* One translator: Translate (the map), Chat (Global Chat), and the World Keyboards panel
+   that types into whichever text box is focused. Open a tab with ?tab=chat or #chat,
+   and the keyboard with ?keyboard=1. Other pages can also send
+   postMessage({rvTranslator:{tab:'chat', keyboard:true}}) to a translator window. */
+function translateTo(text, lang){ return translateOne(String(text).slice(0,500), 'auto', lang || baseLang); }
+window.rvTranslateTo = translateTo;
+function placePanes(){
+  const pane=document.getElementById('chat-pane');
+  const hh=document.getElementById('header').offsetHeight;
+  pane.style.top=hh+'px';
+  // the header wraps on narrow screens: keep the text box and the map below it
+  const bar=document.getElementById('translate-bar');
+  bar.style.top=hh+'px';
+  document.getElementById('map').style.top=(hh+bar.offsetHeight)+'px';
+  document.getElementById('toggle-btn').style.top=(hh+bar.offsetHeight+8)+'px';
+  document.getElementById('lang-toggles').style.top=(hh+bar.offsetHeight+4)+'px';
+  document.getElementById('right-controls').style.top=(hh+bar.offsetHeight+8)+'px';
+  document.getElementById('side-panel').style.top=(hh+bar.offsetHeight)+'px';
+  const kb=document.getElementById('wk-panel');
+  pane.style.bottom=(kb&&kb.classList.contains('open')?kb.offsetHeight:0)+'px';
+}
+function showTab(tab){
+  tab = tab==='chat' ? 'chat' : 'translate';
+  document.querySelectorAll('.tr-tab[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
+  const pane=document.getElementById('chat-pane');
+  if(tab==='chat'&&!pane.firstChild){
+    const f=document.createElement('iframe');
+    f.title='Global Chat'; f.allow='clipboard-write';
+    f.src='global-chat.html'+location.search;
+    f.addEventListener('load',()=>{ try{ WorldKeyboards.watch(f.contentDocument); }catch(e){} });
+    pane.appendChild(f);
+  }
+  pane.classList.toggle('open',tab==='chat');
+  placePanes();
+  try{const u=new URL(location.href);u.searchParams.set('tab',tab);u.hash='';history.replaceState(null,'',u.href)}catch(e){}
+}
+document.addEventListener('worldkeyboards',e=>{
+  document.getElementById('tr-kb-btn').classList.toggle('active',e.detail.open);
+  placePanes();
+});
+window.addEventListener('resize',placePanes);
+window.addEventListener('message',e=>{
+  const m=e.data&&e.data.rvTranslator; if(!m)return;
+  if(m.tab)showTab(m.tab);
+  if(m.keyboard===true)WorldKeyboards.open();
+});
+document.getElementById('base-lang-select').addEventListener('change',e=>WorldKeyboards.setLang(e.target.value));
+(function(){
+  const q=new URLSearchParams(location.search);
+  const tab=q.get('tab')||location.hash.slice(1);
+  showTab(tab);
+  if(q.get('keyboard')==='1')WorldKeyboards.open();
+})();
 </script>
 </body>
 </html>
