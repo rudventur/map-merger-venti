@@ -943,7 +943,7 @@ function loadState(){
 function saveState(){
   const positions = {};
   markers.forEach(m=>{
-    const ll=m.getLatLng(), o=m._langData;
+    const ll=m._nowLatLng||m.getLatLng(), o=m._langData;
     if(Math.abs(ll.lat-o.lat)>0.01||Math.abs(ll.lng-o.lng)>0.01) positions[o.code]={lat:ll.lat,lng:ll.lng};
   });
   const checked = [...checkedLangs];
@@ -2174,6 +2174,337 @@ function loadFromTxt(){
   input.click();
 }
 
+
+// ========================================================================
+//  LANGUAGE TREE + TIME AXIS + NOW / HISTORICAL MAPS
+//  All years are APPROXIMATE "first attested / emerged as distinct" dates,
+//  rounded from common linguistics references. Negative = BC.
+//  For unwritten languages the date is a rough estimate of when the
+//  language became distinct, not of first writing. Treat as illustrative.
+// ========================================================================
+// code: [family, branch, year, optional historical homeland {before:year, lat, lng}]
+const LANG_HISTORY = {
+  'en':['Indo-European','Germanic › West',450,{before:1600,lat:52.5,lng:-1.5}],
+  'en-US':['Indo-European','Germanic › West',1607],
+  'sco':['Indo-European','Germanic › West',1375],
+  'de':['Indo-European','Germanic › West',750],'gsw':['Indo-European','Germanic › West',750],
+  'gsw-FR':['Indo-European','Germanic › West',750],'bar':['Indo-European','Germanic › West',750],
+  'nds':['Indo-European','Germanic › West',800],'ksh':['Indo-European','Germanic › West',1100],
+  'pfl':['Indo-European','Germanic › West',1100],'swg':['Indo-European','Germanic › West',1100],
+  'sli':['Indo-European','Germanic › West',1200],'lb':['Indo-European','Germanic › West',1100],
+  'nl':['Indo-European','Germanic › West',1100],'vls':['Indo-European','Germanic › West',1200],
+  'li':['Indo-European','Germanic › West',1170],'af':['Indo-European','Germanic › West',1750],
+  'fy':['Indo-European','Germanic › West',1200],'frr':['Indo-European','Germanic › West',1300],
+  'stq':['Indo-European','Germanic › West',1300],
+  'sv':['Indo-European','Germanic › North',1225],'da':['Indo-European','Germanic › North',1200],
+  'no':['Indo-European','Germanic › North',1200],'is':['Indo-European','Germanic › North',1100],
+  'fo':['Indo-European','Germanic › North',1300],
+  'es':['Indo-European','Romance › Ibero',1000,{before:1500,lat:40.4,lng:-3.7}],
+  'es-MX':['Indo-European','Romance › Ibero',1521],
+  'pt':['Indo-European','Romance › Ibero',1175,{before:1500,lat:39.5,lng:-8.0}],
+  'pt-BR':['Indo-European','Romance › Ibero',1500],
+  'gl':['Indo-European','Romance › Ibero',1175],'ast':['Indo-European','Romance › Ibero',1000],
+  'an':['Indo-European','Romance › Ibero',1000],'ca':['Indo-European','Romance › Occitano',1100],
+  'oc':['Indo-European','Romance › Occitano',1000],
+  'fr':['Indo-European','Romance › Gallo',842],'fr-CA':['Indo-European','Romance › Gallo',1608],
+  'wa':['Indo-European','Romance › Gallo',1200],'pms':['Indo-European','Romance › Gallo-Italic',1150],
+  'lij':['Indo-European','Romance › Gallo-Italic',1150],'lmo':['Indo-European','Romance › Gallo-Italic',1200],
+  'vec':['Indo-European','Romance › Italo',1200],'it':['Indo-European','Romance › Italo',960],
+  'nap':['Indo-European','Romance › Italo',960],'scn':['Indo-European','Romance › Italo',1200],
+  'co':['Indo-European','Romance › Italo',1200],'sc':['Indo-European','Romance › Sardinian',1070],
+  'fur':['Indo-European','Romance › Rhaeto',1300],'rm':['Indo-European','Romance › Rhaeto',1100],
+  'ro':['Indo-European','Romance › Eastern',1521],'ro-MD':['Indo-European','Romance › Eastern',1521],
+  'rup':['Indo-European','Romance › Eastern',1700],
+  'ht':['Creole','French-based',1700],'tpi':['Creole','English-based',1880],
+  'cy':['Indo-European','Celtic › Brythonic',600],'br':['Indo-European','Celtic › Brythonic',800],
+  'kw':['Indo-European','Celtic › Brythonic',800],'ga':['Indo-European','Celtic › Goidelic',400],
+  'gd':['Indo-European','Celtic › Goidelic',1200],'gv':['Indo-European','Celtic › Goidelic',1600],
+  'ru':['Indo-European','Slavic › East',1000],'uk':['Indo-European','Slavic › East',1300],
+  'be':['Indo-European','Slavic › East',1300],'rue':['Indo-European','Slavic › East',1600],
+  'pl':['Indo-European','Slavic › West',1136],'szl':['Indo-European','Slavic › West',1300],
+  'csb':['Indo-European','Slavic › West',1400],'cs':['Indo-European','Slavic › West',1100],
+  'sk':['Indo-European','Slavic › West',1400],'wen':['Indo-European','Slavic › West',1500],
+  'hsb':['Indo-European','Slavic › West',1500],'dsb':['Indo-European','Slavic › West',1500],
+  'bg':['Indo-European','Slavic › South',863],'mk':['Indo-European','Slavic › South',1800],
+  'sr':['Indo-European','Slavic › South',1150],'hr':['Indo-European','Slavic › South',1100],
+  'bs':['Indo-European','Slavic › South',1150],'cnr':['Indo-European','Slavic › South',1200],
+  'sl':['Indo-European','Slavic › South',1000],
+  'lv':['Indo-European','Baltic',1500],'lt':['Indo-European','Baltic',1500],
+  'el':['Indo-European','Hellenic',-1450],'sq':['Indo-European','Albanian',1462],
+  'hy':['Indo-European','Armenian',405],
+  'fa':['Indo-European','Iranian',-520],'ku':['Indo-European','Iranian',1000],
+  'ps':['Indo-European','Iranian',1500],
+  'hi':['Indo-European','Indo-Aryan',1000],'ur':['Indo-European','Indo-Aryan',1200],
+  'bn':['Indo-European','Indo-Aryan',1000],'mr':['Indo-European','Indo-Aryan',1000],
+  'gu':['Indo-European','Indo-Aryan',1100],'pa':['Indo-European','Indo-Aryan',1100],
+  'ne':['Indo-European','Indo-Aryan',1300],'si':['Indo-European','Indo-Aryan',-200],
+  'fi':['Uralic','Finnic',1540],'et':['Uralic','Finnic',1525],'krl':['Uralic','Finnic',1200],
+  'vro':['Uralic','Finnic',1600],'liv':['Uralic','Finnic',1600],
+  'se':['Uralic','Sami',1600],'smj':['Uralic','Sami',1600],'sma':['Uralic','Sami',1600],
+  'hu':['Uralic','Ugric',900,{before:900,lat:56,lng:58}],
+  'eu':['Isolate','Basque',-100],
+  'tr':['Turkic','Oghuz',1100,{before:1070,lat:41,lng:62}],
+  'az':['Turkic','Oghuz',1300],'uz':['Turkic','Karluk',1500],'kk':['Turkic','Kipchak',1500],
+  'mn':['Mongolic','Mongolic',1225],
+  'ka':['Kartvelian','Kartvelian',430],
+  'ar':['Afro-Asiatic','Semitic',-800],'he':['Afro-Asiatic','Semitic',-1000],
+  'mt':['Afro-Asiatic','Semitic',1450],'am':['Afro-Asiatic','Semitic',1300],
+  'ti':['Afro-Asiatic','Semitic',1200],'so':['Afro-Asiatic','Cushitic',1000],
+  'om':['Afro-Asiatic','Cushitic',1000],'ha':['Afro-Asiatic','Chadic',1000],
+  'ber':['Afro-Asiatic','Berber',-200],
+  'sw':['Niger-Congo','Bantu',1000],'zu':['Niger-Congo','Bantu',1500],'xh':['Niger-Congo','Bantu',1500],
+  'sn':['Niger-Congo','Bantu',1000],'ln':['Niger-Congo','Bantu',1880],'rw':['Niger-Congo','Bantu',1000],
+  'ny':['Niger-Congo','Bantu',1000],'st':['Niger-Congo','Bantu',1500],'kg':['Niger-Congo','Bantu',1000],
+  'yo':['Niger-Congo','Volta-Niger',1000],'ig':['Niger-Congo','Volta-Niger',1000],
+  'ak':['Niger-Congo','Kwa',1000],'wo':['Niger-Congo','Atlantic',1000],'ff':['Niger-Congo','Atlantic',1000],
+  'mg':['Austronesian','Malayo-Polynesian',500],'id':['Austronesian','Malayo-Polynesian',1928],
+  'ms':['Austronesian','Malayo-Polynesian',683],'tl':['Austronesian','Philippine',1000],
+  'mi':['Austronesian','Polynesian',1300],'haw':['Austronesian','Polynesian',1000],
+  'sm':['Austronesian','Polynesian',1000],'to':['Austronesian','Polynesian',1000],
+  'fj':['Austronesian','Oceanic',1000],
+  'ta':['Dravidian','South',-300],'te':['Dravidian','South-Central',575],
+  'kn':['Dravidian','South',450],'ml':['Dravidian','South',830],
+  'zh-CN':['Sino-Tibetan','Sinitic',-1250],'yue':['Sino-Tibetan','Sinitic',900],
+  'bo':['Sino-Tibetan','Tibeto-Burman',650],'my':['Sino-Tibetan','Tibeto-Burman',1100],
+  'ja':['Japonic','Japonic',712],'ko':['Koreanic','Koreanic',600],
+  'th':['Kra-Dai','Tai',1283],'lo':['Kra-Dai','Tai',1350],
+  'vi':['Austroasiatic','Vietic',1000],'km':['Austroasiatic','Khmer',611],
+  'qu':['Quechuan','Quechuan',500],'ay':['Aymaran','Aymaran',500],'gn':['Tupian','Tupi-Guarani',1000],
+  'nah':['Uto-Aztecan','Nahuan',600],'arn':['Araucanian','Araucanian',1000],
+  'guc':['Arawakan','Arawakan',1000],
+  'nv':['Na-Dene','Athabaskan',1400,{before:1500,lat:58,lng:-120}],
+  'chr':['Iroquoian','Iroquoian',1000],'lkt':['Siouan','Siouan',1000],
+  'oj':['Algic','Algonquian',1000],'cr':['Algic','Algonquian',1000],
+  'iu':['Eskimo-Aleut','Inuit',1000],
+};
+const SNAPSHOTS=[{label:'1 AD',year:1},{label:'1000 AD',year:1000},{label:'1500 AD',year:1500},{label:'1900',year:1900},{label:'Now',year:null}];
+const NOW_YEAR=new Date().getFullYear();
+const TIME_MIN=-3000;
+let timeYear=NOW_YEAR;
+function langHist(code){
+  const h=LANG_HISTORY[code];
+  if(h) return h;
+  const l=LANGUAGES.find(x=>x.code===code);
+  const f=(l&&l.family||'Other').split('>').map(s=>s.trim());
+  return [f[0],f[1]||f[0],0];
+}
+function langPresent(code){return timeYear>=langHist(code)[2]}
+function fmtYear(y){return y===NOW_YEAR?'Now ('+y+')':(y<0?(-y)+' BC':y+' AD')}
+
+// Wrap visibility: languages not yet present fade out instead of vanishing entirely.
+const _baseUpdateVisibility=updateVisibility;
+updateVisibility=function(){
+  _baseUpdateVisibility();
+  markers.forEach(m=>{
+    const el=m.getElement();if(!el)return;
+    const present=langPresent(m._langData.code);
+    el.classList.toggle('lang-not-yet',!present);
+  });
+};
+function applyTimePositions(){
+  markers.forEach(m=>{
+    const h=langHist(m._langData.code)[3];
+    const useOld=h && timeYear<h.before;
+    if(useOld){
+      if(!m._nowLatLng) m._nowLatLng=m.getLatLng();
+      m.setLatLng([h.lat,h.lng]);
+    } else if(m._nowLatLng){
+      m.setLatLng(m._nowLatLng); m._nowLatLng=null;
+    }
+  });
+}
+function setTimeYear(y){
+  timeYear=Math.max(TIME_MIN,Math.min(NOW_YEAR,parseInt(y)));
+  if(moveMode && timeYear<NOW_YEAR) toggleMoveMode(); // moving only in Now view
+  const s=document.getElementById('time-slider');if(s&&+s.value!==timeYear)s.value=timeYear;
+  const lb=document.getElementById('time-label');
+  if(lb){const n=LANGUAGES.filter(l=>langPresent(l.code)).length;lb.textContent=fmtYear(timeYear)+' · '+n+'/'+LANGUAGES.length+' languages'}
+  document.querySelectorAll('.snap-btn').forEach(b=>b.classList.toggle('active',+b.dataset.year===timeYear));
+  applyTimePositions();updateVisibility();setTimeout(resolveCollisions,50);
+}
+// Moving markers would save historical positions; force Now view first.
+const _baseToggleMove=toggleMoveMode;
+toggleMoveMode=function(){if(!moveMode&&timeYear<NOW_YEAR)setTimeYear(NOW_YEAR);_baseToggleMove()};
+
+function escHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function buildLangTree(){
+  const tree={};
+  LANGUAGES.forEach(l=>{
+    const [fam,br,yr]=langHist(l.code);
+    ((tree[fam]=tree[fam]||{})[br]=tree[fam][br]||[]).push({l,yr});
+  });
+  let html='';
+  Object.keys(tree).sort((a,b)=>Object.values(tree[b]).flat().length-Object.values(tree[a]).flat().length).forEach(fam=>{
+    const n=Object.values(tree[fam]).flat().length;
+    html+=`<details class="lt-fam"><summary>${escHtml(fam)} <span class="lt-n">${n}</span></summary>`;
+    Object.keys(tree[fam]).sort().forEach(br=>{
+      html+=`<details class="lt-br" open><summary>${escHtml(br)} <span class="lt-n">${tree[fam][br].length}</span></summary>`;
+      tree[fam][br].sort((a,b)=>a.yr-b.yr).forEach(({l,yr})=>{
+        html+=`<div class="lt-lang" data-code="${escHtml(l.code)}">${FLAGS[l.code]||'🏳️'} ${escHtml(l.name)} <span class="lt-yr">~${escHtml(fmtYear(yr))}</span></div>`;
+      });
+      html+='</details>';
+    });
+    html+='</details>';
+  });
+  const body=document.getElementById('lt-body');body.innerHTML=html;
+  body.querySelectorAll('.lt-lang').forEach(el=>el.addEventListener('click',()=>flyToLang(el.dataset.code)));
+}
+function flyToLang(code){
+  const m=markers.find(x=>x._langData.code===code);if(!m)return;
+  if(!langPresent(code)) setTimeYear(Math.max(langHist(code)[2],timeYear));
+  if(!checkedLangs.has(code)){checkedLangs.add(code);const cb=document.querySelector('input[type=checkbox][data-code="'+code+'"]');if(cb)cb.checked=true;saveState()}
+  map.flyTo(m.getLatLng(),Math.max(map.getZoom(),Math.max(5,m._langData.minZoom||1)));
+  map.once('moveend',()=>{updateVisibility();const el=document.getElementById('marker-'+code);if(el){el.classList.remove('hidden');el.style.opacity='1';el.classList.add('lt-pulse');setTimeout(()=>el.classList.remove('lt-pulse'),2000)}});
+}
+function toggleLangTree(){const p=document.getElementById('lang-tree');p.style.display=p.style.display==='block'?'none':'block'}
+(function initTimeUI(){
+  const css=document.createElement('style');
+  css.textContent=`.lang-not-yet{opacity:.12!important;filter:grayscale(1);pointer-events:none}
+#time-bar{position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:850;background:rgba(13,17,23,.92);border:1px solid var(--border);border-radius:8px;padding:6px 10px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:94vw;font-size:11px;color:var(--text)}
+#time-slider{width:min(360px,60vw)}#time-label{color:var(--amber);min-width:170px}
+.snap-btn,#lt-toggle{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--dim);border-radius:4px;padding:3px 7px;font-family:'Fira Code',monospace;font-size:10px;cursor:pointer}
+.snap-btn.active{color:var(--green);border-color:var(--green)}
+#lang-tree{display:none;position:fixed;right:10px;top:110px;bottom:70px;width:300px;overflow:auto;z-index:860;background:rgba(10,10,10,.95);border:1px solid var(--green);border-radius:8px;padding:8px;font-size:12px}
+#lang-tree summary{cursor:pointer;padding:3px 0;color:var(--cyan)}.lt-br{margin-left:12px}.lt-br summary{color:var(--purple)}
+.lt-lang{margin-left:24px;padding:2px 4px;cursor:pointer;border-radius:3px}.lt-lang:hover{background:rgba(0,255,65,.1)}
+.lt-n,.lt-yr{color:var(--dim);font-size:10px}.lt-pulse{outline:2px solid var(--green);border-radius:4px}`;
+  document.head.appendChild(css);
+  const bar=document.createElement('div');bar.id='time-bar';
+  bar.innerHTML=`<button id="lt-toggle" title="Language family tree">🌳 TREE</button><span>⏳</span>
+<input type="range" id="time-slider" min="${TIME_MIN}" max="${NOW_YEAR}" step="25" value="${NOW_YEAR}">
+<span id="time-label"></span>`+SNAPSHOTS.map(s=>`<button class="snap-btn" data-year="${s.year===null?NOW_YEAR:s.year}">${s.label}</button>`).join('');
+  document.body.appendChild(bar);
+  const panel=document.createElement('div');panel.id='lang-tree';
+  panel.innerHTML='<div style="color:var(--green);font-weight:bold;margin-bottom:6px">🌳 Language family tree <span style="color:var(--dim);font-size:10px">(dates approximate)</span></div><div id="lt-body"></div>';
+  document.body.appendChild(panel);
+  document.getElementById('lt-toggle').onclick=toggleLangTree;
+  const sl=document.getElementById('time-slider');
+  sl.addEventListener('input',()=>setTimeYear(+sl.value>=NOW_YEAR-12?NOW_YEAR:sl.value));
+  bar.querySelectorAll('.snap-btn').forEach(b=>b.onclick=()=>setTimeYear(+b.dataset.year));
+  const start=()=>{if(typeof map==='undefined'||!map||!markers.length)return setTimeout(start,300);buildLangTree();setTimeYear(NOW_YEAR)};
+  start();
+})();
+
+// ========================================================================
+//  EVOLUTION TIMELINE — ancestor (proto / old) languages branching into
+//  today's 168 languages. Ancestors are NOT map flags. All split dates are
+//  APPROXIMATE (rounded scholarly estimates; proto-language dates are
+//  reconstructions, not attestations).
+// ========================================================================
+// id: [display name, approximate year (negative = BC), parent id or null]
+const ANCESTORS = {
+  pie:['Proto-Indo-European',-3500,null],
+  pgmc:['Proto-Germanic',-500,'pie'], oe:['Old English',450,'pgmc'], ohg:['Old High German',750,'pgmc'],
+  osx:['Old Saxon',800,'pgmc'], odu:['Old Dutch',900,'pgmc'], ofr:['Old Frisian',1200,'pgmc'], on:['Old Norse',800,'pgmc'],
+  lat:['Latin',-700,'pie'], vlat:['Vulgar Latin',200,'lat'], ofr2:['Old French',842,'vlat'],
+  ocas:['Old Spanish (Castilian)',1000,'vlat'], galpt:['Galician-Portuguese',1175,'vlat'],
+  pcel:['Proto-Celtic',-800,'pie'], oir:['Old Irish',600,'pcel'], brit:['Brittonic',500,'pcel'],
+  pbsl:['Proto-Balto-Slavic',-1500,'pie'], psl:['Proto-Slavic',500,'pbsl'],
+  oes:['Old East Slavic',1000,'psl'], ocs:['Old Church Slavonic',863,'psl'],
+  agr:['Ancient Greek',-1450,'pie'], pii:['Proto-Indo-Iranian',-2000,'pie'],
+  ope:['Old Persian',-520,'pii'], skt:['Sanskrit',-1500,'pii'], prk:['Prakrit',-300,'skt'],
+  pura:['Proto-Uralic',-3000,null], pfin:['Proto-Finnic',0,'pura'], psam:['Proto-Sami',0,'pura'],
+  ptrk:['Proto-Turkic',-500,null], otrk:['Old Turkic',700,'ptrk'],
+  paa:['Proto-Afro-Asiatic',-3000,null], psem:['Proto-Semitic',-2500,'paa'], oar:['Old Arabic',-800,'psem'],
+  gez:['Ge\'ez',300,'psem'], bheb:['Biblical Hebrew',-1000,'psem'],
+  pnc:['Proto-Niger-Congo',-3000,null], pban:['Proto-Bantu',-1000,'pnc'],
+  pan:['Proto-Austronesian',-3000,null], pmp:['Proto-Malayo-Polynesian',-2500,'pan'], omal:['Old Malay',683,'pmp'],
+  poc:['Proto-Oceanic',-1500,'pmp'], ppn:['Proto-Polynesian',-500,'poc'],
+  pdr:['Proto-Dravidian',-2500,null], otam:['Old Tamil',-300,'pdr'],
+  pst:['Proto-Sino-Tibetan',-3000,null], och:['Old Chinese',-1250,'pst'], cch:['Classical Chinese',-500,'och'],
+  ptb:['Proto-Tibeto-Burman',-2000,'pst'],
+};
+// modern code -> ancestor id (others fall back to their family root)
+const EVO_PARENT = {en:'oe','en-US':'oe',sco:'oe',tpi:'oe',de:'ohg',gsw:'ohg','gsw-FR':'ohg',bar:'ohg',ksh:'ohg',pfl:'ohg',swg:'ohg',sli:'ohg',lb:'ohg',
+  nds:'osx',nl:'odu',vls:'odu',li:'odu',af:'odu',fy:'ofr',frr:'ofr',stq:'ofr',sv:'on',da:'on',no:'on',is:'on',fo:'on',
+  fr:'ofr2','fr-CA':'ofr2',wa:'ofr2',ht:'ofr2',es:'ocas','es-MX':'ocas',pt:'galpt','pt-BR':'galpt',gl:'galpt',
+  ga:'oir',gd:'oir',gv:'oir',cy:'brit',br:'brit',kw:'brit',ru:'oes',uk:'oes',be:'oes',rue:'oes',bg:'ocs',mk:'ocs',
+  lv:'pbsl',lt:'pbsl',el:'agr',fa:'ope',ku:'ope',ps:'ope',hi:'prk',ur:'prk',bn:'prk',mr:'prk',gu:'prk',pa:'prk',ne:'prk',si:'prk',
+  sq:'pie',hy:'pie',fi:'pfin',et:'pfin',krl:'pfin',vro:'pfin',liv:'pfin',se:'psam',smj:'psam',sma:'psam',hu:'pura',
+  tr:'otrk',az:'otrk',uz:'otrk',kk:'otrk',ar:'oar',mt:'oar',am:'gez',ti:'gez',he:'bheb',so:'paa',om:'paa',ha:'paa',ber:'paa',
+  id:'omal',ms:'omal',mg:'pmp',tl:'pmp',fj:'poc',mi:'ppn',haw:'ppn',sm:'ppn',to:'ppn',ta:'otam',ml:'otam',kn:'pdr',te:'pdr',
+  'zh-CN':'cch',yue:'cch',bo:'ptb',my:'ptb'};
+const EVO_FAMILY_ROOT={'Indo-European':'pie','Uralic':'pura','Turkic':'ptrk','Afro-Asiatic':'paa','Niger-Congo':'pnc','Austronesian':'pan','Dravidian':'pdr','Sino-Tibetan':'pst'};
+const EVO_ROMANCE_DEFAULT='vlat', EVO_SLAVIC_DEFAULT='psl';
+const EVO_MIN=-4000;
+let evoScale=0.18, evoNodes=null;
+function evoBuild(){
+  const nodes={};
+  Object.entries(ANCESTORS).forEach(([id,[name,year,parent]])=>nodes[id]={id,name,year,parent,kids:[],anc:true});
+  LANGUAGES.forEach(l=>{
+    const [fam,br,yr]=langHist(l.code);
+    let p=EVO_PARENT[l.code];
+    if(!p && /^Romance/.test(br)) p=EVO_ROMANCE_DEFAULT;
+    if(!p && /^Slavic/.test(br)) p=EVO_SLAVIC_DEFAULT;
+    if(!p) p=EVO_FAMILY_ROOT[fam];
+    if(!p){ // single-language or small family: auto proto node
+      p='auto-'+fam;
+      if(!nodes[p]) nodes[p]={id:p,name:'Proto-'+fam,year:Infinity,parent:null,kids:[],anc:true,auto:true};
+      nodes[p].year=Math.max(EVO_MIN+200,Math.min(nodes[p].year,yr-400));
+    }
+    nodes['L:'+l.code]={id:'L:'+l.code,name:l.name,code:l.code,year:yr,parent:p,kids:[],anc:false};
+  });
+  Object.values(nodes).forEach(n=>{if(n.parent&&nodes[n.parent])nodes[n.parent].kids.push(n)});
+  const roots=Object.values(nodes).filter(n=>!n.parent&&n.kids.length);
+  const size=n=>n.kids.length?n.kids.reduce((a,k)=>a+size(k),0):1;
+  roots.sort((a,b)=>size(b)-size(a));
+  let row=0;
+  const lay=(n)=>{n.kids.sort((a,b)=>a.year-b.year);if(!n.kids.length){n.row=row++;return}
+    n.kids.forEach(lay);n.row=n.kids.reduce((a,k)=>a+k.row,0)/n.kids.length};
+  roots.forEach(r=>{lay(r);row+=1.2});
+  evoNodes={nodes,roots,rows:row};
+}
+function evoX(y){return 20+(y-EVO_MIN)*evoScale}
+function evoRender(){
+  if(!evoNodes) evoBuild();
+  const RH=16, W=evoX(NOW_YEAR)+160, H=evoNodes.rows*RH+40;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Fira Code,monospace" font-size="11">`;
+  for(let y=-4000;y<=2000;y+=500){const x=evoX(y);s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#222"/><text x="${x+3}" y="12" fill="#666">${y<0?(-y)+' BC':y===0?'1 AD':y}</text>`}
+  const Y=n=>30+n.row*RH;
+  Object.values(evoNodes.nodes).forEach(n=>{
+    if(!n.kids.length&&n.anc) return;
+    n.kids.forEach(k=>{const x0=evoX(n.year),x1=evoX(k.year);
+      s+=`<path d="M${x0},${Y(n)} V${Y(k)} H${x1}" fill="none" stroke="${k.anc?'#bc8cff':'#2a6'}" stroke-width="1.3"/>`});
+  });
+  Object.values(evoNodes.nodes).forEach(n=>{
+    if(n.anc&&!n.kids.length) return;
+    const x=evoX(n.year),y=Y(n);
+    if(n.anc){
+      s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="#bc8cff"/><text x="${x+5}" y="${y-4}" fill="#bc8cff" font-style="italic">${escHtml(n.name)} ~${escHtml(fmtYear(n.year))}</text>`;
+    } else {
+      const xe=evoX(NOW_YEAR);
+      s+=`<line x1="${x}" y1="${y}" x2="${xe}" y2="${y}" stroke="#0f4" stroke-width="2" opacity=".55"/><circle cx="${x}" cy="${y}" r="3" fill="#0f4"/>`+
+        `<text class="evo-leaf" data-code="${escHtml(n.code)}" x="${xe+4}" y="${y+4}" fill="#ddd" style="cursor:pointer">${FLAGS[n.code]||'🏳️'} ${escHtml(n.name)}</text>`;
+    }
+  });
+  s+=`<line id="evo-marker" x1="0" y1="0" x2="0" y2="${H}" stroke="#ffb800" stroke-width="2"/></svg>`;
+  const body=document.getElementById('evo-body');body.innerHTML=s;
+  body.querySelectorAll('.evo-leaf').forEach(t=>t.addEventListener('click',()=>{flyToLang(t.dataset.code)}));
+  evoMarker();
+}
+function evoMarker(){const m=document.getElementById('evo-marker');if(!m)return;const x=evoX(timeYear);m.setAttribute('x1',x);m.setAttribute('x2',x)}
+function evoZoom(f){const b=document.getElementById('evo-body');const c=(b.scrollLeft+b.clientWidth/2)/evoScale;evoScale=Math.max(0.05,Math.min(2,evoScale*f));evoRender();b.scrollLeft=c*evoScale-b.clientWidth/2}
+function toggleEvolution(){const p=document.getElementById('evo-panel');const on=p.style.display!=='flex';p.style.display=on?'flex':'none';
+  if(on){evoRender();const b=document.getElementById('evo-body');b.scrollLeft=Math.max(0,evoX(timeYear)-b.clientWidth/2)}}
+const _baseSetTimeYear=setTimeYear;
+setTimeYear=function(y){_baseSetTimeYear(y);evoMarker()};
+(function initEvoUI(){
+  const css=document.createElement('style');
+  css.textContent=`#evo-panel{display:none;flex-direction:column;position:fixed;left:10px;right:10px;top:110px;bottom:70px;z-index:870;background:rgba(5,8,12,.97);border:1px solid var(--purple);border-radius:8px}
+#evo-head{display:flex;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--purple);font-size:12px}
+#evo-head button,#evo-toggle{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--dim);border-radius:4px;padding:3px 7px;font-family:'Fira Code',monospace;font-size:10px;cursor:pointer}
+#evo-body{flex:1;overflow:auto}.evo-leaf:hover{fill:#0f4}`;
+  document.head.appendChild(css);
+  const btn=document.createElement('button');btn.id='evo-toggle';btn.textContent='🧬 EVOLUTION';btn.onclick=toggleEvolution;
+  const bar=document.getElementById('time-bar');bar.insertBefore(btn,bar.children[1]);
+  const p=document.createElement('div');p.id='evo-panel';
+  p.innerHTML=`<div id="evo-head">🧬 Language evolution <span style="color:var(--dim);font-size:10px">(all dates approximate · purple = ancestor languages, green = today's languages · click a language to fly the map)</span><span style="flex:1"></span><button id="evo-zin">+ ZOOM</button><button id="evo-zout">- ZOOM</button><button id="evo-close">CLOSE</button></div><div id="evo-body"></div>`;
+  document.body.appendChild(p);
+  document.getElementById('evo-zin').onclick=()=>evoZoom(1.4);
+  document.getElementById('evo-zout').onclick=()=>evoZoom(1/1.4);
+  document.getElementById('evo-close').onclick=toggleEvolution;
+  document.getElementById('evo-body').addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();evoZoom(e.deltaY<0?1.15:1/1.15)}},{passive:false});
+})();
 </script>
 </body>
 </html>
