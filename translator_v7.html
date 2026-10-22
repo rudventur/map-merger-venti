@@ -2384,6 +2384,127 @@ function toggleLangTree(){const p=document.getElementById('lang-tree');p.style.d
   const start=()=>{if(typeof map==='undefined'||!map||!markers.length)return setTimeout(start,300);buildLangTree();setTimeYear(NOW_YEAR)};
   start();
 })();
+
+// ========================================================================
+//  EVOLUTION TIMELINE — ancestor (proto / old) languages branching into
+//  today's 168 languages. Ancestors are NOT map flags. All split dates are
+//  APPROXIMATE (rounded scholarly estimates; proto-language dates are
+//  reconstructions, not attestations).
+// ========================================================================
+// id: [display name, approximate year (negative = BC), parent id or null]
+const ANCESTORS = {
+  pie:['Proto-Indo-European',-3500,null],
+  pgmc:['Proto-Germanic',-500,'pie'], oe:['Old English',450,'pgmc'], ohg:['Old High German',750,'pgmc'],
+  osx:['Old Saxon',800,'pgmc'], odu:['Old Dutch',900,'pgmc'], ofr:['Old Frisian',1200,'pgmc'], on:['Old Norse',800,'pgmc'],
+  lat:['Latin',-700,'pie'], vlat:['Vulgar Latin',200,'lat'], ofr2:['Old French',842,'vlat'],
+  ocas:['Old Spanish (Castilian)',1000,'vlat'], galpt:['Galician-Portuguese',1175,'vlat'],
+  pcel:['Proto-Celtic',-800,'pie'], oir:['Old Irish',600,'pcel'], brit:['Brittonic',500,'pcel'],
+  pbsl:['Proto-Balto-Slavic',-1500,'pie'], psl:['Proto-Slavic',500,'pbsl'],
+  oes:['Old East Slavic',1000,'psl'], ocs:['Old Church Slavonic',863,'psl'],
+  agr:['Ancient Greek',-1450,'pie'], pii:['Proto-Indo-Iranian',-2000,'pie'],
+  ope:['Old Persian',-520,'pii'], skt:['Sanskrit',-1500,'pii'], prk:['Prakrit',-300,'skt'],
+  pura:['Proto-Uralic',-3000,null], pfin:['Proto-Finnic',0,'pura'], psam:['Proto-Sami',0,'pura'],
+  ptrk:['Proto-Turkic',-500,null], otrk:['Old Turkic',700,'ptrk'],
+  paa:['Proto-Afro-Asiatic',-3000,null], psem:['Proto-Semitic',-2500,'paa'], oar:['Old Arabic',-800,'psem'],
+  gez:['Ge\'ez',300,'psem'], bheb:['Biblical Hebrew',-1000,'psem'],
+  pnc:['Proto-Niger-Congo',-3000,null], pban:['Proto-Bantu',-1000,'pnc'],
+  pan:['Proto-Austronesian',-3000,null], pmp:['Proto-Malayo-Polynesian',-2500,'pan'], omal:['Old Malay',683,'pmp'],
+  poc:['Proto-Oceanic',-1500,'pmp'], ppn:['Proto-Polynesian',-500,'poc'],
+  pdr:['Proto-Dravidian',-2500,null], otam:['Old Tamil',-300,'pdr'],
+  pst:['Proto-Sino-Tibetan',-3000,null], och:['Old Chinese',-1250,'pst'], cch:['Classical Chinese',-500,'och'],
+  ptb:['Proto-Tibeto-Burman',-2000,'pst'],
+};
+// modern code -> ancestor id (others fall back to their family root)
+const EVO_PARENT = {en:'oe','en-US':'oe',sco:'oe',tpi:'oe',de:'ohg',gsw:'ohg','gsw-FR':'ohg',bar:'ohg',ksh:'ohg',pfl:'ohg',swg:'ohg',sli:'ohg',lb:'ohg',
+  nds:'osx',nl:'odu',vls:'odu',li:'odu',af:'odu',fy:'ofr',frr:'ofr',stq:'ofr',sv:'on',da:'on',no:'on',is:'on',fo:'on',
+  fr:'ofr2','fr-CA':'ofr2',wa:'ofr2',ht:'ofr2',es:'ocas','es-MX':'ocas',pt:'galpt','pt-BR':'galpt',gl:'galpt',
+  ga:'oir',gd:'oir',gv:'oir',cy:'brit',br:'brit',kw:'brit',ru:'oes',uk:'oes',be:'oes',rue:'oes',bg:'ocs',mk:'ocs',
+  lv:'pbsl',lt:'pbsl',el:'agr',fa:'ope',ku:'ope',ps:'ope',hi:'prk',ur:'prk',bn:'prk',mr:'prk',gu:'prk',pa:'prk',ne:'prk',si:'prk',
+  sq:'pie',hy:'pie',fi:'pfin',et:'pfin',krl:'pfin',vro:'pfin',liv:'pfin',se:'psam',smj:'psam',sma:'psam',hu:'pura',
+  tr:'otrk',az:'otrk',uz:'otrk',kk:'otrk',ar:'oar',mt:'oar',am:'gez',ti:'gez',he:'bheb',so:'paa',om:'paa',ha:'paa',ber:'paa',
+  id:'omal',ms:'omal',mg:'pmp',tl:'pmp',fj:'poc',mi:'ppn',haw:'ppn',sm:'ppn',to:'ppn',ta:'otam',ml:'otam',kn:'pdr',te:'pdr',
+  'zh-CN':'cch',yue:'cch',bo:'ptb',my:'ptb'};
+const EVO_FAMILY_ROOT={'Indo-European':'pie','Uralic':'pura','Turkic':'ptrk','Afro-Asiatic':'paa','Niger-Congo':'pnc','Austronesian':'pan','Dravidian':'pdr','Sino-Tibetan':'pst'};
+const EVO_ROMANCE_DEFAULT='vlat', EVO_SLAVIC_DEFAULT='psl';
+const EVO_MIN=-4000;
+let evoScale=0.18, evoNodes=null;
+function evoBuild(){
+  const nodes={};
+  Object.entries(ANCESTORS).forEach(([id,[name,year,parent]])=>nodes[id]={id,name,year,parent,kids:[],anc:true});
+  LANGUAGES.forEach(l=>{
+    const [fam,br,yr]=langHist(l.code);
+    let p=EVO_PARENT[l.code];
+    if(!p && /^Romance/.test(br)) p=EVO_ROMANCE_DEFAULT;
+    if(!p && /^Slavic/.test(br)) p=EVO_SLAVIC_DEFAULT;
+    if(!p) p=EVO_FAMILY_ROOT[fam];
+    if(!p){ // single-language or small family: auto proto node
+      p='auto-'+fam;
+      if(!nodes[p]) nodes[p]={id:p,name:'Proto-'+fam,year:Infinity,parent:null,kids:[],anc:true,auto:true};
+      nodes[p].year=Math.max(EVO_MIN+200,Math.min(nodes[p].year,yr-400));
+    }
+    nodes['L:'+l.code]={id:'L:'+l.code,name:l.name,code:l.code,year:yr,parent:p,kids:[],anc:false};
+  });
+  Object.values(nodes).forEach(n=>{if(n.parent&&nodes[n.parent])nodes[n.parent].kids.push(n)});
+  const roots=Object.values(nodes).filter(n=>!n.parent&&n.kids.length);
+  const size=n=>n.kids.length?n.kids.reduce((a,k)=>a+size(k),0):1;
+  roots.sort((a,b)=>size(b)-size(a));
+  let row=0;
+  const lay=(n)=>{n.kids.sort((a,b)=>a.year-b.year);if(!n.kids.length){n.row=row++;return}
+    n.kids.forEach(lay);n.row=n.kids.reduce((a,k)=>a+k.row,0)/n.kids.length};
+  roots.forEach(r=>{lay(r);row+=1.2});
+  evoNodes={nodes,roots,rows:row};
+}
+function evoX(y){return 20+(y-EVO_MIN)*evoScale}
+function evoRender(){
+  if(!evoNodes) evoBuild();
+  const RH=16, W=evoX(NOW_YEAR)+160, H=evoNodes.rows*RH+40;
+  let s=`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" font-family="Fira Code,monospace" font-size="11">`;
+  for(let y=-4000;y<=2000;y+=500){const x=evoX(y);s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="#222"/><text x="${x+3}" y="12" fill="#666">${y<0?(-y)+' BC':y===0?'1 AD':y}</text>`}
+  const Y=n=>30+n.row*RH;
+  Object.values(evoNodes.nodes).forEach(n=>{
+    if(!n.kids.length&&n.anc) return;
+    n.kids.forEach(k=>{const x0=evoX(n.year),x1=evoX(k.year);
+      s+=`<path d="M${x0},${Y(n)} V${Y(k)} H${x1}" fill="none" stroke="${k.anc?'#bc8cff':'#2a6'}" stroke-width="1.3"/>`});
+  });
+  Object.values(evoNodes.nodes).forEach(n=>{
+    if(n.anc&&!n.kids.length) return;
+    const x=evoX(n.year),y=Y(n);
+    if(n.anc){
+      s+=`<circle cx="${x}" cy="${y}" r="3.5" fill="#bc8cff"/><text x="${x+5}" y="${y-4}" fill="#bc8cff" font-style="italic">${escHtml(n.name)} ~${escHtml(fmtYear(n.year))}</text>`;
+    } else {
+      const xe=evoX(NOW_YEAR);
+      s+=`<line x1="${x}" y1="${y}" x2="${xe}" y2="${y}" stroke="#0f4" stroke-width="2" opacity=".55"/><circle cx="${x}" cy="${y}" r="3" fill="#0f4"/>`+
+        `<text class="evo-leaf" data-code="${escHtml(n.code)}" x="${xe+4}" y="${y+4}" fill="#ddd" style="cursor:pointer">${FLAGS[n.code]||'🏳️'} ${escHtml(n.name)}</text>`;
+    }
+  });
+  s+=`<line id="evo-marker" x1="0" y1="0" x2="0" y2="${H}" stroke="#ffb800" stroke-width="2"/></svg>`;
+  const body=document.getElementById('evo-body');body.innerHTML=s;
+  body.querySelectorAll('.evo-leaf').forEach(t=>t.addEventListener('click',()=>{flyToLang(t.dataset.code)}));
+  evoMarker();
+}
+function evoMarker(){const m=document.getElementById('evo-marker');if(!m)return;const x=evoX(timeYear);m.setAttribute('x1',x);m.setAttribute('x2',x)}
+function evoZoom(f){const b=document.getElementById('evo-body');const c=(b.scrollLeft+b.clientWidth/2)/evoScale;evoScale=Math.max(0.05,Math.min(2,evoScale*f));evoRender();b.scrollLeft=c*evoScale-b.clientWidth/2}
+function toggleEvolution(){const p=document.getElementById('evo-panel');const on=p.style.display!=='flex';p.style.display=on?'flex':'none';
+  if(on){evoRender();const b=document.getElementById('evo-body');b.scrollLeft=Math.max(0,evoX(timeYear)-b.clientWidth/2)}}
+const _baseSetTimeYear=setTimeYear;
+setTimeYear=function(y){_baseSetTimeYear(y);evoMarker()};
+(function initEvoUI(){
+  const css=document.createElement('style');
+  css.textContent=`#evo-panel{display:none;flex-direction:column;position:fixed;left:10px;right:10px;top:110px;bottom:70px;z-index:870;background:rgba(5,8,12,.97);border:1px solid var(--purple);border-radius:8px}
+#evo-head{display:flex;gap:6px;align-items:center;padding:6px 10px;border-bottom:1px solid var(--border);color:var(--purple);font-size:12px}
+#evo-head button,#evo-toggle{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--dim);border-radius:4px;padding:3px 7px;font-family:'Fira Code',monospace;font-size:10px;cursor:pointer}
+#evo-body{flex:1;overflow:auto}.evo-leaf:hover{fill:#0f4}`;
+  document.head.appendChild(css);
+  const btn=document.createElement('button');btn.id='evo-toggle';btn.textContent='🧬 EVOLUTION';btn.onclick=toggleEvolution;
+  const bar=document.getElementById('time-bar');bar.insertBefore(btn,bar.children[1]);
+  const p=document.createElement('div');p.id='evo-panel';
+  p.innerHTML=`<div id="evo-head">🧬 Language evolution <span style="color:var(--dim);font-size:10px">(all dates approximate · purple = ancestor languages, green = today's languages · click a language to fly the map)</span><span style="flex:1"></span><button id="evo-zin">+ ZOOM</button><button id="evo-zout">- ZOOM</button><button id="evo-close">CLOSE</button></div><div id="evo-body"></div>`;
+  document.body.appendChild(p);
+  document.getElementById('evo-zin').onclick=()=>evoZoom(1.4);
+  document.getElementById('evo-zout').onclick=()=>evoZoom(1/1.4);
+  document.getElementById('evo-close').onclick=toggleEvolution;
+  document.getElementById('evo-body').addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();evoZoom(e.deltaY<0?1.15:1/1.15)}},{passive:false});
+})();
 </script>
 </body>
 </html>
