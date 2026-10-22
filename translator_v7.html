@@ -228,6 +228,8 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="/RudVentur.com/embed/apple-touch-icon.png">
 <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
+<!-- right-click (long-press on a phone) any button for what it does: the shared RUDVENTUR explanations -->
+<script src="https://rudventur.github.io/RudVentur.com/embed/rxplanation.js" defer></script>
 <script src="https://rudventur.github.io/RudVentur.com/embed/popcoin-reward.js" defer></script>
 </head>
 <body>
@@ -235,26 +237,26 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <div id="boot-screen"><div id="boot-text"></div></div>
 
 <div id="header">
-  <h1 onclick="toggleViewMenu(event)" style="cursor:pointer" title="View options">🗺️ CREATOR MAP v7</h1>
+  <h1 data-explain="Opens the view menu: full screen layouts for the translator." onclick="toggleViewMenu(event)" style="cursor:pointer" title="View options">🗺️ CREATOR MAP v7</h1>
   <nav id="tr-tabs" aria-label="Translator sections">
-    <button type="button" class="tr-tab active" data-tab="translate" onclick="showTab('translate')">🌐 Translate</button>
-    <button type="button" class="tr-tab" data-tab="chat" onclick="showTab('chat')">💬 Chat</button>
-    <button type="button" class="tr-tab" id="tr-kb-btn" onclick="WorldKeyboards.toggle()" title="On-screen keyboards for many languages; types into the focused text box">⌨️ Keyboard</button>
+    <button type="button" class="tr-tab active" data-explain="Shows the Translate tab: type your text and see it translated on the map of the world languages." data-tab="translate" onclick="showTab('translate')">🌐 Translate</button>
+    <button type="button" class="tr-tab" data-explain="Shows the Chat tab: the public chat room, with every message translated into your language." data-tab="chat" onclick="showTab('chat')">💬 Chat</button>
+    <button type="button" class="tr-tab" data-explain="Shows or hides the on-screen keyboards for many languages; they type into the text box you clicked last." id="tr-kb-btn" onclick="WorldKeyboards.toggle()" title="On-screen keyboards for many languages; types into the focused text box">⌨️ Keyboard</button>
   </nav>
   <div class="size-control">
     <label>ALL SIZE</label>
     <input type="range" id="sizeSlider" min="12" max="48" value="28" style="width:80px" oninput="updateGlobalSize(this.value)">
   </div>
   <div style="margin-left:auto;display:flex;align-items:center;gap:6px">
-    <button class="hdr-btn" id="btn-move" onclick="toggleMoveMode()">📌 MOVE</button>
-    <button class="hdr-btn" onclick="randomiseAll()" title="Randomise sizes, zoom, position">🎲 RANDOM</button>
-    <button class="hdr-btn" onclick="saveToTxt()" title="Save state to .txt">💾 SAVE</button>
-    <button class="hdr-btn" onclick="loadFromTxt()" title="Load state from .txt">📂 LOAD</button>
-    <button class="hdr-btn" onclick="resetAllState()">↺ RESET</button>
-    <button class="hdr-btn" style="color:var(--cyan);border-color:var(--cyan)" onclick="openGrammarGraphic()" title="Compare word order across languages, aligned to the main language">📐 GRAMMAR GRAPHIC</button>
-    <button class="hdr-btn" style="color:var(--amber);border-color:var(--amber)" onclick="openWordGrid()" title="Translate a core word list, grouped by part of speech">📚 WORD GRID</button>
+    <button class="hdr-btn" data-explain="Move mode: click a flag, then click on the map to move it there. Click again to stop." id="btn-move" onclick="toggleMoveMode()">📌 MOVE</button>
+    <button class="hdr-btn" data-explain="Shuffles the label sizes, the zoom and the map position for a fresh look." onclick="randomiseAll()" title="Randomise sizes, zoom, position">🎲 RANDOM</button>
+    <button class="hdr-btn" data-explain="Downloads a text file with your languages, positions, sizes and translations, to load later." onclick="saveToTxt()" title="Save state to .txt">💾 SAVE</button>
+    <button class="hdr-btn" data-explain="Loads a text file saved with SAVE and puts everything back as it was." onclick="loadFromTxt()" title="Load state from .txt">📂 LOAD</button>
+    <button class="hdr-btn" data-explain="Puts every flag, size and language back to the start and clears the translations." onclick="resetAllState()">↺ RESET</button>
+    <button class="hdr-btn" style="color:var(--cyan);border-color:var(--cyan)" data-explain="Compares word order across the chosen languages, lined up with your language." onclick="openGrammarGraphic()" title="Compare word order across languages, aligned to the main language">📐 GRAMMAR GRAPHIC</button>
+    <button class="hdr-btn" style="color:var(--amber);border-color:var(--amber)" data-explain="Opens a core word list translated into the chosen languages, grouped by part of speech." onclick="openWordGrid()" title="Translate a core word list, grouped by part of speech">📚 WORD GRID</button>
     <div class="redirect-wrap">
-      <button class="hdr-btn" style="color:var(--purple);border-color:var(--purple)" onclick="openRedirectMenu(event)">&#128257; REDIRECT</button>
+      <button class="hdr-btn" style="color:var(--purple);border-color:var(--purple)" data-explain="Shows the other RUDVENTUR map pages (Map Merger, Snout First, Voice of God, rudTrip20) and your own saved sites." onclick="openRedirectMenu(event)">&#128257; REDIRECT</button>
     </div>
     <span style="font-size:10px;color:var(--dim)">RV©26</span>
   </div>
@@ -262,15 +264,15 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 
 <!-- VIEW MODE MENU (logo click) -->
 <div class="view-menu" id="viewMenu">
-  <button onclick="setView('horizontal')">Full Screen Horizontal</button>
-  <button onclick="setView('panoramic')">Full Screen Panoramic</button>
-  <button onclick="setView('normal')">Normal / Default Browser</button>
+  data-explain="Fills the screen in landscape orientation." <button onclick="setView('horizontal')">Full Screen Horizontal</button>
+  data-explain="Fills the screen in a wide panoramic layout." <button onclick="setView('panoramic')">Full Screen Panoramic</button>
+  <button data-explain="Back to the normal browser view." onclick="setView('normal')">Normal / Default Browser</button>
   <div class="menu-sep"></div>
-  <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)">Settings One</button>
+  <button class="settings-toggle" data-explain="Shows more view choices." onclick="toggleSettingsSubmenu(event)">Settings One</button>
   <div class="view-submenu" id="viewSubmenu">
-    <button onclick="setView('horizontal')">&#8618; Panoramic — Locked</button>
-    <button onclick="setView('panoramic')">&#8618; Panoramic — Default Rotation</button>
-    <button onclick="setView('vertical')">&#8618; Full Screen Vertical</button>
+    data-explain="Panoramic full screen that stays wide when the phone turns." <button onclick="setView('horizontal')">&#8618; Panoramic — Locked</button>
+    data-explain="Panoramic full screen that follows the phone rotation." <button onclick="setView('panoramic')">&#8618; Panoramic — Default Rotation</button>
+    <button data-explain="Fills the screen in portrait orientation." onclick="setView('vertical')">&#8618; Full Screen Vertical</button>
   </div>
 </div>
 
@@ -279,16 +281,16 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
   <div id="redirect-modal">
     <div class="rm-head">
       <span>&#128257; Redirect</span>
-      <button onclick="closeRedirectMenu()">✕</button>
+      <button data-explain="Closes the redirect list." onclick="closeRedirectMenu()">✕</button>
     </div>
     <div class="redirect-grid">
       <span class="redirect-card cur">&#127760; Translator <small>(here)</small></span>
-      <button class="redirect-card" onclick="goTo('index.html')">&#128506;&#65039; Map Merger</button>
-      <button class="redirect-card" onclick="goTo('snout-first.html')">&#128062; Snout First</button>
-      <button class="redirect-card" onclick="goTo('voice-of-god.html')">&#128172; Voice of God</button>
-      <button class="redirect-card" onclick="goTo('https://rudventur.github.io/rudTrip20/')">&#127922; rudTrip20</button>
+      <button class="redirect-card" data-explain="Opens Map Merger Venti (walk, drive, sail or fly on a real map) in a new tab, in the same view mode." onclick="goTo('index.html')">&#128506;&#65039; Map Merger</button>
+      <button class="redirect-card" data-explain="Opens Snout First, the pet map, in a new tab." onclick="goTo('snout-first.html')">&#128062; Snout First</button>
+      <button class="redirect-card" data-explain="Opens Voice of God, the RUDVENTUR voice translator, in a new tab." onclick="goTo('voice-of-god.html')">&#128172; Voice of God</button>
+      <button class="redirect-card" data-explain="Opens rudTrip20, a random trip picked on a map and a globe, in a new tab." onclick="goTo('https://rudventur.github.io/rudTrip20/')">&#127922; rudTrip20</button>
       <div id="customRedirectCards"></div>
-      <button class="redirect-card" id="newRedirectBtn" onclick="addCustomRedirect()" style="border-style:dashed">&#10133; NEW <small>(your own useR sites, max 3)</small></button>
+      <button class="redirect-card" data-explain="Adds one of your own websites to this list (up to 3), saved on this device." id="newRedirectBtn" onclick="addCustomRedirect()" style="border-style:dashed">&#10133; NEW <small>(your own useR sites, max 3)</small></button>
     </div>
   </div>
 </div>
@@ -485,20 +487,20 @@ document.addEventListener('click', e => {
 <div id="translate-bar">
   <select id="base-lang-select"></select>
   <input id="translate-input" type="text" placeholder="Type to translate..." autocomplete="off">
-  <button class="tb-btn" id="btn-translate">TRANSLATE ⚡</button>
-  <button class="tb-btn" id="btn-clear">CLEAR ✕</button>
+  <button class="tb-btn" data-explain="Translates the text in the box into every language ticked in the list, shown on the map." id="btn-translate">TRANSLATE ⚡</button>
+  <button class="tb-btn" data-explain="Clears the text box and the translations on the map." id="btn-clear">CLEAR ✕</button>
   <div id="translate-status"></div>
 </div>
 
 <div id="move-instructions">🏁 Click a flag to select it, then click anywhere on the map to move it</div>
 
-<button id="toggle-btn" onclick="toggleLangPanel()">☑ LANGUAGES</button>
+<button data-explain="Shows or hides the list of languages to translate into." id="toggle-btn" onclick="toggleLangPanel()">☑ LANGUAGES</button>
 <div id="lang-toggles">
   <div class="ctrl-row">
-    <button onclick="selectAllLangs(true)">All</button>
-    <button onclick="selectAllLangs(false)">None</button>
-    <button onclick="selectByTier('major')">Major</button>
-    <button onclick="selectByTier('regional')">Regional</button>
+    <button data-explain="Ticks every language in the list." onclick="selectAllLangs(true)">All</button>
+    <button data-explain="Unticks every language." onclick="selectAllLangs(false)">None</button>
+    <button data-explain="Ticks only the major world languages." onclick="selectByTier('major')">Major</button>
+    <button data-explain="Ticks the regional languages and dialects." onclick="selectByTier('regional')">Regional</button>
   </div>
   <div id="lang-checks-list"></div>
 </div>
@@ -507,12 +509,12 @@ document.addEventListener('click', e => {
 
 <!-- RIGHT SIDE: Zoom + Clear -->
 <div id="right-controls">
-  <button onclick="map.zoomIn()" title="Zoom in">+</button>
-  <button onclick="map.zoomOut()" title="Zoom out">−</button>
+  <button data-explain="Zooms the map in." onclick="map.zoomIn()" title="Zoom in">+</button>
+  <button data-explain="Zooms the map out." onclick="map.zoomOut()" title="Zoom out">−</button>
 </div>
 
 <div id="side-panel">
-  <button id="panel-close" style="position:absolute;top:10px;right:14px;background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer;z-index:10">✕</button>
+  <button data-explain="Closes the language details panel." id="panel-close" style="position:absolute;top:10px;right:14px;background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer;z-index:10">✕</button>
   <div id="panel-content"></div>
 </div>
 
@@ -520,7 +522,7 @@ document.addEventListener('click', e => {
   <div id="grammar-modal">
     <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div id="grammar-modal-title" style="font-family:'Orbitron';color:var(--green)"></div>
-      <button onclick="closeGrammar()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+      <button data-explain="Closes the grammar window." onclick="closeGrammar()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
     </div>
     <div id="grammar-body"></div>
   </div>
@@ -530,7 +532,7 @@ document.addEventListener('click', e => {
   <div id="grammargraphic-modal">
     <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div style="font-family:'Orbitron';color:var(--cyan)">📐 Grammar Graphic — Word Order Alignment</div>
-      <button onclick="closeGrammarGraphic()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+      <button data-explain="Closes the grammar graphic." onclick="closeGrammarGraphic()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
     </div>
     <div id="gg-body"></div>
   </div>
@@ -540,7 +542,7 @@ document.addEventListener('click', e => {
   <div id="wordgrid-modal">
     <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
       <div style="font-family:'Orbitron';color:var(--amber)">📚 Word Grid — Core Vocabulary</div>
-      <button onclick="closeWordGrid()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
+      <button data-explain="Closes the word grid." onclick="closeWordGrid()" style="background:none;border:none;color:var(--dim);font-size:24px;cursor:pointer">✕</button>
     </div>
     <div id="wg-controls">
       <div id="wg-lang-chips"></div>
@@ -1038,7 +1040,7 @@ function initMap(savedPositions){
     const sz = langSizes[lang.code] || 28;
     const icon = L.divIcon({
       className:'',
-      html:`<div class="lang-marker" data-code="${lang.code}" id="marker-${lang.code}">
+      html:`<div class="lang-marker" data-explain="Opens this language: your text translated into ${lang.name}, with its grammar and details. In move mode it picks the flag to move." data-code="${lang.code}" id="marker-${lang.code}">
         <span class="lang-flag">${flag}</span>
         <span class="lang-label" id="label-${lang.code}" style="font-size:${sz}px">${lang.name}</span>
       </div>`,
