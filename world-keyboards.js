@@ -279,6 +279,7 @@ const CSS = `
 #wk-tab{position:fixed;left:50%;bottom:0;transform:translateX(-50%);z-index:2501;background:rgba(0,15,5,.97);color:#00ff41;
   border:2px solid #00ff41;border-bottom:0;border-radius:8px 8px 0 0;padding:3px 14px;font:bold .8rem "Courier New",monospace;cursor:pointer}
 #wk-tab:hover{background:#00ff41;color:#000}
+/* on a phone the tab sits at the left so it covers neither the centred footer link nor the close button of the language panel */\n@media (max-width:600px){#wk-tab{left:8px;transform:none}}
 #wk-panel .wk-accent{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;font-size:.75rem;align-items:center}
 #wk-panel .wk-chip{background:#000;color:#00ff41;border:1px solid #00ff41;border-radius:4px;padding:3px 7px;cursor:pointer;font:inherit}
 @media (max-width:760px){#wk-panel .key{height:38px;font-size:.78rem;padding:2px}
@@ -290,14 +291,15 @@ function build() {
   panel = document.createElement("div"); panel.id = "wk-panel"; panel.setAttribute("aria-label", "World Keyboards");
   panel.innerHTML = '<div class="wk-head"><span class="wk-title">⌨️ WORLD KEYBOARDS</span>' +
     '<select id="wk-layout" title="Keyboard layout (follows your language until you pick one)"></select>' +
-    '<button type="button" class="wk-btn" id="wk-follow" title="Use the keyboard of your language">Your language</button>' +
+    '<button type="button" class="wk-btn" data-explain="Switches the keyboard back to the layout of your language (from your useRbox language)." id="wk-follow" title="Use the keyboard of your language">Your language</button>' +
     '<span class="wk-target" id="wk-target"></span>' +
-    '<button type="button" class="wk-btn wk-close" id="wk-close" title="Hide the keyboard (the ⌨️ tab at the bottom brings it back)">▼ Hide</button></div>' +
+    '<button type="button" data-explain="Hides the keyboard to free the space. The small keyboard tab at the bottom brings it back; remembered on this device." class="wk-btn wk-close" id="wk-close" title="Hide the keyboard (the ⌨️ tab at the bottom brings it back)">▼ Hide</button></div>' +
     '<div class="wk-keys" id="wk-keys"></div><div class="wk-accent" id="wk-accent"></div>';
   document.body.appendChild(panel);
   // the tab stays visible while the keyboard is hidden
   tab = document.createElement("button"); tab.type = "button"; tab.id = "wk-tab";
   tab.textContent = "⌨️ ▲ Keyboard"; tab.title = "Show the keyboard";
+  tab.setAttribute("data-explain", "Shows the on-screen keyboard again.");
   tab.addEventListener("click", open);
   document.body.appendChild(tab);
   // keep the text box focused while keys are pressed
@@ -321,6 +323,16 @@ function describe(t) {
   if (t.id === "globalInput") return "→ typing into: Chat";
   return "→ typing into: " + (t.placeholder || t.id || "text box").slice(0, 30);
 }
+function keyExplain(key) {
+  const A = { backspace: "Deletes the character before the cursor.", space: "Types a space.", enter: "Sends the message in the chat box, or starts a new line in a multi-line box.",
+    tab: "Types a tab.", shift: "Shift: the next key types its upper character (shown small in the corner).", caps: "Caps lock: letters stay upper case until pressed again.",
+    kana: "Types hiragana.", kata: "Types katakana.", eisu: "Types Latin letters." };
+  if (key.action && A[key.action]) return A[key.action];
+  if (key.id === "AltR") return "AltGr: the next letter types its accented form for this language.";
+  if (key.action === "char") return "Types " + key.ch + " into the text box.";
+  if (key.action) return key.label + " (no effect here).";
+  return "Types " + glyph(key) + " into the text box you clicked last.";
+}
 function render() {
   if (!panel) return;
   const layout = LAYOUTS[state.layout] || LAYOUTS.uk;
@@ -336,6 +348,7 @@ function render() {
           (key.id === "AltR" && state.alt)) el.classList.add("latched");
       if (!key.action && key[1] && key[1] !== key[0]) { const s = document.createElement("small"); s.textContent = state.shift ? key[0] : key[1]; el.appendChild(s); }
       el.appendChild(document.createTextNode(glyph(key)));
+      el.setAttribute("data-explain", keyExplain(key));
       el.addEventListener("click", () => press(key));
       r.appendChild(el);
     });
@@ -345,7 +358,7 @@ function render() {
   if (layout.accent && layout.accent.chips && layout.accent.chips.length) {
     layout.accent.chips.forEach(([ch, label]) => {
       const b = document.createElement("button"); b.type = "button"; b.className = "wk-chip"; b.title = label; b.textContent = ch;
-      b.addEventListener("click", () => insert(ch)); accentEl.appendChild(b);
+      b.setAttribute("data-explain", "Types " + ch + " (" + label + ") into the text box."); b.addEventListener("click", () => insert(ch)); accentEl.appendChild(b);
     });
   }
 }

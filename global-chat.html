@@ -920,6 +920,7 @@ select option { background: #0d0520; }
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="/RudVentur.com/embed/apple-touch-icon.png">
 <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
+<script src="https://rudventur.github.io/RudVentur.com/embed/rxplanation.js" defer></script>
 <script>
 /* Global Chat lives inside the RUDVENTUR translator (translator_v7.html, Chat tab).
    Opened on its own, it goes to the translator so there is one system with the
@@ -942,17 +943,17 @@ if (window.parent === window) {
     <div style="font-size:0.75rem;color:var(--text2);letter-spacing:2px;">RUDY'S MULTI-AI PROMPT HUB ⚡</div>
     <div style="display:flex;align-items:center;gap:12px;">
       <div style="font-size:0.75rem;color:var(--p3);" id="statusBar">● ONLINE</div>
-      <button class="settings-gear" onclick="openSettingsModal()" title="API Key Settings">⚙️</button>
+      <button class="settings-gear" data-explain="Opens the settings: your own Claude and Grok keys (kept only in this browser) and saving or loading a session." onclick="openSettingsModal()" title="API Key Settings">⚙️</button>
     </div>
   </div>
 
   <!-- AI LAUNCHER STRIP (integrated into header row) -->
   <div class="ai-strip">
     <span class="ai-strip-label">LAUNCH →</span>
-    <button class="ai-btn live" onclick="scrollToChat()">
+    <button class="ai-btn live" data-explain="Jumps to the live Claude chat on the right." onclick="scrollToChat()">
       <span class="live-dot"></span> CLAUDE
     </button>
-    <button class="ai-btn live" onclick="scrollToGrok()" style="border-color:var(--grok);color:var(--grok);animation:none;">
+    <button class="ai-btn live" data-explain="Jumps to the live Grok chat on the right." onclick="scrollToGrok()" style="border-color:var(--grok);color:var(--grok);animation:none;">
       <span class="live-dot" style="background:var(--grok);"></span> GROK
     </button>
     <a class="ai-btn grok"  href="https://grok.com"           target="_blank">🤖 Grok</a>
@@ -969,32 +970,32 @@ if (window.parent === window) {
     <div class="builder">
       <div class="builder-header" style="display:flex;justify-content:space-between;align-items:center;">
         <span>✦ PROMPT ARCHITECT</span>
-        <button class="max-btn" onclick="toggleMax('builder')" title="Maximize">⤢</button>
+        <button class="max-btn" data-explain="Makes the prompt builder fill the page, or back to its size." onclick="toggleMax('builder')" title="Maximize">⤢</button>
       </div>
 
       <div class="cat-tabs">
-        <button class="cat-tab active" onclick="setCategory('science')" id="tab-science">⚛️ SCIENCE</button>
-        <button class="cat-tab"        onclick="setCategory('code')"    id="tab-code">💻 CODE</button>
-        <button class="cat-tab"        onclick="setCategory('general')" id="tab-general">🌌 GENERAL</button>
-        <button class="cat-tab"        onclick="setCategory('custom')"  id="tab-custom">✏️ CUSTOM</button>
+        <button class="cat-tab active" data-explain="Prompt templates for science questions." onclick="setCategory('science')" id="tab-science">⚛️ SCIENCE</button>
+        <button class="cat-tab"        data-explain="Prompt templates for programming help." onclick="setCategory('code')"    id="tab-code">💻 CODE</button>
+        <button class="cat-tab"        data-explain="Prompt templates for general questions." onclick="setCategory('general')" id="tab-general">🌌 GENERAL</button>
+        <button class="cat-tab"        data-explain="Write your own prompt from scratch." onclick="setCategory('custom')"  id="tab-custom">✏️ CUSTOM</button>
       </div>
 
       <div class="template-area" id="templateArea">
         <!-- injected by JS -->
       </div>
 
-      <button class="build-btn" onclick="buildPrompt()">⚡ BUILD PROMPT ⚡</button>
+      <button class="build-btn" data-explain="Builds the prompt from the fields on the left and shows it in the live preview." onclick="buildPrompt()">⚡ BUILD PROMPT ⚡</button>
     </div>
 
     <!-- ═══ CENTER: PREVIEW ═══ -->
     <div class="preview-col">
       <div class="preview-header">
-        <span>✦ LIVE PREVIEW <button class="max-btn" onclick="toggleMax('preview')" title="Maximize">⤢</button></span>
+        <span>✦ LIVE PREVIEW <button class="max-btn" data-explain="Makes the live preview fill the page, or back to its size." onclick="toggleMax('preview')" title="Maximize">⤢</button></span>
         <div style="display:flex;gap:6px;align-items:center;">
           <span id="charCount" style="font-size:0.7rem;color:var(--text2);">0 chars</span>
-          <button class="copy-btn" onclick="copyPrompt()" id="copyBtn">📋 COPY</button>
-          <button class="copy-btn" onclick="savePromptToFile()" title="Save prompt as .txt file">💾 SAVE</button>
-          <button class="copy-btn" onclick="document.getElementById('loadPromptFile').click()" title="Load prompt from file">📂 LOAD</button>
+          <button class="copy-btn" data-explain="Copies the built prompt to your clipboard." onclick="copyPrompt()" id="copyBtn">📋 COPY</button>
+          <button class="copy-btn" data-explain="Downloads the built prompt as a text file." onclick="savePromptToFile()" title="Save prompt as .txt file">💾 SAVE</button>
+          <button class="copy-btn" data-explain="Loads a prompt from a text file on your device." onclick="document.getElementById('loadPromptFile').click()" title="Load prompt from file">📂 LOAD</button>
           <input type="file" id="loadPromptFile" accept=".txt,.md,.json" style="display:none" onchange="loadPromptFromFile(event)">
         </div>
       </div>
@@ -1009,11 +1010,11 @@ if (window.parent === window) {
       </div>
 
       <div class="send-strip">
-        <button class="send-btn claude" onclick="sendToAI('claude')">💜 Claude.ai</button>
-        <button class="send-btn grok"   onclick="sendToAI('grok')">🤖 Grok</button>
-        <button class="send-btn zchat"  onclick="sendToAI('zchat')">⚡ chat.z.ai</button>
-        <button class="send-btn gpt"    onclick="sendToAI('gpt')">🟢 GPT</button>
-        <button class="send-btn meta"   onclick="sendToAI('meta')">🔵 Meta</button>
+        <button class="send-btn claude" data-explain="Copies the prompt and opens Claude.ai in a new tab to paste it." onclick="sendToAI('claude')">💜 Claude.ai</button>
+        <button class="send-btn grok"   data-explain="Copies the prompt and opens Grok in a new tab to paste it." onclick="sendToAI('grok')">🤖 Grok</button>
+        <button class="send-btn zchat"  data-explain="Copies the prompt and opens chat.z.ai in a new tab to paste it." onclick="sendToAI('zchat')">⚡ chat.z.ai</button>
+        <button class="send-btn gpt"    data-explain="Copies the prompt and opens ChatGPT in a new tab to paste it." onclick="sendToAI('gpt')">🟢 GPT</button>
+        <button class="send-btn meta"   data-explain="Copies the prompt and opens Meta AI in a new tab to paste it." onclick="sendToAI('meta')">🔵 Meta</button>
       </div>
     </div>
 
@@ -1022,16 +1023,16 @@ if (window.parent === window) {
 
       <!-- Tab bar -->
       <div class="live-tab-bar">
-        <div class="tab-btn active" id="tab-global" onclick="switchTab(0)">🌍 GLOBAL</div>
-        <div class="tab-btn"        id="tab-claude" onclick="switchTab(1)">💜 CLAUDE</div>
-        <div class="tab-btn"        id="tab-grok"   onclick="switchTab(2)">🤖 GROK</div>
-        <button class="max-btn" onclick="toggleMax('live')" title="Maximize" style="margin:auto 6px auto 0;">⤢</button>
+        <div class="tab-btn active" id="tab-global" data-explain="Shows the public room: everyone here can read and write, and every message also shows in your language." onclick="switchTab(0)">🌍 GLOBAL</div>
+        <div class="tab-btn"        id="tab-claude" data-explain="Shows the live Claude chat (needs your own Claude key in settings)." onclick="switchTab(1)">💜 CLAUDE</div>
+        <div class="tab-btn"        id="tab-grok"   data-explain="Shows the live Grok chat (needs your own Grok key in settings)." onclick="switchTab(2)">🤖 GROK</div>
+        <button class="max-btn" data-explain="Makes the chat column fill the page, or back to its size." onclick="toggleMax('live')" title="Maximize" style="margin:auto 6px auto 0;">⤢</button>
       </div>
 
       <!-- ── GLOBAL CHAT PANEL ── -->
       <div class="tab-panel active" id="global-panel">
         <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:rgba(5,1,15,0.5);">
-          <button class="max-btn" onclick="minimizeGlobalChat()" title="Minimize to corner">⤡ Mini</button>
+          <button class="max-btn" data-explain="Shrinks the public chat into a small widget in the corner." onclick="minimizeGlobalChat()" title="Minimize to corner">⤡ Mini</button>
         </div>
         <div class="chat-messages" id="globalMessages">
           <!-- messages from chat/global (shared RUDVENTUR Firebase project) -->
@@ -1043,8 +1044,8 @@ if (window.parent === window) {
           <textarea id="globalInput" placeholder="Type message... (public room)" rows="2"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendGlobalMessage();}"></textarea>
           <div class="chat-actions">
-            <button class="send-chat-btn" onclick="sendGlobalMessage()">🌍 SEND</button>
-            <button class="use-prompt-btn" onclick="sendBuiltPromptToGlobal()">SHARE PROMPT</button>
+            <button class="send-chat-btn" data-explain="Sends your message to the public room." onclick="sendGlobalMessage()">🌍 SEND</button>
+            <button class="use-prompt-btn" data-explain="Shares the built prompt in the public room." onclick="sendBuiltPromptToGlobal()">SHARE PROMPT</button>
           </div>
         </div>
       </div>
@@ -1061,9 +1062,9 @@ if (window.parent === window) {
             placeholder="Ask Claude anything... or click 'USE PROMPT ↑' to send your built prompt!"
             onkeydown="handleKey(event)"></textarea>
           <div class="chat-actions">
-            <button class="send-chat-btn" onclick="sendToClaudeLive()" id="sendBtn">⚡ SEND</button>
-            <button class="use-prompt-btn" onclick="useBuiltPrompt()">USE PROMPT ↑</button>
-            <button class="use-prompt-btn" onclick="clearClaudeChat()" style="border-color:rgba(255,80,80,0.4);color:#ff6b6b;">🗑️ CLEAR</button>
+            <button class="send-chat-btn" data-explain="Sends your message to Claude using your own key." onclick="sendToClaudeLive()" id="sendBtn">⚡ SEND</button>
+            <button class="use-prompt-btn" data-explain="Puts the built prompt into the Claude message box." onclick="useBuiltPrompt()">USE PROMPT ↑</button>
+            <button class="use-prompt-btn" data-explain="Clears the Claude conversation." onclick="clearClaudeChat()" style="border-color:rgba(255,80,80,0.4);color:#ff6b6b;">🗑️ CLEAR</button>
           </div>
           <div class="token-info" id="tokenInfo">Ready · Powered by Claude Sonnet</div>
         </div>
@@ -1081,10 +1082,10 @@ if (window.parent === window) {
             placeholder="Ask Grok anything... or click 'USE PROMPT ↑' to send your built prompt!"
             onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendToGrokLive();}"></textarea>
           <div class="chat-actions">
-            <button class="send-chat-btn" onclick="sendToGrokLive()" id="grokSendBtn"
+            <button class="send-chat-btn" data-explain="Sends your message to Grok using your own key." onclick="sendToGrokLive()" id="grokSendBtn"
               style="background:linear-gradient(135deg,#001a33,#003366);border-color:var(--grok);color:var(--grok);">🤖 SEND</button>
-            <button class="use-prompt-btn" onclick="useBuiltPromptGrok()">USE PROMPT ↑</button>
-            <button class="use-prompt-btn" onclick="clearGrokChat()" style="border-color:rgba(255,80,80,0.4);color:#ff6b6b;">🗑️ CLEAR</button>
+            <button class="use-prompt-btn" data-explain="Puts the built prompt into the Grok message box." onclick="useBuiltPromptGrok()">USE PROMPT ↑</button>
+            <button class="use-prompt-btn" data-explain="Clears the Grok conversation." onclick="clearGrokChat()" style="border-color:rgba(255,80,80,0.4);color:#ff6b6b;">🗑️ CLEAR</button>
           </div>
           <div class="token-info" id="grokTokenInfo" style="color:rgba(0,212,255,0.4);">Ready · Powered by Grok</div>
         </div>
@@ -1100,27 +1101,27 @@ if (window.parent === window) {
   <div class="global-mini-header">
     <span>🌍 GLOBAL CHAT</span>
     <div style="display:flex;gap:4px;">
-      <button class="max-btn" onclick="restoreGlobalChat()" title="Restore to main panel">⤢</button>
-      <button class="max-btn" onclick="closeGlobalMini()" title="Close widget">✕</button>
+      <button class="max-btn" data-explain="Puts the public chat back in the main panel." onclick="restoreGlobalChat()" title="Restore to main panel">⤢</button>
+      <button class="max-btn" data-explain="Closes the small chat widget (the globe button opens it again)." onclick="closeGlobalMini()" title="Close widget">✕</button>
     </div>
   </div>
   <div class="global-mini-msgs" id="globalMiniMsgs"></div>
   <div class="global-mini-input">
     <input type="text" id="globalMiniInput" placeholder="Quick message..."
       onkeydown="if(event.key==='Enter'){sendGlobalMiniMessage();}">
-    <button onclick="sendGlobalMiniMessage()">🌍</button>
+    <button data-explain="Sends your quick message to the public room." onclick="sendGlobalMiniMessage()">🌍</button>
   </div>
 </div>
 
 <!-- FAB button to open minimized global chat -->
-<button class="global-mini-fab" id="globalMiniFab" onclick="openGlobalMini()" title="Open Global Chat">🌍</button>
+<button class="global-mini-fab" data-explain="Opens the small public chat widget." id="globalMiniFab" onclick="openGlobalMini()" title="Open Global Chat">🌍</button>
 
 <!-- SETTINGS MODAL -->
 <div class="settings-overlay" id="settingsOverlay" onclick="if(event.target===this)closeSettingsModal()">
   <div class="settings-modal">
     <div class="settings-header">
       <span>⚙️ API KEY SETTINGS</span>
-      <button class="settings-close" onclick="closeSettingsModal()">✕</button>
+      <button data-explain="Closes the settings." class="settings-close" onclick="closeSettingsModal()">✕</button>
     </div>
     <div class="settings-body">
       <div class="settings-warning">🔒 Keys are stored only in your browser's localStorage. Never share this page if keys are saved!</div>
@@ -1133,14 +1134,14 @@ if (window.parent === window) {
         <input type="password" id="grokKeyInput" placeholder="xai-..." autocomplete="off">
       </div>
       <div class="settings-actions">
-        <button class="settings-save-btn" onclick="saveKeys()">💾 Save to this session</button>
-        <button class="settings-clear-btn" onclick="clearKeys()">🗑️ Clear all keys</button>
+        <button class="settings-save-btn" data-explain="Saves your keys in this browser for this session only. Never share the page with keys saved." onclick="saveKeys()">💾 Save to this session</button>
+        <button class="settings-clear-btn" data-explain="Removes every saved key from this browser." onclick="clearKeys()">🗑️ Clear all keys</button>
       </div>
       <div style="border-top:1px dashed rgba(155,48,255,0.3);padding-top:14px;margin-top:4px;">
         <div class="field-label" style="margin-bottom:8px;">📦 SESSION DATA</div>
         <div class="settings-actions">
-          <button class="settings-save-btn" onclick="exportSession()" style="font-size:0.75rem;">📤 Export Session</button>
-          <button class="settings-save-btn" onclick="document.getElementById('importSessionFile').click()" style="font-size:0.75rem;background:linear-gradient(135deg,#003366,#006699);">📥 Import Session</button>
+          <button class="settings-save-btn" data-explain="Downloads this chat session as a file." onclick="exportSession()" style="font-size:0.75rem;">📤 Export Session</button>
+          <button class="settings-save-btn" data-explain="Loads a chat session file you exported before." onclick="document.getElementById('importSessionFile').click()" style="font-size:0.75rem;background:linear-gradient(135deg,#003366,#006699);">📥 Import Session</button>
           <input type="file" id="importSessionFile" accept=".json" style="display:none" onchange="importSession(event)">
         </div>
         <div style="font-size:0.65rem;color:var(--text2);margin-top:6px;text-align:center;">Export saves chat history, prompt, and settings (not API keys)</div>
@@ -1313,6 +1314,7 @@ function renderTemplate() {
       const chip = document.createElement('button');
       chip.className = 'chip';
       chip.textContent = c;
+      chip.setAttribute('data-explain', 'Adds the wish ' + c + ' to your prompt. Click again to take it out.');
       chip.onclick = () => addChip(c, chip);
       chipWrap.appendChild(chip);
     });
