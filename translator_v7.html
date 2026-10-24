@@ -2559,7 +2559,11 @@ function openProfile(code,fromHistory){
     h('div',{class:'panel-pronunciation-row'},h('span',{class:'respell'},lang.hello.pr||''),h('span',{class:'panel-ipa',id:'panel-ipa'}),
       h('button',{class:'panel-ipa-btn',id:'panel-ipa-btn',onclick:()=>loadPanelIpa(code)},'get real IPA')),
     h('div',{class:'panel-voice-note',id:'panel-voice-note'})));
-  if(currentTranslations[code]) body.appendChild(profSection('Current translated phrase',h('div',{class:'prof-tr'},currentTranslations[code])));
+  if(currentTranslations[code]){const tr=currentTranslations[code],k=`phr|${code}|${tr}`;
+    const iv=ipaCache&&ipaCache[k];
+    body.appendChild(profSection('Current translated phrase',h('div',{class:'prof-tr'},tr),
+      iv!==undefined?h('div',{class:'prof-ipa'},iv?`/${iv}/${ipaApprox(code)}`:'—'):
+      h('button',{class:'prof-btn',id:'prof-phon-phrase',onclick:function(){profPhonetic(code,[{code,text:tr,key:k}],this)}},'🗣️ phonetic')))}
   // ancestry mini timeline
   const chain=profAncestry(code);
   const minY=Math.min(...chain.map(n=>n.year)),span=Math.max(1,NOW_YEAR-minY);
@@ -2587,7 +2591,8 @@ function openProfile(code,fromHistory){
   // common words from word grid cache
   if(!wordCache) wordCache=loadWordCache();
   const words=CORE_WORDS.map(w=>w[0]).filter(w=>wordCache[`en|${code}|${w.toLowerCase()}`]).slice(0,16);
-  body.appendChild(profSection('Common words (from word grid cache)',words.length?h('div',{class:'prof-words'},words.map(w=>h('div',null,h('span',{class:'prof-en'},w),' → ',wordCache[`en|${code}|${w.toLowerCase()}`]))):
+  body.appendChild(profSection('Common words (from word grid cache)',words.length?h('div',{class:'prof-words'},words.map(w=>{const iv=ipaCache&&ipaCache[`ipa|${code}|${w.toLowerCase()}`];return h('div',null,h('span',{class:'prof-en'},w),' → ',wordCache[`en|${code}|${w.toLowerCase()}`],iv?h('span',{class:'prof-ipa'},`[${iv}]${ipaApprox(code)}`):(iv===''||iv===null?h('span',{class:'prof-ipa'},'—'):null))}),
+    h('button',{class:'prof-btn',id:'prof-phon-words',onclick:function(){profPhonetic(code,words.map(w=>({code,text:wordCache[`en|${code}|${w.toLowerCase()}`],key:`ipa|${code}|${w.toLowerCase()}`})),this)}},'🗣️ phonetic for these words')):
     h('div',null,'None cached yet. ',h('button',{class:'prof-btn',onclick:()=>{closeProfile();openWordGridFor(code)}},'📚 Open word grid'))));
   document.getElementById('prof-back').disabled=profIndex<=0;
   document.getElementById('prof-fwd').disabled=profIndex>=profHistory.length-1;
@@ -2624,6 +2629,118 @@ flyToLang=function(code,noProfile){_baseFly(code);if(!noProfile)openProfile(code
       h('button',{id:'prof-quick',title:'Label size and quick panel',onclick:()=>{const c=profHistory[profIndex];closeProfile();openPanel(LANGUAGES.find(l=>l.code===c))}},'⚙ Label panel'),h('span',{style:'flex:1'}),h('button',{id:'prof-close',onclick:closeProfile},'✖ Close')),h('div',{id:'prof-body'})));
   document.body.appendChild(ov);
   document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProfile()});
+})();
+
+// ========================================================================
+//  PHONETIC (International Phonetic Alphabet) FOR TRANSLATIONS
+//  Uses the same espeak-ng engine and local-storage cache as the word grid.
+//  Languages without their own espeak voice fall back to the closest
+//  related voice and are labelled "approx."; otherwise a dash is shown.
+// ========================================================================
+const IPA_FALLBACK={szl:'pl',csb:'pl',sli:'de',wen:'pl',hsb:'cs',dsb:'pl',rue:'uk',sco:'en',gv:'ga',kw:'cy',br:'fr',
+  co:'it',sc:'it',nap:'it',scn:'it',pms:'it',lij:'it',fur:'it',lmo:'it',vec:'it',an:'es',ast:'es',oc:'ca',wa:'fr',
+  rm:'it',gsw:'de','gsw-FR':'de',bar:'de',ksh:'de',pfl:'de',swg:'de',nds:'de',frr:'de',stq:'nl',li:'nl',vls:'nl',fy:'nl',
+  fo:'is',se:'fi',smj:'fi',sma:'fi',krl:'fi',vro:'et',liv:'et',rup:'ro',cnr:'sr',yue:'cmn',ht:'fr',tpi:'en',
+  sn:'sw',ny:'sw',rw:'sw',ln:'sw',kg:'sw',st:'sw',xh:'zu',ti:'am',ff:'wo',ak:'yo',mg:'id',tl:'id',ms:'id',
+  sm:'mi',to:'mi',haw:'mi',fj:'mi',ay:'qu',arn:'es',guc:'es',ber:'ar',ps:'fa',bo:'my'};
+const _baseResolveVoice=resolveEspeakVoice;
+resolveEspeakVoice=function(code,voices){
+  const own=_baseResolveVoice(code,voices);
+  if(own){delete ipaCache[`approx|${code}`];return own}
+  const fb=IPA_FALLBACK[code];
+  const v=fb?_baseResolveVoice(fb,voices):null;
+  if(v){ipaCache[`approx|${code}`]=true;return v}
+  return null;
+};
+(function forgetOldNoVoiceFlags(){ // older versions cached "no voice" for languages that now have a fallback
+  if(!ipaCache) ipaCache=loadIpaCache();
+  let ch=false;
+  Object.keys(IPA_FALLBACK).forEach(c=>{
+    if(ipaCache[`na|${c}`]){delete ipaCache[`na|${c}`];ch=true}
+    if(ipaCache[`hello-ipa|${c}`]===null){delete ipaCache[`hello-ipa|${c}`];ch=true}
+  });
+  if(ch) saveIpaCache();
+})();
+function ipaApprox(code){return ipaCache&&ipaCache[`approx|${code}`]?' approx.':''}
+function ipaClean(text){return String(text).replace(/[.,!?;:…。、！？，“”"«»()\[\]¿¡]/g,' ').replace(/\s+/g,' ').trim()}
+const ipaTick=()=>new Promise(r=>setTimeout(r,0));
+// items: [{code,text,key}] -> fills ipaCache[key] with phonetic text, '' if no voice
+async function ipaCompute(items,onProgress){
+  if(!ipaCache) ipaCache=loadIpaCache();
+  const todo=items.filter(it=>it.text&&!(it.key in ipaCache));
+  if(!todo.length) return;
+  const state=await loadEspeak(document.getElementById('translate-status'));
+  const groups={};
+  todo.forEach(it=>{const v=resolveEspeakVoice(it.code,state.voices);
+    if(!v){ipaCache[it.key]='';return}(groups[v]=groups[v]||[]).push(it)});
+  let done=0;
+  for(const [voice,list] of Object.entries(groups)){
+    for(let i=0;i<list.length;i+=12){
+      const chunk=list.slice(i,i+12);
+      let lines=null;
+      try{lines=await phonemizeBatch(state,chunk.map(it=>ipaClean(it.text)||'-'),voice)}catch(e){console.warn('phonetic batch failed',voice,e)}
+      if(!lines||lines.length!==chunk.length){ // punctuation split lines: do them one by one
+        lines=[];
+        for(const it of chunk){try{lines.push((await phonemizeBatch(state,[ipaClean(it.text)],voice)).join(' '))}catch(e){lines.push('')}await ipaTick()}
+      }
+      chunk.forEach((it,j)=>{ipaCache[it.key]=cleanIpaResult(lines[j])||''});
+      done+=chunk.length;if(onProgress)onProgress(done,todo.length);
+      saveIpaCache();await ipaTick();
+    }
+  }
+  saveIpaCache();
+}
+let ipaMapOn=false;
+const phraseKey=(code,text)=>`phr|${code}|${text}`;
+function renderMapIpa(){
+  LANGUAGES.forEach(l=>{
+    const mk=document.getElementById('marker-'+l.code);if(!mk)return;
+    let sp=mk.querySelector('.lang-ipa');
+    const tr=currentTranslations[l.code];
+    const val=ipaMapOn&&translatingActive&&tr&&ipaCache?ipaCache[phraseKey(l.code,tr)]:undefined;
+    if(val===undefined){if(sp)sp.remove();return}
+    if(!sp){sp=document.createElement('span');sp.className='lang-ipa';mk.appendChild(sp)}
+    sp.textContent=val?`/${val}/${ipaApprox(l.code)}`:'—';
+  });
+}
+async function runMapIpa(){
+  const st=document.getElementById('translate-status');
+  const items=Object.entries(currentTranslations).map(([code,text])=>({code,text,key:phraseKey(code,text)}));
+  if(!items.length){if(st)st.textContent='> Translate a phrase first, then phonetic spelling appears under each label.';renderMapIpa();return}
+  try{
+    await ipaCompute(items,(d,n)=>{if(st)st.textContent=`> Phonetic spelling ${d}/${n}…`;renderMapIpa()});
+    if(st) st.textContent='> Phonetic spelling ready (International Phonetic Alphabet, approx. = closest related voice).';
+  }catch(e){console.error(e);if(st)st.textContent='> Phonetic engine failed to load — see console.'}
+  renderMapIpa();
+}
+function toggleMapIpa(){
+  ipaMapOn=!ipaMapOn;
+  const b=document.getElementById('btn-ipa');b.classList.toggle('active',ipaMapOn);b.textContent=ipaMapOn?'IPA ON 🗣️':'IPA 🗣️';
+  if(ipaMapOn) runMapIpa(); else renderMapIpa();
+}
+// after each translation, labels refresh; recompute phonetics if the toggle is on
+const _baseDoTranslate=doTranslate;
+doTranslate=async function(){await _baseDoTranslate();if(ipaMapOn)runMapIpa()};
+const _baseUpdateLabels=updateMapLabels;
+updateMapLabels=function(){_baseUpdateLabels();renderMapIpa()};
+// word grid: show "approx." next to cells phonemised with a related voice
+const _baseRenderWgCell=renderWgCell;
+renderWgCell=function(l,en){const html=_baseRenderWgCell(l,en);
+  return ipaApprox(l.code)&&html.includes('class="wg-ipa"')?html.replace('</span></td>','<small> approx.</small></span></td>'):html};
+async function profPhonetic(code,items,btn){
+  if(btn){btn.disabled=true;btn.textContent='…loading phonetic engine'}
+  try{await ipaCompute(items)}catch(e){console.error(e)}
+  openProfile(code,true);
+}
+(function initIpaUI(){
+  const css=document.createElement('style');
+  css.textContent=`.lang-marker{position:relative}.lang-ipa{position:absolute;left:30px;top:100%;margin-top:2px;font-family:'Fira Code',monospace;font-size:12px;color:var(--cyan);text-shadow:1px 1px 0 #000,0 0 6px #000;white-space:nowrap;pointer-events:none}
+#btn-ipa{background:rgba(0,240,255,.08);border:1px solid rgba(0,240,255,.3);color:var(--cyan)}#btn-ipa.active{background:var(--cyan);color:#000}
+.prof-ipa{color:var(--cyan);font-family:'Fira Code',monospace;font-size:13px;margin-left:6px}`;
+  document.head.appendChild(css);
+  const b=document.createElement('button');b.className='tb-btn';b.id='btn-ipa';b.textContent='IPA 🗣️';
+  b.title='Show International Phonetic Alphabet spelling under each translated label';b.onclick=toggleMapIpa;
+  const t=document.getElementById('btn-translate');t.parentNode.insertBefore(b,t.nextSibling);
 })();
 </script>
 </body>
