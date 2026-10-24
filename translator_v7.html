@@ -1436,7 +1436,7 @@ function openPanel(lang){
   const panel=document.getElementById('side-panel'),content=document.getElementById('panel-content');
   const flag=FLAGS[lang.code]||'🏳️';
   const dialectBadge=lang.dialectOf?`<span class="dialect-badge">Dialect of: ${lang.dialectOf}</span>`:`<span class="dialect-badge" style="background:var(--green)">ROOT</span>`;
-  const translatedBit=currentTranslations[lang.code]?`<div class="panel-section"><div class="panel-section-title">Translation</div><div style="font-size:24px;color:var(--purple);font-weight:bold">${currentTranslations[lang.code]}</div></div>`:'';
+  const translatedBit=currentTranslations[lang.code]?`<div class="panel-section"><div class="panel-section-title">Translation</div><div style="font-size:24px;color:var(--purple);font-weight:bold" id="panel-translation"></div></div>`:'';
   const sz=langSizes[lang.code]||28;
 
   content.innerHTML=`
@@ -1469,6 +1469,8 @@ function openPanel(lang){
     <button onclick="openGrammar('${lang.name}')" style="width:100%;margin-top:20px;padding:12px;background:var(--green);color:#000;border:none;font-family:'Orbitron';cursor:pointer;border-radius:6px;font-weight:bold">FULL INFO</button>
     <button onclick="openGrammarGraphicFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(0,240,255,.1);border:1px solid var(--cyan);color:var(--cyan);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📐 GRAMMAR GRAPHIC (make main)</button>
     <button onclick="openWordGridFor('${lang.code}')" style="width:100%;margin-top:8px;padding:10px;background:rgba(255,184,0,.1);border:1px solid var(--amber);color:var(--amber);font-family:'Orbitron';cursor:pointer;border-radius:6px;font-size:12px">📚 WORD GRID (incl. this language)</button>`;
+  const trEl=document.getElementById('panel-translation');
+  if(trEl) trEl.textContent=currentTranslations[lang.code]; // translated text is untrusted: never innerHTML
   panel.classList.add('open');
   hydratePanelIpa(lang.code);
   updateVoiceNote(lang.code);
@@ -1784,10 +1786,10 @@ function renderWgCell(l,en){
   const ipaKey=`ipa|${l.code}|${lower}`;
   let ipaBit;
   if(ipaCache&&ipaCache[`na|${l.code}`]) ipaBit=`<span class="wg-ipa wg-ipa-na">(IPA n/a for this language)</span>`;
-  else if(ipaCache&&ipaCache[ipaKey]) ipaBit=`<span class="wg-ipa">[${ipaCache[ipaKey]}]</span>`;
+  else if(ipaCache&&ipaCache[ipaKey]) ipaBit=`<span class="wg-ipa">[${escHtml(ipaCache[ipaKey])}]</span>`;
   else if(ipaCache&&ipaKey in ipaCache) ipaBit=`<span class="wg-ipa wg-ipa-na">(pronunciation uncertain)</span>`;
   else ipaBit=`<button class="wg-mini-btn" onclick="ipaCell('${l.code}','${enSafe}',this)" title="Generate pronunciation">🗣️</button>`;
-  return `<td>${val}${ipaBit}</td>`;
+  return `<td>${escHtml(val)}${ipaBit}</td>`;
 }
 
 async function translateCell(code,en,btnEl){
@@ -2504,6 +2506,241 @@ setTimeYear=function(y){_baseSetTimeYear(y);evoMarker()};
   document.getElementById('evo-zout').onclick=()=>evoZoom(1/1.4);
   document.getElementById('evo-close').onclick=toggleEvolution;
   document.getElementById('evo-body').addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();evoZoom(e.deltaY<0?1.15:1/1.15)}},{passive:false});
+})();
+
+// ========================================================================
+//  LANGUAGE PROFILES — full-page overlay for each of the 168 languages.
+//  Opened from map flags, the TREE panel and EVOLUTION entries.
+//  Every piece of outside / translated text goes in via textContent.
+// ========================================================================
+const NATIVE_NAMES={en:'English',es:'Español',fr:'Français',de:'Deutsch',ru:'Русский',el:'Ελληνικά',ar:'العربية','zh-CN':'中文 (普通话)',ja:'日本語',ko:'한국어',pl:'Polski',tr:'Türkçe',hi:'हिन्दी',it:'Italiano',pt:'Português',sv:'Svenska',fi:'Suomi',hu:'Magyar',nl:'Nederlands',uk:'Українська',cs:'Čeština',ro:'Română',he:'עברית',
+'en-US':'American English','fr-CA':'Français canadien','es-MX':'Español mexicano','pt-BR':'Português brasileiro',gsw:'Schwiizerdütsch',cy:'Cymraeg',ca:'Català',eu:'Euskara',ga:'Gaeilge',br:'Brezhoneg',gl:'Galego',szl:'Ślōnskŏ gŏdka',csb:'Kaszëbsczi',gd:'Gàidhlig',co:'Corsu',fy:'Frysk',wen:'Serbšćina',lb:'Lëtzebuergesch',mt:'Malti',et:'Eesti',lv:'Latviešu',lt:'Lietuvių',sk:'Slovenčina',sl:'Slovenščina',sq:'Shqip',mk:'Македонски',bs:'Bosanski',cnr:'Crnogorski',is:'Íslenska',fo:'Føroyskt',be:'Беларуская',bg:'Български',sr:'Српски',hr:'Hrvatski','ro-MD':'Limba moldovenească',da:'Dansk',no:'Norsk',se:'Davvisámegiella',smj:'Julevsámegiella',sma:'Åarjelsaemien gïele',sc:'Sardu',nap:'Napulitano',scn:'Sicilianu',pms:'Piemontèis',lij:'Ligure',fur:'Furlan',lmo:'Lombard',vec:'Vèneto',an:'Aragonés',ast:'Asturianu',oc:'Occitan','gsw-FR':'Elsässisch',bar:'Boarisch',nds:'Plattdüütsch',ksh:'Kölsch',pfl:'Pälzisch',swg:'Schwäbisch',sli:'Schläsisch',frr:'Nordfriisk',stq:'Seeltersk',hsb:'Hornjoserbšćina',dsb:'Dolnoserbšćina',wa:'Walon',li:'Limburgs',vls:'West-Vlams',rm:'Rumantsch',sco:'Scots',gv:'Gaelg',kw:'Kernewek',krl:'Karjala',vro:'Võro kiil',liv:'Līvõ kēļ',rue:'Русиньскый',rup:'Armãneashti',ka:'ქართული',hy:'Հայերեն',az:'Azərbaycan dili',
+sw:'Kiswahili',am:'አማርኛ',yo:'Yorùbá',ig:'Igbo',ha:'Hausa',zu:'isiZulu',xh:'isiXhosa',af:'Afrikaans',so:'Soomaali',mg:'Malagasy',wo:'Wolof',ber:'ⵜⴰⵎⴰⵣⵉⵖⵜ',sn:'chiShona',ak:'Twi',ff:'Fulfulde',ln:'Lingála',rw:'Ikinyarwanda',ny:'Chichewa',st:'Sesotho',ti:'ትግርኛ',om:'Afaan Oromoo',kg:'Kikongo',fa:'فارسی',ku:'Kurdî',uz:'Oʻzbekcha',kk:'Қазақ тілі',ps:'پښتو',ur:'اردو',bn:'বাংলা',ta:'தமிழ்',te:'తెలుగు',mr:'मराठी',gu:'ગુજરાતી',pa:'ਪੰਜਾਬੀ',kn:'ಕನ್ನಡ',ml:'മലയാളം',si:'සිංහල',ne:'नेपाली',th:'ไทย',vi:'Tiếng Việt',id:'Bahasa Indonesia',ms:'Bahasa Melayu',tl:'Tagalog',my:'မြန်မာဘာသာ',km:'ភាសាខ្មែរ',lo:'ພາສາລາວ',mn:'Монгол хэл',bo:'བོད་སྐད',yue:'廣東話',
+qu:'Runa simi',gn:"Avañe'ẽ",nah:'Nāhuatl',ht:'Kreyòl ayisyen',nv:'Diné bizaad',chr:'ᏣᎳᎩ',lkt:'Lakȟótiyapi',oj:'Anishinaabemowin',cr:'ᓀᐦᐃᔭᐍᐏᐣ',iu:'ᐃᓄᒃᑎᑐᑦ',ay:'Aymar aru',arn:'Mapudungun',guc:'Wayuunaiki',mi:'Te reo Māori',haw:'ʻŌlelo Hawaiʻi',sm:'Gagana Sāmoa',to:'Lea faka-Tonga',fj:'Na vosa vakaViti',tpi:'Tok Pisin'};
+
+let profHistory=[], profIndex=-1;
+function h(tag,attrs,...kids){ // tiny safe element builder: strings become text nodes
+  const e=document.createElement(tag);
+  if(attrs) for(const [k,v] of Object.entries(attrs)){
+    if(k==='style') e.style.cssText=v; else if(k==='class') e.className=v;
+    else if(k.startsWith('on')) e.addEventListener(k.slice(2),v); else e.setAttribute(k,v);
+  }
+  kids.flat().forEach(c=>{if(c==null||c===false)return;e.appendChild(typeof c==='object'?c:document.createTextNode(String(c)))});
+  return e;
+}
+function profAncestry(code){
+  if(!evoNodes) evoBuild();
+  const chain=[];let n=evoNodes.nodes['L:'+code];
+  while(n){chain.unshift(n);n=n.parent?evoNodes.nodes[n.parent]:null}
+  return chain;
+}
+function profSisters(code){
+  if(!evoNodes) evoBuild();
+  const n=evoNodes.nodes['L:'+code];if(!n||!n.parent)return[];
+  return evoNodes.nodes[n.parent].kids.filter(k=>!k.anc&&k.code!==code).map(k=>k.code);
+}
+function profSection(title,...kids){return h('div',{class:'prof-sec'},h('div',{class:'prof-sec-t'},title),...kids)}
+function openProfile(code,fromHistory){
+  const lang=LANGUAGES.find(l=>l.code===code);if(!lang)return;
+  if(!fromHistory){profHistory=profHistory.slice(0,profIndex+1);if(profHistory[profIndex]!==code){profHistory.push(code);profIndex=profHistory.length-1}}
+  const [fam,br,yr,old]=langHist(code);
+  const body=document.getElementById('prof-body');body.textContent='';
+  // header
+  body.appendChild(h('div',{class:'prof-head'},
+    h('div',{class:'prof-flag'},FLAGS[code]||'🏳️'),
+    h('div',null,h('div',{class:'prof-name'},lang.name),
+      h('div',{class:'prof-native'},NATIVE_NAMES[code]||lang.name),
+      h('div',{class:'prof-meta'},`${lang.country} · ${lang.speakers} speakers · ${lang.tier}`),
+      h('div',{class:'prof-meta'},`${fam} › ${br} · first appeared ~${fmtYear(yr)} (approximate)`))));
+  // hello + speech + phonetic (reuses side panel ids so speakHello / IPA helpers work)
+  body.appendChild(profSection('Hello',
+    h('div',{class:'prof-hello'},lang.hello.text,
+      h('button',{class:'panel-speak-btn',id:'panel-speak-btn',title:'Hear it spoken',onclick:function(){speakHello(code,this)}},'🔊')),
+    h('div',{class:'panel-pronunciation-row'},h('span',{class:'respell'},lang.hello.pr||''),h('span',{class:'panel-ipa',id:'panel-ipa'}),
+      h('button',{class:'panel-ipa-btn',id:'panel-ipa-btn',onclick:()=>loadPanelIpa(code)},'get real IPA')),
+    h('div',{class:'panel-voice-note',id:'panel-voice-note'})));
+  if(currentTranslations[code]){const tr=currentTranslations[code],k=`phr|${code}|${tr}`;
+    const iv=ipaCache&&ipaCache[k];
+    body.appendChild(profSection('Current translated phrase',h('div',{class:'prof-tr'},tr),
+      iv!==undefined?h('div',{class:'prof-ipa'},iv?`/${iv}/${ipaApprox(code)}`:'—'):
+      h('button',{class:'prof-btn',id:'prof-phon-phrase',onclick:function(){profPhonetic(code,[{code,text:tr,key:k}],this)}},'🗣️ phonetic')))}
+  // ancestry mini timeline
+  const chain=profAncestry(code);
+  const minY=Math.min(...chain.map(n=>n.year)),span=Math.max(1,NOW_YEAR-minY);
+  const tl=h('div',{class:'prof-tl',style:`height:${chain.length*18+14}px`});
+  chain.forEach((n,i)=>{const pct=((n.year-minY)/span)*92;
+    tl.appendChild(h('div',{class:'prof-tl-node'+(n.anc?'':' prof-tl-me'),style:`left:${Math.min(pct,70)}%;top:${6+i*18}px`},h('i'),h('span',null,`${n.name} ~${fmtYear(n.year)}`)))});
+  body.appendChild(profSection('Ancestry (approximate dates)',h('div',{class:'prof-chain'},chain.map(n=>n.name).join(' › ')),tl));
+  // sisters
+  const sis=profSisters(code);
+  body.appendChild(profSection('Sister languages',sis.length?h('div',{class:'prof-chips'},sis.map(c=>{const l=LANGUAGES.find(x=>x.code===c);
+    return h('button',{class:'prof-chip','data-code':c,onclick:()=>openProfile(c)},`${FLAGS[c]||'🏳️'} ${l.name}`)})):'No close sister among the 168 languages on the map.'));
+  // script
+  body.appendChild(profSection('Alphabet / script',h('div',{class:'alphabet-display'},lang.alphabet||'—'),h('div',{class:'prof-meta'},'Sample: ',h('b',null,lang.hello.text))));
+  // grammar + word order
+  const order=wordOrderOf(lang).split('');
+  body.appendChild(profSection('Grammar',h('div',{class:'prof-meta'},lang.grammar||'—'),
+    h('div',{class:'prof-wo'},order.map(r=>h('span',{style:`background:${ROLE_COLOR[r]}`},ROLE_NAME[r]))),
+    h('button',{class:'prof-btn',onclick:()=>{closeProfile();openGrammarGraphicFor(code)}},'📐 Grammar graphic')));
+  // historical positions
+  const tbl=h('div',{class:'prof-periods'});
+  SNAPSHOTS.forEach(s=>{const y=s.year===null?NOW_YEAR:s.year;const present=y>=yr;
+    const where=!present?'not yet present':(old&&y<old.before?`older homeland (${old.lat.toFixed(1)}, ${old.lng.toFixed(1)})`:`today's area (${lang.lat.toFixed(1)}, ${lang.lng.toFixed(1)})`);
+    tbl.appendChild(h('button',{class:'prof-period'+(present?'':' prof-absent'),onclick:()=>{setTimeYear(y);closeProfile();const m=markers.find(x=>x._langData.code===code);if(m)map.flyTo(m.getLatLng(),Math.max(map.getZoom(),4))}},h('b',null,s.label),' ',where))});
+  body.appendChild(profSection('Across the periods (click to view on map)',tbl));
+  // common words from word grid cache
+  if(!wordCache) wordCache=loadWordCache();
+  const words=CORE_WORDS.map(w=>w[0]).filter(w=>wordCache[`en|${code}|${w.toLowerCase()}`]).slice(0,16);
+  body.appendChild(profSection('Common words (from word grid cache)',words.length?h('div',{class:'prof-words'},words.map(w=>{const iv=ipaCache&&ipaCache[`ipa|${code}|${w.toLowerCase()}`];return h('div',null,h('span',{class:'prof-en'},w),' → ',wordCache[`en|${code}|${w.toLowerCase()}`],iv?h('span',{class:'prof-ipa'},`[${iv}]${ipaApprox(code)}`):(iv===''||iv===null?h('span',{class:'prof-ipa'},'—'):null))}),
+    h('button',{class:'prof-btn',id:'prof-phon-words',onclick:function(){profPhonetic(code,words.map(w=>({code,text:wordCache[`en|${code}|${w.toLowerCase()}`],key:`ipa|${code}|${w.toLowerCase()}`})),this)}},'🗣️ phonetic for these words')):
+    h('div',null,'None cached yet. ',h('button',{class:'prof-btn',onclick:()=>{closeProfile();openWordGridFor(code)}},'📚 Open word grid'))));
+  document.getElementById('prof-back').disabled=profIndex<=0;
+  document.getElementById('prof-fwd').disabled=profIndex>=profHistory.length-1;
+  document.getElementById('profile-overlay').style.display='flex';
+  body.scrollTop=0;
+  hydratePanelIpa(code);updateVoiceNote(code);
+}
+function closeProfile(){document.getElementById('profile-overlay').style.display='none'}
+function profNav(d){const i=profIndex+d;if(i<0||i>=profHistory.length)return;profIndex=i;openProfile(profHistory[i],true)}
+// Map flags, TREE and EVOLUTION entries now open the profile (move mode unchanged)
+const _baseMarkerClick=onMarkerClick;
+onMarkerClick=function(m){if(moveMode)return _baseMarkerClick(m);openProfile(m._langData.code)};
+const _baseFly=flyToLang;
+flyToLang=function(code,noProfile){_baseFly(code);if(!noProfile)openProfile(code)};
+(function initProfileUI(){
+  const css=document.createElement('style');
+  css.textContent=`#profile-overlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.75);align-items:center;justify-content:center}
+#prof-box{width:min(900px,96vw);height:min(92vh,1000px);background:#0b0f14;border:1px solid var(--green);border-radius:10px;display:flex;flex-direction:column}
+#prof-bar{display:flex;gap:6px;padding:8px;border-bottom:1px solid var(--border)}#prof-bar button,.prof-btn,.prof-chip,.prof-period{background:rgba(255,255,255,.04);border:1px solid var(--border);color:var(--text);border-radius:5px;padding:4px 9px;font-family:'Fira Code',monospace;font-size:11px;cursor:pointer}
+#prof-bar button:disabled{opacity:.3}#prof-body{flex:1;overflow:auto;padding:16px 20px}
+.prof-head{display:flex;gap:18px;align-items:center}.prof-flag{font-size:90px;line-height:1}.prof-name{font-family:'Orbitron';font-size:34px;color:var(--green)}
+.prof-native{font-size:22px;color:var(--cyan)}.prof-meta{color:var(--dim);font-size:12px;margin-top:3px}
+.prof-sec{margin-top:16px;border-top:1px solid var(--border);padding-top:10px}.prof-sec-t{color:var(--amber);font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.prof-hello{font-size:28px;color:#fff;display:flex;gap:10px;align-items:center}.prof-tr{font-size:22px;color:var(--purple)}
+.prof-chain{color:var(--purple);font-size:12px}.prof-tl{position:relative;height:70px;margin:10px 0 0;border-top:2px solid #333}
+.prof-tl-node{position:absolute;font-size:10px;color:#bc8cff;white-space:nowrap}.prof-tl-node i{display:inline-block;width:8px;height:8px;border-radius:50%;background:#bc8cff;margin-right:4px}
+.prof-tl-me{color:var(--green)}.prof-tl-me i{background:var(--green)}.prof-chips,.prof-wo,.prof-periods,.prof-words{display:flex;flex-wrap:wrap;gap:6px}
+.prof-wo span{color:#000;font-weight:bold;padding:4px 10px;border-radius:4px;font-size:11px}.prof-absent{opacity:.4}
+.prof-words div{background:rgba(255,255,255,.04);padding:3px 8px;border-radius:4px;font-size:12px}.prof-en{color:var(--dim)}`;
+  document.head.appendChild(css);
+  const ov=h('div',{id:'profile-overlay',onclick:e=>{if(e.target.id==='profile-overlay')closeProfile()}},
+    h('div',{id:'prof-box'},h('div',{id:'prof-bar'},
+      h('button',{id:'prof-back',onclick:()=>profNav(-1)},'◀ Back'),h('button',{id:'prof-fwd',onclick:()=>profNav(1)},'Forward ▶'),
+      h('button',{id:'prof-quick',title:'Label size and quick panel',onclick:()=>{const c=profHistory[profIndex];closeProfile();openPanel(LANGUAGES.find(l=>l.code===c))}},'⚙ Label panel'),h('span',{style:'flex:1'}),h('button',{id:'prof-close',onclick:closeProfile},'✖ Close')),h('div',{id:'prof-body'})));
+  document.body.appendChild(ov);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')closeProfile()});
+})();
+
+// ========================================================================
+//  PHONETIC (International Phonetic Alphabet) FOR TRANSLATIONS
+//  Uses the same espeak-ng engine and local-storage cache as the word grid.
+//  Languages without their own espeak voice fall back to the closest
+//  related voice and are labelled "approx."; otherwise a dash is shown.
+// ========================================================================
+const IPA_FALLBACK={szl:'pl',csb:'pl',sli:'de',wen:'pl',hsb:'cs',dsb:'pl',rue:'uk',sco:'en',gv:'ga',kw:'cy',br:'fr',
+  co:'it',sc:'it',nap:'it',scn:'it',pms:'it',lij:'it',fur:'it',lmo:'it',vec:'it',an:'es',ast:'es',oc:'ca',wa:'fr',
+  rm:'it',gsw:'de','gsw-FR':'de',bar:'de',ksh:'de',pfl:'de',swg:'de',nds:'de',frr:'de',stq:'nl',li:'nl',vls:'nl',fy:'nl',
+  fo:'is',se:'fi',smj:'fi',sma:'fi',krl:'fi',vro:'et',liv:'et',rup:'ro',cnr:'sr',yue:'cmn',ht:'fr',tpi:'en',
+  sn:'sw',ny:'sw',rw:'sw',ln:'sw',kg:'sw',st:'sw',xh:'zu',ti:'am',ff:'wo',ak:'yo',mg:'id',tl:'id',ms:'id',
+  sm:'mi',to:'mi',haw:'mi',fj:'mi',ay:'qu',arn:'es',guc:'es',ber:'ar',ps:'fa',bo:'my'};
+const _baseResolveVoice=resolveEspeakVoice;
+resolveEspeakVoice=function(code,voices){
+  const own=_baseResolveVoice(code,voices);
+  if(own){delete ipaCache[`approx|${code}`];return own}
+  const fb=IPA_FALLBACK[code];
+  const v=fb?_baseResolveVoice(fb,voices):null;
+  if(v){ipaCache[`approx|${code}`]=true;return v}
+  return null;
+};
+(function forgetOldNoVoiceFlags(){ // older versions cached "no voice" for languages that now have a fallback
+  if(!ipaCache) ipaCache=loadIpaCache();
+  let ch=false;
+  Object.keys(IPA_FALLBACK).forEach(c=>{
+    if(ipaCache[`na|${c}`]){delete ipaCache[`na|${c}`];ch=true}
+    if(ipaCache[`hello-ipa|${c}`]===null){delete ipaCache[`hello-ipa|${c}`];ch=true}
+  });
+  if(ch) saveIpaCache();
+})();
+function ipaApprox(code){return ipaCache&&ipaCache[`approx|${code}`]?' approx.':''}
+function ipaClean(text){return String(text).replace(/[.,!?;:…。、！？，“”"«»()\[\]¿¡]/g,' ').replace(/\s+/g,' ').trim()}
+const ipaTick=()=>new Promise(r=>setTimeout(r,0));
+// items: [{code,text,key}] -> fills ipaCache[key] with phonetic text, '' if no voice
+async function ipaCompute(items,onProgress){
+  if(!ipaCache) ipaCache=loadIpaCache();
+  const todo=items.filter(it=>it.text&&!(it.key in ipaCache));
+  if(!todo.length) return;
+  const state=await loadEspeak(document.getElementById('translate-status'));
+  const groups={};
+  todo.forEach(it=>{const v=resolveEspeakVoice(it.code,state.voices);
+    if(!v){ipaCache[it.key]='';return}(groups[v]=groups[v]||[]).push(it)});
+  let done=0;
+  for(const [voice,list] of Object.entries(groups)){
+    for(let i=0;i<list.length;i+=12){
+      const chunk=list.slice(i,i+12);
+      let lines=null;
+      try{lines=await phonemizeBatch(state,chunk.map(it=>ipaClean(it.text)||'-'),voice)}catch(e){console.warn('phonetic batch failed',voice,e)}
+      if(!lines||lines.length!==chunk.length){ // punctuation split lines: do them one by one
+        lines=[];
+        for(const it of chunk){try{lines.push((await phonemizeBatch(state,[ipaClean(it.text)],voice)).join(' '))}catch(e){lines.push('')}await ipaTick()}
+      }
+      chunk.forEach((it,j)=>{ipaCache[it.key]=cleanIpaResult(lines[j])||''});
+      done+=chunk.length;if(onProgress)onProgress(done,todo.length);
+      saveIpaCache();await ipaTick();
+    }
+  }
+  saveIpaCache();
+}
+let ipaMapOn=false;
+const phraseKey=(code,text)=>`phr|${code}|${text}`;
+function renderMapIpa(){
+  LANGUAGES.forEach(l=>{
+    const mk=document.getElementById('marker-'+l.code);if(!mk)return;
+    let sp=mk.querySelector('.lang-ipa');
+    const tr=currentTranslations[l.code];
+    const val=ipaMapOn&&translatingActive&&tr&&ipaCache?ipaCache[phraseKey(l.code,tr)]:undefined;
+    if(val===undefined){if(sp)sp.remove();return}
+    if(!sp){sp=document.createElement('span');sp.className='lang-ipa';mk.appendChild(sp)}
+    sp.textContent=val?`/${val}/${ipaApprox(l.code)}`:'—';
+  });
+}
+async function runMapIpa(){
+  const st=document.getElementById('translate-status');
+  const items=Object.entries(currentTranslations).map(([code,text])=>({code,text,key:phraseKey(code,text)}));
+  if(!items.length){if(st)st.textContent='> Translate a phrase first, then phonetic spelling appears under each label.';renderMapIpa();return}
+  try{
+    await ipaCompute(items,(d,n)=>{if(st)st.textContent=`> Phonetic spelling ${d}/${n}…`;renderMapIpa()});
+    if(st) st.textContent='> Phonetic spelling ready (International Phonetic Alphabet, approx. = closest related voice).';
+  }catch(e){console.error(e);if(st)st.textContent='> Phonetic engine failed to load — see console.'}
+  renderMapIpa();
+}
+function toggleMapIpa(){
+  ipaMapOn=!ipaMapOn;
+  const b=document.getElementById('btn-ipa');b.classList.toggle('active',ipaMapOn);b.textContent=ipaMapOn?'IPA ON 🗣️':'IPA 🗣️';
+  if(ipaMapOn) runMapIpa(); else renderMapIpa();
+}
+// after each translation, labels refresh; recompute phonetics if the toggle is on
+const _baseDoTranslate=doTranslate;
+doTranslate=async function(){await _baseDoTranslate();if(ipaMapOn)runMapIpa()};
+const _baseUpdateLabels=updateMapLabels;
+updateMapLabels=function(){_baseUpdateLabels();renderMapIpa()};
+// word grid: show "approx." next to cells phonemised with a related voice
+const _baseRenderWgCell=renderWgCell;
+renderWgCell=function(l,en){const html=_baseRenderWgCell(l,en);
+  return ipaApprox(l.code)&&html.includes('class="wg-ipa"')?html.replace('</span></td>','<small> approx.</small></span></td>'):html};
+async function profPhonetic(code,items,btn){
+  if(btn){btn.disabled=true;btn.textContent='…loading phonetic engine'}
+  try{await ipaCompute(items)}catch(e){console.error(e)}
+  openProfile(code,true);
+}
+(function initIpaUI(){
+  const css=document.createElement('style');
+  css.textContent=`.lang-marker{position:relative}.lang-ipa{position:absolute;left:30px;top:100%;margin-top:2px;font-family:'Fira Code',monospace;font-size:12px;color:var(--cyan);text-shadow:1px 1px 0 #000,0 0 6px #000;white-space:nowrap;pointer-events:none}
+#btn-ipa{background:rgba(0,240,255,.08);border:1px solid rgba(0,240,255,.3);color:var(--cyan)}#btn-ipa.active{background:var(--cyan);color:#000}
+.prof-ipa{color:var(--cyan);font-family:'Fira Code',monospace;font-size:13px;margin-left:6px}`;
+  document.head.appendChild(css);
+  const b=document.createElement('button');b.className='tb-btn';b.id='btn-ipa';b.textContent='IPA 🗣️';
+  b.title='Show International Phonetic Alphabet spelling under each translated label';b.onclick=toggleMapIpa;
+  const t=document.getElementById('btn-translate');t.parentNode.insertBefore(b,t.nextSibling);
 })();
 </script>
 </body>
