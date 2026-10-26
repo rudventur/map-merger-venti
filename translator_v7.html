@@ -219,7 +219,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<link rel="apple-touch-icon" href="/RudVentur.com/embed/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="https://rudventur.github.io/RudVentur.com/embed/apple-touch-icon.png">
 <script src="https://rudventur.github.io/RudVentur.com/embed/rvView.js"></script>
 <script src="https://rudventur.github.io/RudVentur.com/embed/popcoin-reward.js" defer></script>
 </head>
@@ -543,7 +543,7 @@ document.addEventListener('click', e => {
 </div>
 
 <div id="footer">
-  <span>> RudVentur © 2026 | <a href="https://rudventur.com" target="_blank" style="color:var(--green);text-decoration:none">rudventur.com</a></span>
+  <span>> RudVentur © 2026 | <a href="https://rudventur.com" target="_blank" rel="noopener" style="color:var(--green);text-decoration:none">rudventur.com</a></span>
   <span class="cursor-blink"></span>
 </div>
 
@@ -2743,5 +2743,167 @@ async function profPhonetic(code,items,btn){
   const t=document.getElementById('btn-translate');t.parentNode.insertBefore(b,t.nextSibling);
 })();
 </script>
+<script>
+/* ===== UI polish: layout fixes + right-click explanations ===== */
+(function(){
+  // ---- layout: keep fixed bars stacked without overlap, at any width ----
+  const css=document.createElement('style');
+  css.textContent=`
+#rx-tip{position:fixed;z-index:10000;max-width:300px;background:#0b0f14;border:1px solid var(--cyan);border-radius:8px;padding:8px 10px;font-family:'Fira Code',monospace;font-size:12px;line-height:1.45;color:var(--text,#ddd);box-shadow:0 8px 30px rgba(0,0,0,.7);display:none}
+#rx-tip b{display:block;color:var(--cyan);margin-bottom:3px;font-size:12px}
+#rx-tip small{display:block;color:var(--dim,#888);margin-top:5px;font-size:10px}
+#toggle-btn{top:var(--ui-top,110px)}
+#lang-toggles{top:calc(var(--ui-top,110px) - 5px);max-height:calc(100vh - var(--ui-top,110px) - var(--ui-bottom,70px) - 10px)}
+#lang-tree{top:var(--ui-top,110px);bottom:var(--ui-bottom,70px)}
+#evo-panel{top:var(--ui-top,110px);bottom:var(--ui-bottom,70px)}
+#right-controls,.leaflet-top.leaflet-right{top:var(--ui-top,110px)!important}
+#time-bar{bottom:calc(var(--footer-h,24px) + 6px)}
+@media(min-width:601px){#side-panel{top:var(--ui-top-raw,100px)}}
+@media(max-width:600px){
+  #header{flex-wrap:wrap;gap:5px 6px;padding:.4rem .5rem}
+  #header .hdr-btn{padding:4px 7px;font-size:9.5px}
+  #header>div[style*="margin-left:auto"]{flex-wrap:wrap;margin-left:0!important;gap:5px!important}
+  #translate-bar{padding:6px 8px;gap:6px}
+  #translate-input{flex:1 1 100%;min-width:0;order:-1}
+  #base-lang-select{flex:1 1 0;min-width:0;max-width:130px}
+  #translate-bar .tb-btn{padding:6px 8px;font-size:10px}
+  #time-bar{left:6px;right:6px;transform:none;max-width:none;justify-content:center;padding:4px 6px}
+  #time-slider{flex:1 1 100%}
+  .snap-btn{padding:3px 6px}
+  #lang-tree{left:6px;right:6px;width:auto}
+  #footer{font-size:9px}
+}`;
+  document.head.appendChild(css);
+  function relayout(){
+    const hd=document.getElementById('header'), tb=document.getElementById('translate-bar'), ft=document.getElementById('footer'), tm=document.getElementById('time-bar');
+    if(!hd||!tb) return;
+    const hh=hd.getBoundingClientRect().height;
+    tb.style.top=Math.round(hh)+'px';
+    const bottomOfBars=Math.round(hh+tb.getBoundingClientRect().height);
+    const R=document.documentElement.style;
+    R.setProperty('--ui-top-raw',bottomOfBars+'px');
+    R.setProperty('--ui-top',(bottomOfBars+8)+'px');
+    const fh=ft?Math.round(ft.getBoundingClientRect().height):24;
+    R.setProperty('--footer-h',fh+'px');
+    const tmh=tm?Math.round(tm.getBoundingClientRect().height):0;
+    R.setProperty('--ui-bottom',(fh+tmh+14)+'px');
+    // move leaflet zoom (top-right) under the bars too
+    document.querySelectorAll('.leaflet-top.leaflet-right').forEach(e=>e.style.top=(bottomOfBars+8)+'px');
+  }
+  window.addEventListener('resize',relayout);
+  if(window.ResizeObserver){const ro=new ResizeObserver(relayout);['header','translate-bar','footer'].forEach(id=>{const e=document.getElementById(id);if(e)ro.observe(e)});setTimeout(()=>{const t=document.getElementById('time-bar');if(t)ro.observe(t)},500)}
+  relayout(); setTimeout(relayout,300); setTimeout(relayout,2000);
+
+  // ---- explanations: [selector, title, plain explanation] — first match wins ----
+  const RX=[
+    ['#btn-translate','Translate','Translates the text in the box into every language shown on the map. Each label then shows the translated phrase. Free services are used, so a few rare languages may not get a result.'],
+    ['#btn-ipa','International Phonetic Alphabet','Shows how the translated phrase is pronounced, written in the International Phonetic Alphabet, under every label on the map. Press again to hide it.'],
+    ['#btn-clear','Clear','Removes the translations and pronunciations and puts the language names back on the map.'],
+    ['#translate-input','Text to translate','Type a word or sentence here, then press Translate (or Enter).'],
+    ['#base-lang-select','Source language','Choose which language you are typing in.'],
+    ['#translate-status','Status','Shows progress and results of the last translation.'],
+    ['#btn-move','Move labels','Switches drag mode on or off. When on, you can drag the flags and names around the map; positions are remembered.'],
+    ['[onclick^="randomiseAll"]','Random','Shuffles label sizes, the zoom and the map position for a fresh look.'],
+    ['[onclick^="saveToTxt"]','Save','Downloads your current layout (sizes, positions, chosen languages) as a text file.'],
+    ['[onclick^="loadFromTxt"]','Load','Loads a layout you saved earlier from a text file.'],
+    ['[onclick^="resetAllState"]','Reset','Puts every label, size and setting back to the starting layout.'],
+    ['[onclick^="openGrammarGraphic"]','Grammar graphic','Opens a chart comparing the word order of sentences across languages.'],
+    ['[onclick^="openWordGrid"]','Word grid','Opens a table of everyday words that you can translate into several languages side by side.'],
+    ['[onclick^="openRedirectMenu"]','Redirect','Opens a menu of other RudVentur pages and apps you can jump to.'],
+    ['#sizeSlider','All size','Makes every label on the map bigger or smaller at once.'],
+    ['#toggle-btn','Languages','Opens the list of languages, where you tick which ones appear on the map and set each one\'s size.'],
+    ['[onclick^="selectAllLangs(true"]','All','Shows every language on the map.'],
+    ['[onclick^="selectAllLangs(false"]','None','Hides every language from the map.'],
+    ['[onclick^="selectByTier"]','Group','Shows only this group of languages.'],
+    ['#lang-checks-list input[type=checkbox]','Show language','Tick to show this language on the map, untick to hide it.'],
+    ['#lang-checks-list input[type=range]','Label size','Makes this one language label bigger or smaller.'],
+    ['[onclick^="map.zoomIn"],.leaflet-control-zoom-in','Zoom in','Zooms the map in.'],
+    ['[onclick^="map.zoomOut"],.leaflet-control-zoom-out','Zoom out','Zooms the map out.'],
+    ['#lt-toggle','Tree','Opens the language family tree: languages grouped by family and branch. Click a language to fly to it.'],
+    ['#evo-toggle','Evolution','Opens a timeline of how languages split from older ancestor languages over five thousand years.'],
+    ['#time-slider','Time slider','Drag to travel through time. Languages that did not exist yet disappear, and older homelands are shown.'],
+    ['.snap-btn','Jump to year','Jumps the time slider straight to this year.'],
+    ['#time-label','Current year','Shows the year you are looking at and how many languages existed then.'],
+    ['#evo-zin','Zoom in on timeline','Stretches the evolution timeline so you can read crowded parts.'],
+    ['#evo-zout','Zoom out on timeline','Shrinks the evolution timeline to see more at once.'],
+    ['#evo-close','Close','Closes the evolution timeline.'],
+    ['.evo-leaf','Language on timeline','Click to fly the map to this language and open its profile.'],
+    ['.lt-lang','Language in tree','Click to fly the map to this language and open its profile.'],
+    ['#prof-back','Back','Goes back to the previous language profile you looked at.'],
+    ['#prof-fwd','Forward','Goes forward again after using Back.'],
+    ['#prof-quick','Label panel','Closes the profile and opens the small side panel where you can change this label\'s size and hear it spoken.'],
+    ['#prof-close','Close','Closes the language profile.'],
+    ['.prof-period','Period','Moves the map to where this language was spoken in that period.'],
+    ['.prof-chip','Related language','Opens the profile of this sister or related language.'],
+    ['#prof-phon-phrase','Phrase pronunciation','Shows how the translated phrase sounds, in the International Phonetic Alphabet.'],
+    ['#prof-phon-words','Word pronunciations','Shows how each common word sounds, in the International Phonetic Alphabet.'],
+    ['#panel-speak-btn,.panel-speak-btn','Speak','Plays the greeting out loud using your browser\'s voice for this language (if your device has one).'],
+    ['#panel-ipa-btn,.panel-ipa-btn','Phonetic','Generates the real International Phonetic Alphabet pronunciation for this greeting using a free pronunciation engine.'],
+    ['#panel-slider','Label size','Makes this language label on the map bigger or smaller.'],
+    ['#panel-close','Close','Closes the side panel.'],
+    ['[onclick^="openGrammar("]','Full grammar','Opens the full grammar notes for this language.'],
+    ['[onclick^="openGrammarGraphicFor"]','Grammar graphic','Opens the word-order chart with this language as the main one.'],
+    ['[onclick^="openWordGridFor"]','Word grid','Opens the word grid with this language added.'],
+    ['.prof-btn','Profile action','Opens a related tool for this language.'],
+    ['[onclick^="translateColumn"]','Translate column','Translates every visible word in this language column.'],
+    ['[onclick^="ipaColumn"]','Pronounce column','Adds International Phonetic Alphabet pronunciations for every translated word in this column.'],
+    ['[onclick^="translateCell"]','Translate word','Translates just this one word.'],
+    ['[onclick^="ipaCell"]','Pronounce word','Shows how this word is pronounced, in the International Phonetic Alphabet.'],
+    ['[onclick^="removeWgLang"]','Remove language','Removes this language column from the word grid.'],
+    ['#wg-add-lang','Add language','Adds another language column to the word grid.'],
+    ['#wg-exclude-easy','Exclude easy words','Hides the very basic words (pronouns, numbers) so the grid shows more interesting ones.'],
+    ['[onclick^="closeWordGrid"]','Close','Closes the word grid.'],
+    ['[onclick^="closeGrammarGraphic"]','Close','Closes the grammar graphic.'],
+    ['[onclick^="closeGrammar"]','Close','Closes the grammar notes.'],
+    ['[onclick^="closeRedirectMenu"]','Close','Closes the redirect menu.'],
+    ['[onclick^="goTo"]','Go to page','Opens this page or app.'],
+    ['#newRedirectBtn','New link','Adds your own shortcut to the redirect menu.'],
+    ['[onclick^="setView"]','View mode','Changes how the page fills the screen.'],
+    ['.settings-toggle','Settings','Shows more view options.'],
+    ['.gg-chip','Language chip','Adds or removes this language in the grammar graphic.'],
+    ['.lang-marker','Language label','Click to open this language\'s profile. In Move mode, drag it to a new spot.'],
+    ['#footer a','Link','Opens rudventur.com in a new tab.'],
+    ['#header h1','Title','Click to open view options (full screen and so on).'],
+  ];
+  const SEL='button,input,select,a,[onclick],.lang-marker,.evo-leaf,.lt-lang,.snap-btn,#header h1';
+  function find(el){
+    for(const [s,t,d] of RX){const m=el.closest&&el.closest(s); if(m) return {el:m,t,d};}
+    const c=el.closest&&el.closest(SEL); if(!c) return null;
+    const label=(c.getAttribute('aria-label')||c.title||c.textContent||c.placeholder||'').trim().replace(/\s+/g,' ').slice(0,60);
+    return {el:c,t:label||'Control',d:c.title&&c.title!==label?c.title:'Click to use this control.'};
+  }
+  let tip=null;
+  function hide(){if(tip)tip.style.display='none'}
+  function show(x,y,info){
+    if(!tip){tip=document.createElement('div');tip.id='rx-tip';tip.setAttribute('role','tooltip');document.body.appendChild(tip);}
+    tip.textContent='';
+    const b=document.createElement('b');b.textContent=info.t;
+    const p=document.createElement('div');p.textContent=info.d;
+    const s=document.createElement('small');s.textContent='Right-click any button for help · click anywhere to close';
+    tip.append(b,p,s); tip.style.display='block';
+    const w=tip.offsetWidth,hh=tip.offsetHeight;
+    tip.style.left=Math.max(6,Math.min(x+10,innerWidth-w-6))+'px';
+    tip.style.top=Math.max(6,Math.min(y+10,innerHeight-hh-6))+'px';
+  }
+  document.addEventListener('contextmenu',e=>{
+    const info=find(e.target); if(!info) return;
+    e.preventDefault(); e.stopPropagation(); show(e.clientX,e.clientY,info);
+  },true);
+  document.addEventListener('pointerdown',e=>{if(tip&&!tip.contains(e.target))hide()},true);
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')hide()});
+  window.addEventListener('scroll',hide,true);
+  // hover fallback: give every control without a title a short one
+  function addTitles(root){
+    (root||document).querySelectorAll(SEL).forEach(el=>{
+      if(el.title||el.closest('.leaflet-tile-pane')) return;
+      for(const [s,t,d] of RX){ if(el.matches(s)){ el.title=t+' — '+d+' (right-click for help)'; return; } }
+    });
+  }
+  addTitles();
+  document.addEventListener('mouseover',e=>{const c=e.target.closest&&e.target.closest(SEL); if(c&&!c.title){ for(const [s,t,d] of RX){ if(c.matches(s)){c.title=t+' — '+d+' (right-click for help)';break;} } }},true);
+  setTimeout(addTitles,1500);
+})();
+</script>
+
 </body>
 </html>
