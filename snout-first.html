@@ -135,6 +135,19 @@ canvas#snoutMap{position:fixed;inset:0;z-index:1;touch-action:none}
 .view-menu .settings-toggle.open::after{transform:rotate(90deg)}
 .view-submenu{display:none;padding-left:.6rem;margin:0 .2rem;border-left:2px solid rgba(204,136,51,0.3)}
 .view-submenu.open{display:block}
+.view-menu{max-height:calc(100vh - 80px);overflow-y:auto;max-width:calc(100vw - 16px)}
+.view-menu .menu-head{border:none;color:#cc8833;font-size:.8rem;padding:4px 8px;letter-spacing:.05em}
+.view-menu .menu-head small{color:rgba(204,136,51,.7);font-size:.72rem;margin-left:4px}
+.view-menu .mi{display:inline-block;width:1.6em;text-align:center;margin-right:4px}
+.dir-group{color:rgba(255,204,102,.55);font-size:.78rem;padding:6px 10px 2px;text-transform:uppercase}
+.dir-link{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;color:#ffcc66;text-decoration:none;font-size:1rem;min-height:40px}
+.dir-link:hover,.dir-link:focus-visible{background:#cc8833;color:#1a120a;outline:none}
+.dir-logo{flex:0 0 28px;height:28px;display:flex;align-items:center;justify-content:center;background:#fff8e6;border-radius:6px;border:1px solid #cc8833}
+.dir-logo img{width:20px;height:20px;object-fit:contain}
+.dir-emoji{font-size:1rem;line-height:1}
+.dir-name{flex:1;display:flex;flex-direction:column;line-height:1.05}
+.dir-name small{font-size:.78rem;opacity:.7}
+.dir-out{opacity:.6}
 .view-submenu button{font-size:.88rem;color:rgba(255,204,102,0.8)}
 
 /* ── BONE DIVIDER ── */
@@ -247,19 +260,42 @@ body.sf-hidden-bar .sf-ptab.sf-ptab-top{display:flex}
 <button class="sf-ptab sf-ptab-top" type="button" data-panel-toggle="bar"><span class="sf-pt-icon">&#9660;</span><span class="sf-pt-label" data-open="Snout First" data-closed="&#128062; Snout First">&#128062; Snout First</span></button>
 
 <!-- VIEW MODE MENU (logo click) -->
-<div class="view-menu" id="viewMenu">
-  <div class="menu-sep" style="border:none;color:#cc8833;font-size:.8rem;padding:4px 8px">FULL SCREEN</div>
-  <button onclick="setView('horizontal')">Full Screen Horizontal</button>
-  <button onclick="setView('panoramic')">Full Screen Panoramic</button>
-  <button onclick="setView('vertical')">Full Screen Vertical</button>
-  <button onclick="setView('normal')">Normal / Default Browser</button>
+<div class="view-menu" id="viewMenu" role="menu" aria-label="Snout First menu">
+  <div class="menu-sep menu-head">&#128250; FULL SCREEN</div>
+  <button onclick="setView('horizontal')"><span class="mi">&#8596;&#65039;</span>Full Screen Horizontal</button>
+  <button onclick="setView('panoramic')"><span class="mi">&#127748;</span>Full Screen Panoramic</button>
+  <button onclick="setView('vertical')"><span class="mi">&#8597;&#65039;</span>Full Screen Vertical</button>
+  <button onclick="setView('normal')"><span class="mi">&#128421;&#65039;</span>Normal / Default Browser</button>
   <div class="menu-sep"></div>
-  <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)">Settings One</button>
+  <button class="settings-toggle" onclick="toggleSettingsSubmenu(event)"><span><span class="mi">&#9881;&#65039;</span>Settings One</span></button>
   <div class="view-submenu" id="viewSubmenu">
-    <button onclick="setView('horizontal')">&#8618; Panoramic — Locked</button>
-    <button onclick="setView('panoramic')">&#8618; Panoramic — Default Rotation</button>
-    <button onclick="setView('vertical')">&#8618; Full Screen Vertical</button>
+    <button onclick="setView('horizontal')"><span class="mi">&#128274;</span>Panoramic — Locked</button>
+    <button onclick="setView('panoramic')"><span class="mi">&#128260;</span>Panoramic — Default Rotation</button>
+    <button onclick="setView('vertical')"><span class="mi">&#8597;&#65039;</span>Full Screen Vertical</button>
   </div>
+  <div class="menu-sep"></div>
+  <div class="menu-sep menu-head">&#128210; DIRECTORY <small>opens in a new tab</small></div>
+  <nav class="dir-list" aria-label="Pet services directory">
+    <div class="dir-group">Map data</div>
+    <a class="dir-link" href="https://www.openstreetmap.org/" target="_blank" rel="noopener noreferrer" title="OpenStreetMap: map, vets and places (opens in a new tab)"><span class="dir-logo"><img src="img/logos/openstreetmap.org.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128506;&#65039;'}))"></span><span class="dir-name">OpenStreetMap<small>map, vets and places</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <div class="dir-group">Pet food</div>
+    <a class="dir-link" href="https://www.givefood.org.uk/" target="_blank" rel="noopener noreferrer" title="Give Food: food banks (opens in a new tab)"><span class="dir-logo"><img src="img/logos/givefood.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#129387;'}))"></span><span class="dir-name">Give Food<small>food banks</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.bluecross.org.uk/" target="_blank" rel="noopener noreferrer" title="Blue Cross: pet food banks (opens in a new tab)"><span class="dir-logo"><img src="img/logos/bluecross.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#129460;'}))"></span><span class="dir-name">Blue Cross<small>pet food banks</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.trussell.org.uk/" target="_blank" rel="noopener noreferrer" title="The Trussell Trust: food banks (opens in a new tab)"><span class="dir-logo"><span class="dir-emoji">&#129387;</span></span><span class="dir-name">The Trussell Trust<small>food banks</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <div class="dir-group">Vets and emergencies</div>
+    <a class="dir-link" href="https://www.vets-now.com/" target="_blank" rel="noopener noreferrer" title="Vets Now: night and weekend vets (opens in a new tab)"><span class="dir-logo"><img src="img/logos/vets-now.com.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#127973;'}))"></span><span class="dir-name">Vets Now<small>night and weekend vets</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.pdsa.org.uk/" target="_blank" rel="noopener noreferrer" title="PDSA: low cost vet care (opens in a new tab)"><span class="dir-logo"><img src="img/logos/pdsa.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#127973;'}))"></span><span class="dir-name">PDSA<small>low cost vet care</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.animalpoisonline.co.uk/" target="_blank" rel="noopener noreferrer" title="Animal PoisonLine: poison help (opens in a new tab)"><span class="dir-logo"><img src="img/logos/animalpoisonline.co.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#9763;&#65039;'}))"></span><span class="dir-name">Animal PoisonLine<small>poison help</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <div class="dir-group">Lost pets</div>
+    <a class="dir-link" href="https://www.doglost.co.uk/" target="_blank" rel="noopener noreferrer" title="DogLost: lost and found dogs (opens in a new tab)"><span class="dir-logo"><img src="img/logos/doglost.co.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128269;'}))"></span><span class="dir-name">DogLost<small>lost and found dogs</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://tractive.com/" target="_blank" rel="noopener noreferrer" title="Tractive: pet trackers (opens in a new tab)"><span class="dir-logo"><img src="img/logos/tractive.com.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128225;'}))"></span><span class="dir-name">Tractive<small>pet trackers</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <div class="dir-group">Rescue and welfare</div>
+    <a class="dir-link" href="https://www.rspca.org.uk/" target="_blank" rel="noopener noreferrer" title="RSPCA: animal welfare (opens in a new tab)"><span class="dir-logo"><img src="img/logos/rspca.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128737;&#65039;'}))"></span><span class="dir-name">RSPCA<small>animal welfare</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.dogstrust.org.uk/" target="_blank" rel="noopener noreferrer" title="Dogs Trust: dog rescue (opens in a new tab)"><span class="dir-logo"><img src="img/logos/dogstrust.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128021;'}))"></span><span class="dir-name">Dogs Trust<small>dog rescue</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.battersea.org.uk/" target="_blank" rel="noopener noreferrer" title="Battersea: dogs and cats home (opens in a new tab)"><span class="dir-logo"><img src="img/logos/battersea.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#127968;'}))"></span><span class="dir-name">Battersea<small>dogs and cats home</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.cats.org.uk/" target="_blank" rel="noopener noreferrer" title="Cats Protection: cat rescue (opens in a new tab)"><span class="dir-logo"><img src="img/logos/cats.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#128008;'}))"></span><span class="dir-name">Cats Protection<small>cat rescue</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+    <a class="dir-link" href="https://www.woodgreen.org.uk/" target="_blank" rel="noopener noreferrer" title="Wood Green: pets charity (opens in a new tab)"><span class="dir-logo"><img src="img/logos/woodgreen.org.uk.png" alt="" width="20" height="20" loading="lazy" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'dir-emoji',innerHTML:'&#127795;'}))"></span><span class="dir-name">Wood Green<small>pets charity</small></span><span class="dir-out" aria-hidden="true">&#8599;</span></a>
+  </nav>
 </div>
 
 <!-- REDIRECT — big modal; destinations open in a new tab carrying the current view mode -->
