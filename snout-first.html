@@ -205,6 +205,19 @@ body.sf-hidden-bar .sf-ptab.sf-ptab-top{display:flex}
 .db{background:rgba(26,18,10,0.88);border:2px solid rgba(204,136,51,0.4);color:#ffcc66;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:.85rem;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:all .1s}
 .db:active,.db.pressed{background:#cc8833;color:#1a120a}
 .db-c{font-family:'Press Start 2P',monospace;font-size:.18rem;color:rgba(204,136,51,0.3);border-color:rgba(204,136,51,0.15)}
+
+/* top bar fits without sideways scrolling: buttons scale with the screen, then wrap */
+.hud{height:auto;min-height:50px;flex-wrap:wrap;row-gap:4px;padding:4px 10px;overflow:visible}
+.hbtns{flex-wrap:wrap;flex-shrink:1;min-width:0;gap:clamp(3px,.5vw,8px)}
+.hbtn{font-size:clamp(.72rem,.95vw,.9rem);padding:clamp(2px,.3vw,4px) clamp(4px,.6vw,8px)}
+.csearch{min-width:150px}
+@media (max-width:1100px){.hud .hsep{display:none}}
+@media (max-width:700px){
+  .hbtns{order:3;flex:1 1 100%;overflow:visible;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+  .hbtns .hbtn,.hbtns .redirect-wrap,.hbtns .redirect-wrap .hbtn{width:100%;font-size:.8rem;padding:4px 2px;overflow:hidden;text-overflow:ellipsis}
+  .csearch{order:2;min-width:0}
+  .hud>.sf-ptoggle{order:1;margin-left:auto}
+}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#000000">
@@ -1804,6 +1817,11 @@ if (window.sfPanels) {
   sfPanels.register({ id: 'pack', el: '#packPanel', label: 'the pack', side: 'left', remember: false,
     read: () => !!S.packOpen, apply: open => { if (!!S.packOpen !== open) togglePack(); } });
 }
+</script>
+<script>
+/* keep --bar-h equal to the real top bar height, so panels sit right under it when it wraps */
+(function(){var b=document.getElementById('sfBar');if(!b)return;function f(){if(document.body.classList.contains('sf-hidden-bar')){document.documentElement.style.removeProperty('--bar-h');return}document.documentElement.style.setProperty('--bar-h',b.offsetHeight+'px')}
+if(window.ResizeObserver)new ResizeObserver(f).observe(b);addEventListener('resize',f);f()})();
 </script>
 </body>
 </html>
