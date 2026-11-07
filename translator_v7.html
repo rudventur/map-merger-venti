@@ -166,6 +166,9 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
 .gg-tick{font-size:9px;letter-spacing:1px;white-space:nowrap}
 
 /* WORD GRID MODAL — 300-word list translated + aligned by part of speech */
+#feelings-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
+#feelings-modal{background:#050805;color:#00ff41;font-family:'Courier New',monospace;border:1px solid #00ff41;border-radius:12px;max-width:760px;width:100%;max-height:92vh;overflow-y:auto;padding:14px;box-shadow:0 0 50px rgba(0,255,65,.2);background-image:linear-gradient(rgba(0,255,65,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,65,.04) 1px,transparent 1px);background-size:40px 40px}
+#feelings-canvas{width:100%;aspect-ratio:1;display:block;border:1px solid #1a3a22;border-radius:8px;background:radial-gradient(circle,#0a180e 0%,#030503 70%);cursor:pointer}
 #wordgrid-overlay{position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.8);backdrop-filter:blur(5px);display:none;align-items:center;justify-content:center;padding:1rem}
 #wordgrid-modal{background:var(--panel);border:1px solid var(--amber);border-radius:12px;max-width:1100px;width:100%;max-height:88vh;display:flex;flex-direction:column;box-shadow:0 0 50px rgba(255,184,0,.15)}
 #wg-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 1.5rem;border-bottom:1px solid var(--border)}
@@ -240,6 +243,7 @@ input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;heigh
     <button class="hdr-btn" onclick="loadFromTxt()" title="Load state from .txt">📂 LOAD</button>
     <button class="hdr-btn" onclick="resetAllState()">↺ RESET</button>
     <button class="hdr-btn" style="color:var(--cyan);border-color:var(--cyan)" onclick="openGrammarGraphic()" title="Compare word order across languages, aligned to the main language">📐 GRAMMAR GRAPHIC</button>
+    <button class="hdr-btn" style="color:#ff5fd2;border-color:#ff5fd2" onclick="openFeelings()" title="Every feeling named in English, drawn as an electric circle. Feelings ride inside every language.">💗 FEELINGS</button>
     <button class="hdr-btn" style="color:var(--amber);border-color:var(--amber)" onclick="openWordGrid()" title="Translate a core word list, grouped by part of speech">📚 WORD GRID</button>
     <div class="redirect-wrap">
       <button class="hdr-btn" style="color:var(--purple);border-color:var(--purple)" onclick="openRedirectMenu(event)">&#128257; REDIRECT</button>
@@ -524,6 +528,17 @@ document.addEventListener('click', e => {
   </div>
 </div>
 
+<div id="feelings-overlay" onclick="if(event.target===this) closeFeelings()">
+  <div id="feelings-modal">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div style="font-weight:bold;letter-spacing:2px;color:#7dffb0">⚡ FEELINGS CIRCLE · electric</div>
+      <button onclick="closeFeelings()" style="background:none;border:none;color:#5a7a5a;font-size:24px;cursor:pointer">✕</button>
+    </div>
+    <div style="font-size:11px;color:#5a9a6a;margin-bottom:8px">Feelings ride inside every language. Pick a feeling here and keep it in mind when you translate: the same words can carry joy, fear or anger. Outer ring = mild, middle = core, inner = strong. Yellow words on the bolts are mixes (Joy + Trust = Love).</div>
+    <canvas id="feelings-canvas" width="720" height="720"></canvas>
+    <div id="feelings-readout" style="margin-top:8px;border:1px solid #ffe600;color:#ffe600;padding:8px 10px;border-radius:4px;font-size:12px">Click a feeling family to see its English names</div>
+  </div>
+</div>
 <div id="wordgrid-overlay" onclick="if(event.target===this) closeWordGrid()">
   <div id="wordgrid-modal">
     <div style="padding:1rem 1.5rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -2905,5 +2920,165 @@ async function profPhonetic(code,items,btn){
 })();
 </script>
 
+<script>
+(function(){
+let feelOpen=false;
+
+const families = [
+  { name:'Joy', mild:'Serenity', strong:'Ecstasy', color:'#f4c430',
+    also:['Happiness','Amusement','Relief','Contentment','Pride','Optimism'] },
+  { name:'Trust', mild:'Acceptance', strong:'Admiration', color:'#3cb371',
+    also:['Affection','Kindness','Belonging','Devotion','Respect'] },
+  { name:'Fear', mild:'Apprehension', strong:'Terror', color:'#a66bff',
+    also:['Anxiety','Worry','Panic','Dread','Horror'] },
+  { name:'Surprise', mild:'Distraction', strong:'Amazement', color:'#3d8fff',
+    also:['Wonder','Shock','Awe','Curiosity','Confusion'] },
+  { name:'Sadness', mild:'Pensiveness', strong:'Grief', color:'#6b7fff',
+    also:['Loneliness','Hurt','Sorrow','Despair','Regret'] },
+  { name:'Disgust', mild:'Boredom', strong:'Loathing', color:'#a8b84a',
+    also:['Contempt','Revulsion','Aversion','Judgment'] },
+  { name:'Anger', mild:'Annoyance', strong:'Rage', color:'#ff6b6b',
+    also:['Frustration','Resentment','Jealousy','Fury'] },
+  { name:'Anticipation', mild:'Interest', strong:'Vigilance', color:'#ff9f4a',
+    also:['Hope','Excitement','Eagerness','Impatience'] },
+];
+const mixes = [
+  [0,1,'Love'],[1,2,'Submission'],[2,3,'Awe'],[3,4,'Disapproval'],
+  [4,5,'Remorse'],[5,6,'Contempt'],[6,7,'Aggressiveness'],[7,0,'Optimism']
+];
+
+const canvas = document.getElementById('feelings-canvas');
+const ctx = canvas.getContext('2d');
+const CX = 360, CY = 360;
+let t = 0, selected = 0;
+
+function feelPos(i, r) {
+  const a = (i/8)*Math.PI*2 - Math.PI/2;
+  return [CX + Math.cos(a)*r, CY + Math.sin(a)*r];
+}
+
+function feelBolt(x1,y1,x2,y2, color, alpha) {
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1.4;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 8;
+  ctx.beginPath();
+  ctx.moveTo(x1,y1);
+  const n = 6;
+  for (let i=1;i<n;i++){
+    const u=i/n;
+    const x = x1+(x2-x1)*u + (Math.random()-0.5)*18*(1-Math.abs(u-0.5)*2);
+    const y = y1+(y2-y1)*u + (Math.random()-0.5)*18*(1-Math.abs(u-0.5)*2);
+    ctx.lineTo(x,y);
+  }
+  ctx.lineTo(x2,y2);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function feelDraw() {
+  t += 0.02;
+  ctx.clearRect(0,0,720,720);
+  // grid glow
+  ctx.fillStyle = 'rgba(0,255,65,0.03)';
+  for (let i=0;i<18;i++){
+    ctx.fillRect(0, i*40, 720, 1);
+    ctx.fillRect(i*40, 0, 1, 720);
+  }
+  // outer ring
+  ctx.strokeStyle = 'rgba(0,255,65,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(CX,CY,280,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(CX,CY,200,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.arc(CX,CY,120,0,Math.PI*2); ctx.stroke();
+
+  // mix bolts
+  mixes.forEach(([a,b,label], mi) => {
+    const [x1,y1] = feelPos(a, 200);
+    const [x2,y2] = feelPos(b, 200);
+    if (Math.sin(t*3 + mi)*0.5+0.5 > 0.35) {
+      feelBolt(x1,y1,x2,y2, '#aaffcc', 0.35 + 0.25*Math.sin(t*4+mi));
+    }
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    ctx.fillStyle = 'rgba(255,230,0,0.75)';
+    ctx.font = '10px Courier New';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, mx, my);
+  });
+
+  families.forEach((f,i) => {
+    const [xo,yo] = feelPos(i, 280); // mild
+    const [xc,yc] = feelPos(i, 200); // core
+    const [xi,yi] = feelPos(i, 120); // strong
+    // charge arcs between intensities
+    feelBolt(xo,yo,xc,yc, f.color, 0.55);
+    feelBolt(xc,yc,xi,yi, f.color, 0.7);
+    // nodes as charged orbs
+    function orb(x,y,r, label, strong) {
+      const g = ctx.createRadialGradient(x,y,0,x,y,r);
+      g.addColorStop(0, '#fff');
+      g.addColorStop(0.25, f.color);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle = f.color;
+      ctx.lineWidth = selected===i ? 2.5 : 1;
+      ctx.beginPath(); ctx.arc(x,y,r*0.55,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle = '#e8ffe8';
+      ctx.font = (strong? 'bold 11px' : '10px') + ' Courier New';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, x, y + r + 12);
+    }
+    orb(xo,yo,10, f.mild, false);
+    orb(xc,yc,16, f.name, true);
+    orb(xi,yi,12, f.strong, false);
+  });
+
+  // nucleus
+  ctx.shadowColor = '#00ff41';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = '#041208';
+  ctx.beginPath(); ctx.arc(CX,CY,48,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#00ff41';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = '#7dffb0';
+  ctx.font = 'bold 12px Courier New';
+  ctx.textAlign = 'center';
+  ctx.fillText('FEELINGS', CX, CY-4);
+  ctx.fillStyle = '#5a9a6a';
+  ctx.font = '9px Courier New';
+  ctx.fillText('× languages', CX, CY+12);
+
+  if(feelOpen) requestAnimationFrame(feelDraw);
+}
+
+canvas.addEventListener('click', (e) => {
+  const r = canvas.getBoundingClientRect();
+  const x = (e.clientX-r.left) * (720/r.width);
+  const y = (e.clientY-r.top) * (720/r.height);
+  let best = -1, bd = 9999;
+  families.forEach((_,i) => {
+    const [px,py] = feelPos(i, 200);
+    const d = Math.hypot(px-x, py-y);
+    if (d < bd) { bd = d; best = i; }
+  });
+  if (bd < 50) {
+    selected = best;
+    const f = families[best];
+    document.getElementById('feelings-readout').innerHTML =
+      `<b>${f.name.toUpperCase()}</b> · ${f.mild} → ${f.name} → ${f.strong}<br>` +
+      f.also.join(' · ');
+  }
+});
+
+window.openFeelings=function(){document.getElementById('feelings-overlay').style.display='flex';if(!feelOpen){feelOpen=true;feelDraw();}};
+window.closeFeelings=function(){document.getElementById('feelings-overlay').style.display='none';feelOpen=false;};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeFeelings()});
+})();
+</script>
 </body>
 </html>
