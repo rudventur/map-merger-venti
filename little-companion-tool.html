@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Little Companion Tool</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --neon: #00ff9f;
+    --neon2: #ff00aa;
+    --card: #1a1a1a;
+    --text: #e0e0e0;
+  }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, sans-serif;
+  }
+  body { display: flex; flex-direction: column; }
+  header {
+    background: #000;
+    border-bottom: 2px solid var(--neon);
+    padding: 8px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  header h1 {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--neon);
+    text-shadow: 0 0 8px var(--neon);
+    margin-right: auto;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+  button, select, input[type="text"] {
+    background: #111;
+    color: var(--neon);
+    border: 1px solid var(--neon);
+    border-radius: 4px;
+    padding: 4px 10px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    text-transform: uppercase;
+  }
+  button:hover, select:hover { background: #222; box-shadow: 0 0 8px var(--neon); }
+  #area {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    background: #111;
+  }
+  .tile {
+    position: absolute;
+    background: #1c1c1c;
+    border: 2px solid var(--neon);
+    border-radius: 12px;
+    padding: 18px 14px;
+    box-shadow: 0 0 12px rgba(0,255,159,0.3);
+    cursor: grab;
+    user-select: none;
+    text-align: center;
+    color: #fff;
+    min-width: 220px;
+    min-height: 220px;
+    font-size: 1.4rem;
+  }
+  .tile:active { cursor: grabbing; }
+  .tile.easy { min-width: 260px; min-height: 260px; font-size: 1.6rem; }
+  .tile .emoji { font-size: 2.8em; margin-bottom: 6px; }
+  .tile .word { font-weight: 700; line-height: 1.2; }
+  .tile .ipa { font-size: 0.7em; color: #aaa; margin-top: 4px; font-family: monospace; }
+  .handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: var(--neon2);
+    border-radius: 50%;
+    opacity: 0.7;
+  }
+  .handle.tl { top: 6px; left: 6px; }
+  .handle.tr { top: 6px; right: 6px; }
+  .handle.bl { bottom: 6px; left: 6px; }
+  .handle.br { bottom: 6px; right: 6px; }
+
+  .modal-like, #modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+  }
+  .modal-like.show, #modal.show { display: flex; }
+  .modal-content {
+    background: #111;
+    border: 2px solid var(--neon);
+    border-radius: 12px;
+    padding: 30px;
+    width: 92vw;
+    height: 88vh;
+    overflow: auto;
+    position: relative;
+    color: #fff;
+    font-size: 1.25rem;
+  }
+  .close {
+    position: absolute;
+    top: 10px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--neon);
+    font-size: 2rem;
+    cursor: pointer;
+    font-weight: 700;
+  }
+  .lang-block { margin: 16px 0; padding: 16px; background: #1a1a1a; border-radius: 8px; border-left: 4px solid var(--neon); }
+  .say-btn {
+    margin-top: 10px;
+    background: var(--neon);
+    color: #000;
+    border: none;
+    padding: 8px 18px;
+    border-radius: 6px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #emoji-picker {
+    display: none;
+    position: fixed;
+    background: #111;
+    border: 1px solid var(--neon);
+    border-radius: 8px;
+    padding: 10px;
+    z-index: 300;
+    max-width: 320px;
+    max-height: 220px;
+    overflow: auto;
+  }
+  #emoji-picker.show { display: block; }
+  .emoji-opt { font-size: 1.6rem; cursor: pointer; padding: 4px; display: inline-block; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>LITTLE COMPANION TOOL</h1>
+  <label>MAIN <select id="langFrom"></select></label>
+  <label>TO <select id="langTo"></select></label>
+  <button id="langTreeBtn">TREE</button>
+  <select id="difficulty">
+    <option value="easy">EASY</option>
+    <option value="normal">NORMAL</option>
+    <option value="complex">COMPLEX</option>
+    <option value="all" selected>ALL</option>
+  </select>
+  <label><input type="checkbox" id="overlay"> OVERLAY</label>
+  <button id="tileOptionsBtn">TILES</button>
+  <button id="fullIpaBtn">IPA</button>
+  <input type="color" id="bgColor" value="#0a0a0a" style="width:32px;height:28px;border:none;background:none">
+  <input type="text" id="bgHex" value="#0a0a0a" style="width:70px" placeholder="#HEX">
+</header>
+
+<div id="area"></div>
+
+<div id="modal">
+  <div class="modal-content">
+    <button class="close" onclick="closeModal()">×</button>
+    <h2 id="modalTitle" style="font-size:2rem;margin-top:0"></h2>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div id="ipaModal" class="modal-like">
+  <div class="modal-content">
+    <button class="close" onclick="document.getElementById('ipaModal').classList.remove('show')">×</button>
+    <h2 style="font-size:2rem;margin-top:0">INTERNATIONAL PHONETIC ALPHABET</h2>
+    <div style="margin-bottom:16px">
+      <button onclick="showIpaMode('full')">FULL CHART</button>
+      <button onclick="showIpaMode('vowels')">VOWELS</button>
+      <button onclick="showIpaMode('consonants')">CONSONANTS</button>
+      <button onclick="showIpaMode('compact')">COMPACT</button>
+    </div>
+    <div id="ipaContent" style="font-size:1.4rem;line-height:2"></div>
+  </div>
+</div>
+
+<div id="optionsModal" class="modal-like">
+  <div class="modal-content">
+    <button class="close" onclick="document.getElementById('optionsModal').classList.remove('show')">×</button>
+    <h2 style="font-size:2rem;margin-top:0">TILE OPTIONS</h2>
+    <label>SIZE: <input type="range" id="tileScale" min="0.8" max="2" step="0.1" value="1"></label><br><br>
+    <label><input type="checkbox" id="showIpa" checked> SHOW IPA</label><br>
+    <label><input type="checkbox" id="showBothLangs" checked> SHOW BOTH LANGUAGES</label><br>
+    <label><input type="checkbox" id="showEmoji" checked> SHOW EMOJI</label><br><br>
+    <label>HANDLES: <select id="handleStyle">
+      <option value="dots">DOTS</option>
+      <option value="squares">SQUARES</option>
+      <option value="none">NONE</option>
+    </select></label><br>
+    <label><input type="checkbox" id="resizeLock" checked> LOCK RESIZE</label>
+  </div>
+</div>
+
+<div id="langTreeModal" class="modal-like">
+  <div class="modal-content">
+    <button class="close" onclick="document.getElementById('langTreeModal').classList.remove('show')">×</button>
+    <h2 style="font-size:2rem;margin-top:0">LINGUISTIC TREE</h2>
+    <div id="treeView"></div>
+  </div>
+</div>
+
+<div id="emoji-picker"></div>
+
+<script>
+const emotions = [
+  { en: "Love", pl: "Miłość", ipaEn: "/lʌv/", ipaPl: "/ˈmi.wɔɕt͡ɕ/", emoji: "❤️", level: "easy", explEn: "A deep feeling of affection and care.", explPl: "Głębokie uczucie przywiązania i troski.", synEn: "affection, fondness", synPl: "uczucie, czułość" },
+  { en: "Crush", pl: "Zadurzenie", ipaEn: "/krʌʃ/", ipaPl: "/za.duˈʐɛ.ɲɛ/", emoji: "😍", level: "easy", explEn: "A strong but often temporary attraction.", explPl: "Silne, często chwilowe zauroczenie.", synEn: "infatuation", synPl: "zauroczenie" },
+  { en: "Warmth", pl: "Ciepło", ipaEn: "/wɔːrmθ/", ipaPl: "/ˈt͡ɕɛ.pwɔ/", emoji: "☀️", level: "easy", explEn: "A gentle, comforting feeling of affection.", explPl: "Łagodne, kojące uczucie bliskości.", synEn: "tenderness", synPl: "czułość" },
+  { en: "Longing", pl: "Tęsknota", ipaEn: "/ˈlɒŋ.ɪŋ/", ipaPl: "/tɛ̃sˈknɔ.ta/", emoji: "💭", level: "normal", explEn: "A strong desire for someone absent.", explPl: "Silne pragnienie kogoś nieobecnego.", synEn: "yearning", synPl: "pragnienie" },
+  { en: "Passion", pl: "Namiętność", ipaEn: "/ˈpæʃ.ən/", ipaPl: "/na.ˈmjɛnt.nɔɕt͡ɕ/", emoji: "🔥", level: "normal", explEn: "Intense emotion and desire.", explPl: "Intensywne uczucie i pożądanie.", synEn: "desire", synPl: "pożądanie" },
+  { en: "Limerence", pl: "Limerencja", ipaEn: "/ˈlɪm.ər.əns/", ipaPl: "/li.mɛˈrɛn.t͡sja/", emoji: "🌀", level: "complex", explEn: "Intense, obsessive romantic longing.", explPl: "Intensywne, obsesyjne romantyczne pragnienie.", synEn: "infatuation", synPl: "obsesyjne zakochanie" },
+  { en: "Compersion", pl: "Compersion", ipaEn: "/kəmˈpɜː.ʃən/", ipaPl: "/kɔmˈpɛr.sjɔn/", emoji: "💛", level: "complex", explEn: "Joy in another person's happiness.", explPl: "Radość ze szczęścia drugiej osoby.", synEn: "sympathetic joy", synPl: "współradość" },
+  { en: "Ambivalence", pl: "Ambivalencja", ipaEn: "/æmˈbɪv.ə.ləns/", ipaPl: "/am.bi.vaˈlɛn.t͡sja/", emoji: "⚖️", level: "complex", explEn: "Conflicting feelings at the same time.", explPl: "Sprzeczne uczucia jednocześnie.", synEn: "mixed feelings", synPl: "mieszane uczucia" }
+];
+
+const colors = ["#1a2a1a","#1a1a2a","#2a1a1a","#1a2a2a","#2a1a2a","#2a2a1a"];
+
+const LANG_TREE = {
+  'Indo-European': {
+    'Germanic': ['en','de','nl'],
+    'Romance': ['fr','es','it'],
+    'Slavic': ['ru','pl','uk','cs']
+  },
+  'Other': {
+    'East Asian': ['ja','zh-CN','ko'],
+    'More': ['ar','hi','tr','fi','hu']
+  }
+};
+
+const LANG_NAMES = {
+  en: 'English', pl: 'Polish', de: 'German', fr: 'French', es: 'Spanish',
+  it: 'Italian', ru: 'Russian', ja: 'Japanese', 'zh-CN': 'Chinese',
+  ko: 'Korean', ar: 'Arabic', hi: 'Hindi', tr: 'Turkish', nl: 'Dutch',
+  uk: 'Ukrainian', cs: 'Czech', fi: 'Finnish', hu: 'Hungarian'
+};
+
+function populateLangSelects() {
+  const from = document.getElementById('langFrom');
+  const to = document.getElementById('langTo');
+  from.innerHTML = '';
+  to.innerHTML = '';
+  Object.entries(LANG_TREE).forEach(([family, branches]) => {
+    const optg = document.createElement('optgroup');
+    optg.label = family;
+    Object.entries(branches).forEach(([branch, codes]) => {
+      codes.forEach(code => {
+        const name = LANG_NAMES[code] || code;
+        const opt = document.createElement('option');
+        opt.value = code;
+        opt.textContent = name;
+        optg.appendChild(opt);
+      });
+    });
+    from.appendChild(optg.cloneNode(true));
+    to.appendChild(optg);
+  });
+  from.value = 'en';
+  to.value = 'pl';
+}
+
+function render() {
+  const area = document.getElementById('area');
+  area.innerHTML = '';
+  const diff = document.getElementById('difficulty').value;
+  const overlay = document.getElementById('overlay').checked;
+  const fromCode = document.getElementById('langFrom').value;
+  const toCode = document.getElementById('langTo').value;
+  let filtered = emotions.filter(e => diff === 'all' || e.level === diff);
+
+  const areaRect = area.getBoundingClientRect();
+  const maxX = Math.max(20, areaRect.width - 280);
+  const maxY = Math.max(20, areaRect.height - 280);
+
+  filtered.forEach((e, i) => {
+    const word1 = fromCode === 'pl' ? e.pl : e.en;
+    const ipa1 = fromCode === 'pl' ? e.ipaPl : e.ipaEn;
+    const word2 = toCode === 'pl' ? e.pl : e.en;
+    const ipa2 = toCode === 'pl' ? e.ipaPl : e.ipaEn;
+
+    const tile = document.createElement('div');
+    tile.className = 'tile ' + e.level;
+    tile.style.background = colors[i % colors.length];
+    tile.innerHTML = `
+      <div class="handle tl"></div><div class="handle tr"></div>
+      <div class="handle bl"></div><div class="handle br"></div>
+      <div class="emoji">${e.emoji}</div>
+      <div class="word">${word1}</div>
+      <div class="ipa">${ipa1}</div>
+      <div class="word" style="margin-top:8px;font-size:0.9em">${word2}</div>
+      <div class="ipa">${ipa2}</div>
+    `;
+    if (overlay) {
+      tile.style.left = (areaRect.width / 2 - 130 + (Math.random()*80-40)) + 'px';
+      tile.style.top = (areaRect.height / 2 - 140 + (Math.random()*80-40)) + 'px';
+    } else {
+      tile.style.left = (Math.random() * maxX) + 'px';
+      tile.style.top = (Math.random() * maxY) + 'px';
+    }
+    makeDraggable(tile);
+    tile.onclick = (ev) => {
+      if (!ev.target.classList.contains('handle')) openModal(e);
+    };
+    area.appendChild(tile);
+  });
+}
+
+function makeDraggable(el) {
+  let dragging = false;
+  let startX, startY, startLeft, startTop;
+  el.addEventListener('pointerdown', (e) => {
+    if (e.target.classList.contains('handle') || e.target.classList.contains('emoji')) return;
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = el.offsetLeft;
+    startTop = el.offsetTop;
+    el.setPointerCapture(e.pointerId);
+    el.style.zIndex = 1000;
+  });
+  el.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    el.style.left = (startLeft + dx) + 'px';
+    el.style.top = (startTop + dy) + 'px';
+  });
+  el.addEventListener('pointerup', () => { dragging = false; });
+  el.addEventListener('pointercancel', () => { dragging = false; });
+}
+
+function openModal(e) {
+  const fromCode = document.getElementById('langFrom').value;
+  const isPl = fromCode === 'pl';
+  document.getElementById('modalTitle').textContent = isPl ? e.pl : e.en;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="lang-block">
+      <strong>MAIN LANGUAGE</strong><br>
+      <strong style="font-size:1.6rem">${isPl ? e.pl : e.en}</strong> <span style="color:#aaa">${isPl ? e.ipaPl : e.ipaEn}</span><br>
+      ${isPl ? e.explPl : e.explEn}<br>
+      <small>Synonyms: ${isPl ? e.synPl : e.synEn}</small><br>
+      <button class="say-btn" onclick="speak('${isPl ? e.pl : e.en}', '${isPl ? 'pl' : 'en'}')">SAY IT</button>
+    </div>
+    <div class="lang-block">
+      <strong>${e.en}</strong> ${e.ipaEn} &nbsp;|&nbsp; <strong>${e.pl}</strong> ${e.ipaPl}<br>
+      ${e.explEn}<br>${e.explPl}<br>
+      <button class="say-btn" onclick="speak('${e.en}', 'en')">SAY EN</button>
+      <button class="say-btn" onclick="speak('${e.pl}', 'pl')">SAY PL</button>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+}
+
+function speak(text, lang) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = lang === 'pl' ? 'pl-PL' : 'en-US';
+  speechSynthesis.speak(u);
+}
+
+function speakIpa(sym) {
+  const u = new SpeechSynthesisUtterance(sym);
+  u.lang = 'en-US';
+  u.rate = 0.6;
+  speechSynthesis.speak(u);
+}
+
+function showIpaMode(mode) {
+  const content = document.getElementById('ipaContent');
+  const click = (s) => `<span style="cursor:pointer;padding:4px 6px" onclick="speakIpa('${s}')">${s}</span>`;
+  const vowels = ['i','y','ɨ','ʉ','ɯ','u','ɪ','ʏ','ʊ','e','ø','ɘ','ɵ','ɤ','o','ə','ɛ','œ','ɜ','ɞ','ʌ','ɔ','æ','ɐ','a','ɶ','ɑ','ɒ'];
+  const cons = ['p','b','t','d','ʈ','ɖ','c','ɟ','k','ɡ','q','ɢ','ʔ','m','ɱ','n','ɳ','ɲ','ŋ','ɴ','ʙ','r','ɾ','ɽ','ɸ','β','f','v','θ','ð','s','z','ʃ','ʒ','ʂ','ʐ','ç','ʝ','x','ɣ','χ','ʁ','ħ','ʕ','h','ɦ','ɬ','ɮ','ʋ','ɹ','ɻ','j','ɰ','l','ɭ','ʎ','ʟ'];
+  if (mode === 'vowels') {
+    content.innerHTML = '<h3>VOWELS</h3><div>' + vowels.map(click).join(' ') + '</div>';
+  } else if (mode === 'consonants') {
+    content.innerHTML = '<h3>CONSONANTS</h3><div>' + cons.map(click).join(' ') + '</div>';
+  } else if (mode === 'compact') {
+    content.innerHTML = '<div style="font-size:1.6rem">' + [...vowels.slice(0,10), ...cons.slice(0,20)].map(click).join(' ') + '</div>';
+  } else {
+    content.innerHTML = '<h3>FULL CHART (selected pulmonic + vowels)</h3><div>' + [...cons, ...vowels].map(click).join(' ') + '</div><p style="font-size:0.9rem;color:#aaa;margin-top:20px">Click any symbol to hear an approximation. Full IPA has ~160+ symbols; this shows the core set used in most languages.</p>';
+  }
+}
+
+document.getElementById('difficulty').onchange = render;
+document.getElementById('overlay').onchange = render;
+document.getElementById('langFrom').onchange = render;
+document.getElementById('langTo').onchange = render;
+
+document.getElementById('fullIpaBtn').onclick = () => {
+  showIpaMode('full');
+  document.getElementById('ipaModal').classList.add('show');
+};
+
+document.getElementById('tileOptionsBtn').onclick = () => {
+  document.getElementById('optionsModal').classList.add('show');
+};
+
+document.getElementById('tileScale').oninput = (e) => {
+  document.querySelectorAll('.tile').forEach(t => t.style.transform = `scale(${e.target.value})`);
+};
+
+document.getElementById('langTreeBtn').onclick = () => {
+  const view = document.getElementById('treeView');
+  view.innerHTML = '';
+  Object.entries(LANG_TREE).forEach(([family, branches]) => {
+    const d = document.createElement('details');
+    d.open = true;
+    d.innerHTML = `<summary style="font-weight:700;font-size:1.3rem;margin:10px 0">${family}</summary>`;
+    Object.entries(branches).forEach(([br, codes]) => {
+      const div = document.createElement('div');
+      div.style.marginLeft = '20px';
+      div.innerHTML = `<strong>${br}:</strong> ` + codes.map(c => `<span style="cursor:pointer;color:var(--neon);margin-right:10px" data-code="${c}">${LANG_NAMES[c]||c}</span>`).join('');
+      d.appendChild(div);
+    });
+    view.appendChild(d);
+  });
+  view.onclick = (e) => {
+    if (e.target.dataset.code) {
+      const code = e.target.dataset.code;
+      if (confirm('Set as MAIN?')) document.getElementById('langFrom').value = code;
+      else if (confirm('Set as TO?')) document.getElementById('langTo').value = code;
+      document.getElementById('langTreeModal').classList.remove('show');
+      render();
+    }
+  };
+  document.getElementById('langTreeModal').classList.add('show');
+};
+
+// background
+document.getElementById('bgColor').oninput = (e) => {
+  document.body.style.background = e.target.value;
+  document.getElementById('area').style.background = e.target.value;
+  document.getElementById('bgHex').value = e.target.value;
+};
+document.getElementById('bgHex').onchange = (e) => {
+  let v = e.target.value.trim();
+  if (!v.startsWith('#')) v = '#' + v;
+  if (/^#[0-9a-fA-F]{6}$/.test(v)) {
+    document.body.style.background = v;
+    document.getElementById('area').style.background = v;
+    document.getElementById('bgColor').value = v;
+  }
+};
+
+populateLangSelects();
+render();
+</script>
+</body>
+</html>
